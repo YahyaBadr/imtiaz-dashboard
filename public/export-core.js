@@ -22,6 +22,69 @@
     return ({ current: 'جارٍ الآن', upcoming: 'قادم', finished: 'انتهى' })[st] || '—';
   }
 
+  /* ── احتياطيات محلية للدوال المشتركة مع app.js (export-core يُحمَّل قبل app.js،
+     وتُفضَّل نسخة window إن وُجدت وقت الاستدعاء — نفس أرقام اللوحة دائماً) ── */
+  const W = (name, fallback) => function () {
+    const f = window[name];
+    return typeof f === 'function' ? f.apply(null, arguments) : fallback.apply(null, arguments);
+  };
+  const localFormatDate = function (v) {
+    if (v === null || v === undefined || v === '') return '';
+    const s = String(v).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    if (/^\d{4}-\d{2}-\d{2}[T ]/.test(s)) return s.slice(0, 10);
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    return s;
+  };
+  const localComputeStatus = function (startDate, endDate) {
+    const s = formatDate(startDate), e = formatDate(endDate);
+    if (!s || !e) return 'upcoming';
+    const today = new Date().toISOString().slice(0, 10);
+    if (today > e) return 'finished';
+    if (today >= s) return 'current';
+    return 'upcoming';
+  };
+  const localNormGender = function (g) {
+    const s = String(g || '').trim().toUpperCase();
+    if (s === 'F' || s === 'أنثى' || s === 'انثى' || s.startsWith('FEM')) return 'F';
+    if (s === 'M' || s === 'ذكر' || s.startsWith('MAL')) return 'M';
+    return '';
+  };
+  const localFormatPhone = function (phone) {
+    let p = String(phone === null || phone === undefined ? '' : phone).trim().replace(/\D/g, '');
+    if (!p) return '';
+    if (p.startsWith('0020')) p = p.slice(4);
+    if (p.startsWith('20') && p.length === 12) p = p.slice(2);
+    if (p.length === 10 && p.startsWith('1')) p = '0' + p;
+    return p;
+  };
+  const localRoundLabel = function (key) {
+    const DB = window.DB || {};
+    const k = normRoundKey(key);
+    return (DB.roundNames && (DB.roundNames[k] || DB.roundNames[key])) || String(key || '').trim() || 'غير محدد';
+  };
+  const localNormRoundKey = function (key) {
+    const raw = String(key === null || key === undefined ? '' : key).trim();
+    if (!raw) return '';
+    const alias = ((window.APP_CONFIG || {}).ROUND_ALIASES || {});
+    if (alias[raw]) return normRoundKey(alias[raw]);
+    const s = raw.toLowerCase().replace(/[\s\-]+/g, '_').replace(/[^\w]/g, '');
+    if (/unit|وحدة|وحدات/.test(s)) return 'units';
+    if (/poultry|دواجن|دجاج/.test(s)) return 'poultry';
+    if (/slaughter|food|مجزر|مجازر|غذاء/.test(s)) return 'slaughter';
+    if (/equine|horse|lab|fish|خيل|معامل|سمك/.test(s)) return 'equine_lab_fish';
+    if (/college|depart|قسم|اقسام|كلية/.test(s)) return 'college';
+    if (/elective|اختياري/.test(s)) return 'elective';
+    return raw;
+  };
+  const formatDate      = W('formatDate', localFormatDate);
+  const computeStatus   = W('computeStatus', localComputeStatus);
+  const normGender      = W('normGender', localNormGender);
+  const formatPhone     = W('formatPhone', localFormatPhone);
+  const roundLabel      = W('roundLabel', localRoundLabel);
+  const normRoundKey    = W('normRoundKey', localNormRoundKey);
+
   function ensureReady() {
     const DB = window.DB;
     if (!DB || !Array.isArray(DB.students) || !DB.students.length) {

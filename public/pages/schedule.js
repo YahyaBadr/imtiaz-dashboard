@@ -50,7 +50,15 @@ function renderSchedule(container) {
      foot : شارة الحالة مثبتة أسفل البطاقة (margin-top:auto) لتتساوى في كل صف */
   function rotCard(opts) {
     const rKey = opts.rKey, meta = opts.meta, st = opts.status;
-    const chips = opts.chips.map((c) => gChip(c[0], c[1])).join('');
+    const chips = (opts.chips || []).map((c) => gChip(c[0], c[1])).join('');
+    /* foot: 'total' → نقطة الحالة + رقاقة الإجمالي · 'status' → شارة الحالة مثبتة أسفل البطاقة */
+    let footInner;
+    if (opts.foot === 'total') {
+      const dot = opts.dot ? `<span class="cap-dot ${opts.dot}" title="${opts.dot === 'green' ? 'الطاقة الكاملة مستوفاة' : 'بها غير مسجلين'}"></span>` : '';
+      footInner = dot + gChip('الإجمالي ' + (opts.total != null ? opts.total : ''), true);
+    } else {
+      footInner = statusBadge(st);
+    }
     return `
       <div class="rot-card ${esc(rKey)}">
         <div class="rot-head">
@@ -59,7 +67,7 @@ function renderSchedule(container) {
           <span class="rot-status">${statusBadge(st)}</span>
         </div>
         <div class="rot-meta">${chips}</div>
-        <div class="rot-foot">${statusBadge(st)}</div>
+        <div class="rot-foot">${footInner}</div>
       </div>`;
   }
 

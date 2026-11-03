@@ -1165,13 +1165,13 @@ window.installApp = async function () {
   openModal('تثبيت التطبيق على جهازك', ios ? `
     <ol class="install-steps">
       <li>افتح الموقع في متصفح <strong>Safari</strong>.</li>
-      <li>اضغط زر <strong>المشاركة</strong> <span class="kbd">⬆︎</span> أسفل الشاشة.</li>
+      <li>اضغط زر <strong>المشاركة</strong> <span class="kbd">${ico("upload")}</span> أسفل الشاشة.</li>
       <li>مرّر لأسفل واختر <strong>«إضافة إلى الشاشة الرئيسية»</strong> (Add to Home Screen).</li>
       <li>اضغط <strong>إضافة</strong> — ستجد الأيقونة على شاشتك.</li>
     </ol>` : `
     <ol class="install-steps">
       <li><strong>أندرويد (Chrome):</strong> اضغط القائمة <span class="kbd">⋮</span> ثم <strong>«تثبيت التطبيق»</strong> أو «إضافة إلى الشاشة الرئيسية».</li>
-      <li><strong>الكمبيوتر (Chrome / Edge):</strong> اضغط أيقونة التثبيت <span class="kbd">⊕</span> في آخر شريط العنوان.</li>
+      <li><strong>الكمبيوتر (Chrome / Edge):</strong> اضغط أيقونة التثبيت <span class="kbd">${ico("download")}</span> في آخر شريط العنوان.</li>
       <li>تأكد أن الموقع مفتوح عبر <strong>https</strong>.</li>
     </ol>`);
 };
@@ -1200,6 +1200,31 @@ const PAGE_RENDERERS = {
 };
 let _activePage = null;
 
+/* ── مؤشر التبويب المنزلق + شارات العد — يُحدَّثان عند كل تنقّل وعند تغيّر حجم النافذة ── */
+window.moveNavIndicator = function () {
+  const inner = document.querySelector('.nav-inner');
+  const ind = inner && inner.querySelector('.nav-indicator');
+  if (!ind) return;
+  const active = inner.querySelector('.nav-btn.active');
+  if (!active) { ind.classList.remove('show'); return; }
+  const r = active.getBoundingClientRect(), pr = inner.getBoundingClientRect();
+  ind.style.width = r.width + 'px';
+  ind.style.transform = 'translate(' + (r.left - pr.left + inner.scrollLeft) + 'px, calc(100% - 2px))';
+  ind.classList.add('show');
+};
+window.updateNavBadges = function () {
+  try {
+    const btn = document.querySelector('.nav-btn[data-page="not-registered"]');
+    if (!btn) return;
+    let n = btn.querySelector('.nav-count');
+    const count = (typeof DB !== 'undefined' && DB.unregistered) ? DB.unregistered.length : 0;
+    if (!count) { if (n) n.remove(); return; }
+    if (!n) { n = document.createElement('span'); n.className = 'nav-count'; n.setAttribute('aria-hidden', 'true'); btn.appendChild(n); }
+    if (String(count) !== n.textContent) n.textContent = String(count);
+  } catch (e) {}
+};
+window.addEventListener('resize', () => { window.moveNavIndicator && window.moveNavIndicator(); }, { passive: true });
+
 window.showPage = function (pageId) {
   const pageEl = document.getElementById('page-' + pageId);
   if (!pageEl) return;
@@ -1221,6 +1246,7 @@ window.showPage = function (pageId) {
 function rerenderAll() {
   document.querySelectorAll('.page').forEach((p) => { delete p.dataset.rendered; p.innerHTML = ''; });
   const cur = _activePage || 'overview'; _activePage = null; showPage(cur);
+  window.updateNavBadges && window.updateNavBadges();
 }
 
 /* ───────────────────────── 13) التحميل والتحديث ───────────────────────── */

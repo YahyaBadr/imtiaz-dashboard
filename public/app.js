@@ -7,6 +7,183 @@
 window.DB = {};
 const CFG = () => window.APP_CONFIG || {};
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   0) ACCESS GATE — بوابة الدخول
+   لا تُطلب أي بيانات من الـ API ولا تُعرض أي صفحة قبل اجتياز هذه البوابة.
+   الرمز: من config.js (GATE.PASSPHRASE) أو يختاره المستخدم على جهازه (وضع محلي).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+window.Gate = (function () {
+  const SESSION_KEY = 'imtiaz_gate_session_v1';
+  const LOCAL_KEY = 'imtiaz_gate_local_pass_v1';
+  const ATTEMPTS_KEY = 'imtiaz_gate_attempts_v1';
+  let unlocked = false, idleTimer = null;
+
+  const cfg = () => Object.assign({ ENABLED: true, PASSPHRASE: '', REMEMBER_HOURS: 12, AUTO_LOCK_MINUTES: 0, MAX_ATTEMPTS: 5, LOCKOUT_SECONDS: 30 }, CFG().GATE || {});
+  const ls = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } },
+    del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } }
+  };
+  const $ = (id) => document.getElementById(id);
+  const sha256 = async function (txt) {
+    try {
+      if (window.crypto && crypto.subtle) {
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+        return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+      }
+    } catch (e) { /* ignore */ }
+    let h = 5381; for (let i = 0; i < txt.length; i++) { h = ((h * 33) ^ txt.charCodeAt(i)) >>> 0; }
+    return 'f' + h.toString(16);
+  };
+
+  function sessionValid() {
+    try {
+      const raw = ls.get(SESSION_KEY); if (!raw) return false;
+      const s = JSON.parse(raw);
+      return !!(s && s.exp > Date.now());
+    } catch (e) { return false; }
+  }
+  function lockoutLeft() {
+    try {
+      const a = JSON.parse(ls.get(ATTEMPTS_KEY) || '{"n":0,"until":0}');
+      const left = Math.ceil((a.until - Date.now()) / 1000);
+      return left > 0 ? left : 0;
+    } catch (e) { return 0; }
+  }
+  function bumpAttempts() {
+    const c = cfg();
+    let a = { n: 0, until: 0 };
+    try { a = JSON.parse(ls.get(ATTEMPTS_KEY) || '{"n":0,"until":0}'); } catch (e) { /* ignore */ }
+    a.n = (a.n || 0) + 1;
+    if (a.n >= c.MAX_ATTEMPTS) { a.until = Date.now() + c.LOCKOUT_SECONDS * 1000; a.n = 0; }
+    ls.set(ATTEMPTS_KEY, JSON.stringify(a));
+    return a;
+  }
+  function resetAttempts() { ls.del(ATTEMPTS_KEY); }
+
+  function expectedHashes() {
+    const c = cfg(), out = [];
+    if (c.PASSPHRASE) out.push({ hash: null, plain: String(c.PASSPHRASE), source: 'config' });
+    const local = ls.get(LOCAL_KEY);
+    if (local) out.push({ hash: local, plain: null, source: 'device' });
+    return out;
+  }
+
+  async function check(input) {
+    const val = String(input || '').trim();
+    if (!val) return false;
+    const list = expectedHashes();
+    if (!list.length) return false;
+    const h = await sha256(val);
+    return list.some((x) => (x.hash ? x.hash === h : x.plain === val));
+  }
+
+  function markUnlocked() {
+    const c = cfg();
+    unlocked = true;
+    ls.set(SESSION_KEY, JSON.stringify({ ts: Date.now(), exp: Date.now() + Math.max(1, c.REMEMBER_HOURS) * 3600 * 1000 }));
+    resetAttempts();
+    hideGate();
+    startIdleLock();
+  }
+
+  function showGate(msg) {
+    const ov = $('gate-overlay'); if (!ov) { return; }
+    ov.classList.remove('hidden');
+    document.body.classList.add('gated', 'no-scroll');
+    const c = cfg();
+    const setup = $('gate-setup'), note = $('gate-note'), mode = $('gate-mode');
+    const needsLocalSetup = !c.PASSPHRASE && !ls.get(LOCAL_KEY);
+    if (setup) setup.classList.toggle('hidden', !needsLocalSetup);
+    if (note) note.textContent = needsLocalSetup
+      ? 'لم يتم تعيين رمز للوحة بعد. اختر رمز دخول خاص بهذا الجهاز (٤ أحرف أو أكثر).'
+      : 'هذه اللوحة تحتوي على بيانات طلاب. أدخل رمز الدخول للمتابعة.';
+    if (mode) mode.textContent = c.PASSPHRASE ? 'الحماية: رمز مشترك للوحة' : 'الحماية: رمز محلي على هذا الجهاز';
+    const err = $('gate-err');
+    if (err) { err.textContent = msg || ''; err.classList.toggle('hidden', !msg); }
+    const inp = $('gate-pass'); if (inp) setTimeout(() => { try { inp.focus(); } catch (e) { /* ignore */ } }, 60);
+  }
+
+  function hideGate() {
+    const ov = $('gate-overlay');
+    if (ov) ov.classList.add('hidden');
+    document.body.classList.remove('gated', 'no-scroll');
+    const inp = $('gate-pass'); if (inp) inp.value = '';
+    const inp2 = $('gate-pass2'); if (inp2) inp2.value = '';
+  }
+
+  function startIdleLock() {
+    const mins = Number(cfg().AUTO_LOCK_MINUTES) || 0;
+    if (idleTimer) clearTimeout(idleTimer);
+    if (mins <= 0) return;
+    const arm = () => { if (idleTimer) clearTimeout(idleTimer); idleTimer = setTimeout(lock, mins * 60 * 1000); };
+    ['click', 'keydown', 'touchstart', 'scroll'].forEach((ev) => document.addEventListener(ev, arm, { passive: true }));
+    arm();
+  }
+
+  async function lock() {
+    unlocked = false;
+    ls.del(SESSION_KEY);
+    closeAllForLock();
+    showGate('تم قفل اللوحة.');
+    toast('🔒 تم قفل اللوحة');
+  }
+
+  function closeAllForLock() {
+    try { window.Overlays && Overlays.closeAll(); } catch (e) { /* ignore */ }
+    document.querySelectorAll('.modal-overlay,.profile-overlay,.search-overlay').forEach((n) => n.remove());
+    document.body.classList.remove('no-scroll');
+  }
+
+  function clearDevicePass() { ls.del(LOCAL_KEY); ls.del(SESSION_KEY); unlocked = false; showGate('تم حذف الرمز المحلي — اختر رمزاً جديداً.'); }
+
+  async function submit(pass, confirmPass) {
+    const c = cfg();
+    const left = lockoutLeft();
+    if (left > 0) { showGate(`محاولات كثيرة — انتظر ${left} ثانية ثم أعد المحاولة.`); return false; }
+    const val = String(pass || '').trim();
+    if (val.length < 4) { showGate('الرمز قصير جداً — استخدم ٤ أحرف على الأقل.'); return false; }
+
+    // أول مرة في الوضع المحلي: إنشاء رمز خاص بالجهاز
+    if (!c.PASSPHRASE && !ls.get(LOCAL_KEY)) {
+      if (confirmPass !== undefined && confirmPass !== val) { showGate('الرمزان غير متطابقين.'); return false; }
+      ls.set(LOCAL_KEY, await sha256(val));
+      markUnlocked();
+      toast('✓ تم ضبط الرمز — احتفظ به، لا يمكن استعادته');
+      return true;
+    }
+    if (await check(val)) { markUnlocked(); return true; }
+    const a = bumpAttempts();
+    const remain = Math.max(0, c.MAX_ATTEMPTS - (a.n || 0));
+    showGate(a.until ? `تم إيقاف المحاولات مؤقتاً لمدة ${c.LOCKOUT_SECONDS} ثانية.` : `رمز غير صحيح. المحاولات المتبقية: ${remain}.`);
+    return false;
+  }
+
+  function bindUI(onPass) {
+    const form = $('gate-form');
+    if (form) form.addEventListener('submit', (e) => { e.preventDefault(); onPass($('gate-pass') ? $('gate-pass').value : ''); });
+    const setupBtn = document.querySelector('[data-action="gate-set-pass"]');
+    if (setupBtn) setupBtn.addEventListener('click', () => onPass($('gate-pass') ? $('gate-pass').value : '', $('gate-pass2') ? $('gate-pass2').value : ''));
+  }
+
+  function init(onPass) {
+    const c = cfg();
+    if (!c.ENABLED) { unlocked = true; return true; }
+    if (sessionValid()) { unlocked = true; hideGate(); startIdleLock(); return true; }
+    showGate('');
+    bindUI(onPass);
+    return false;
+  }
+
+  return {
+    init, submit, lock, showGate, hideGate, clearDevicePass,
+    isUnlocked: () => unlocked,
+    hasConfiguredPass: () => !!cfg().PASSPHRASE || !!ls.get(LOCAL_KEY),
+    gateCfg: cfg
+  };
+})();
+
 /* ───────────────────────── 1) أدوات عامة ───────────────────────── */
 
 // تهريب HTML (أسماء الطلاب فيها أحياناً علامات ' و " كانت تكسر الأزرار القديمة)
@@ -241,6 +418,7 @@ function parseCSV(text) {                                       // احتياط�
 }
 
 async function fetchSheet(name) {
+  if (!Gate.isUnlocked()) throw new Error('LOCKED');                 // لا طلب بيانات قبل الدخول
   const base = CFG().API_URL;
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), CFG().REQUEST_TIMEOUT_MS || 30000);
@@ -802,6 +980,17 @@ async function refreshData(opts) {
 async function init() {
   setUpdateBadge();
   if (CFG().PRESENTATION_MODE) document.body.classList.add('presentation-mode');
+
+  // 1) البوابة أولاً — لا بيانات ولا تسجيل SW قبل الدخول
+  const passedNow = Gate.init((pass, confirm) => onGateSubmit(pass, confirm));
+  if (!passedNow) {
+    const ld = document.getElementById('loading-screen'); if (ld) ld.classList.add('hidden');
+    return;
+  }
+  bootAfterUnlock();
+}
+
+function bootAfterUnlock() {
   initInstallUI(); registerSW();
 
   const cached = readCache();
@@ -811,11 +1000,21 @@ async function init() {
     document.getElementById('loading-screen').classList.add('hidden');
     showPage('overview');
     setUpdateBadge('جارٍ التحديث…');
-    try { await refreshData({ silent: true }); } catch (e) { console.error(e); showBanner('أنت تعمل بدون اتصال — يتم عرض آخر نسخة محفوظة.'); setUpdateBadge(); }
+    refreshData({ silent: true }).catch((e) => { console.error(e); showBanner('أنت تعمل بدون اتصال — يتم عرض آخر نسخة محفوظة.'); setUpdateBadge(); });
     return;
   }
-  try { await refreshData({ firstPaint: true }); } catch (e) { console.error(e); showError({ students: e.message }); }
+  refreshData({ firstPaint: true }).catch((e) => { console.error(e); showError({ students: e.message }); });
 }
+
+// نجاح الدخول → مسح كاش قديم إن طُلب، ثم تحميل البيانات
+async function onGateSubmit(pass, confirm) {
+  const ok = await Gate.submit(pass, confirm);
+  if (!ok) return;
+  const ld = document.getElementById('loading-screen'); if (ld) ld.classList.remove('hidden');
+  if (!_booted) { _booted = true; bootAfterUnlock(); }
+  else { rerenderAll(); }
+}
+let _booted = false;
 
 window.AppBoot = function () { init(); };
 
@@ -845,6 +1044,39 @@ const ACTIONS = {
     const nid = String(s.national_id || ''); const masked = '••••••••••' + nid.slice(-4);
     const wasMasked = out.dataset.masked === '1';
     out.textContent = wasMasked ? nid : masked; out.dataset.masked = wasMasked ? '0' : '1'; el.textContent = wasMasked ? '🙈' : '👁️';
+  },
+
+  /* ── بوابة الدخول ── */
+  'lock': () => { if (Gate.isUnlocked()) Gate.lock(); else Gate.showGate(''); },
+  'gate-forget': () => {
+    const c = Gate.gateCfg();
+    if (c.PASSPHRASE) { toast('الرمز مضبوط من ملف الإعدادات (config.js) — غيّره هناك ثم أعد النشر.'); return; }
+    openModal('نسيت الرمز؟', `
+      <p class="muted">الرمز محفوظ على هذا الجهاز فقط ولا يمكن استعادته. يمكنك حذفه وضبط رمز جديد:</p>
+      <ol class="install-steps">
+        <li>اضغط «حذف الرمز وبدء إعداد جديد» بالأسفل.</li>
+        <li>اختر رمزاً جديداً (٤ أحرف أو أكثر).</li>
+        <li>احتفظ بالرمز في مكان آمن — لا توجد رسالة استعادة.</li>
+      </ol>
+      <div class="modal-actions">${btn('🗑️ حذف الرمز وبدء إعداد جديد', 'gate-clear-local', null, 'btn-rose')}</div>`);
+  },
+  'gate-clear-local': () => { Overlays.closeAll(); Gate.clearDevicePass(); },
+  'gate-help': () => {
+    const c = Gate.gateCfg();
+    openModal('كيف أحمي بيانات اللوحة؟', `
+      <div class="kv-list">
+        <div class="kv"><span>الوضع الحالي</span><b>${c.PASSPHRASE ? 'رمز مشترك مكتوب في config.js' : 'رمز محلي على كل جهاز'}</b></div>
+        <div class="kv"><span>مدة الجلسة</span><b>${c.REMEMBER_HOURS} ساعة على هذا الجهاز</b></div>
+        <div class="kv"><span>القفل التلقائي</span><b>${c.AUTO_LOCK_MINUTES ? c.AUTO_LOCK_MINUTES + ' دقيقة خمول' : 'معطّل'}</b></div>
+      </div>
+      <h3 style="margin-top:14px">مهم — اقرأ هذا</h3>
+      <p class="muted">بوابة الدخول هنا هي <strong>قفل واجهة</strong>: تمنع الفضوليين وتُخفي البيانات عن أي جهاز غير مُصرّح. لكنها ليست تشفيراً كاملاً، لأن ملفات الموقع عامة بطبيعتها، وبياناتها تأتي من رابط Google Apps Script.</p>
+      <h3>لحماية كاملة (خطوتان فقط)</h3>
+      <ol class="install-steps">
+        <li><strong>Cloudflare Access (مجاني حتى 50 مستخدم):</strong> لوحة Cloudflare → <em>Zero Trust → Access → Applications</em> → أضف التطبيق <code>imtiaz-dashboard.pages.dev</code> واختر سياسة «Allow» لبريد الكلية مع رمز تحقق OTP.</li>
+        <li><strong>Apps Script:</strong> اجعل السكربت يطلب <code>?token=...</code> صحيحاً، وضع نفس القيمة في <code>GATE.API_TOKEN</code> داخل config.js، وقيّد مشاركة جدول Google على حسابات الكلية فقط.</li>
+      </ol>
+      <p class="muted" style="margin-top:10px">بهذا لا يستطيع أي شخص قراءة البيانات حتى لو عرف الرابط.</p>`);
   }
 };
 window.registerAction = function (name, fn) { ACTIONS[name] = fn; };

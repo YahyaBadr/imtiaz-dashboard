@@ -13,8 +13,7 @@ function renderNotRegistered(container) {
   const sortedRounds = Object.keys(byRound).sort((a, b) => roundOrder.indexOf(a) - roundOrder.indexOf(b));
   const totalMissing = rows.length;
 
-  // THE FIX: Hardcoded dimensions directly into the SVG
-  const lotusSvg = `<svg class="title-ornament" width="22" height="12" style="width:22px !important; height:12px !important; max-width:22px !important; max-height:12px !important;" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
+  const lotusSvg = `<svg class="title-ornament" viewBox="0 0 24 14" aria-hidden="true"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
 
   container.innerHTML = `
     <div class="card card-sm" style="margin-bottom: calc(var(--gap)*1.5); background:#FFFFFF; border-right:4px solid var(--c-amber)">
@@ -26,7 +25,7 @@ function renderNotRegistered(container) {
             <div style="font-size:0.86rem; color:var(--c-text-muted); margin-top:2px">الإجمالي: <strong class="num" style="color:var(--c-rose)">${totalMissing}</strong> طالب/ة لم يعتمد تسجيلهم حتى الآن</div>
           </div>
         </div>
-        <button class="btn btn-plum" onclick="copyAllNotRegistered()">📋 نسخ جميع الأسماء غير المسجلة</button>
+        ${btn('📋 نسخ جميع الأسماء غير المسجلة', 'copy-all-nr', null, 'btn-plum')}
       </div>
     </div>
 
@@ -51,28 +50,38 @@ function buildGroupBlock(groupId, students, roundKey) {
   const rows = students.map(s => {
     const gIcon = s.gender === 'M' ? '<span class="gender-m">♂</span>' : s.gender === 'F' ? '<span class="gender-f">♀</span>' : '';
     const sKey = `${groupId}_${s.code_short}`.replace(/\s+/g, ''); 
-    return `<div class="copyable-name" data-name="${escapeAttr(s.full_name)}" data-code="${s.code_short || ''}" data-group="${groupId}">${gIcon}<span class="clickable-student-name" onclick="openStudentProfile('${sKey}')" title="اضغط لفتح الملف الكامل للطالب">${s.full_name || 'غير محدد'}</span><span class="student-code">${s.code_short || '—'}</span></div>`;
+    return `<div class="copyable-name" data-name="${esc(s.full_name)}" data-code="${esc(s.code_short || '')}" data-group="${esc(groupId)}">${gIcon}<span class="clickable-student-name"${act('student', { sid: sKey })} title="اضغط لفتح الملف الكامل للطالب">${esc(s.full_name || 'غير محدد')}</span><span class="student-code">${esc(s.code_short || '—')}</span></div>`;
   }).join('');
 
   return `
     <div style="margin-bottom: var(--gap)">
       <div class="nr-header">
         <div style="display:flex; align-items:center; gap:8px"><span class="cartouche-badge">جروب ${groupId}</span><span style="font-weight:700; font-size:0.92rem; color:var(--c-plum)">طلاب غير مسجلين</span></div>
-        <div style="display:flex; gap:8px; align-items:center"><span class="badge badge-grey num">${students.length} طلاب</span><button class="btn btn-surface btn-sm" onclick="copyBlock('${blockId}', 'جروب ${groupId} — ${roundLabel(roundKey)}')">📋 نسخ</button></div>
+        <div style="display:flex; gap:8px; align-items:center"><span class="badge badge-grey num">${students.length} طلاب</span>${btn('📋 نسخ', 'copy-block', { block: blockId, label: 'جروب ' + groupId + ' — ' + roundLabel(roundKey) }, 'btn-surface btn-sm')}</div>
       </div>
       <div class="copyable-list"><div class="copyable-list-inner" id="${blockId}">${rows}</div></div>
     </div>`;
 }
 
-window.copyBlock = function(blockId, label) {
-  const block = document.getElementById(blockId); if (!block) return;
-  const names = Array.from(block.querySelectorAll('.copyable-name')).map(el => `${el.querySelector('.clickable-student-name')?.textContent.trim() || ''}\t${el.querySelector('.student-code')?.textContent.trim() || ''}`);
-  navigator.clipboard.writeText(`${label}\n` + names.join('\n')).then(() => alert(`تم نسخ ${names.length} اسم ✓`));
+window.copyBlock = function (blockId, label) {
+  const block = document.getElementById(blockId); if (!block) { toast('تعذّر العثور على القائمة'); return; }
+  const names = Array.from(block.querySelectorAll('.copyable-name')).map((el) => {
+    const n = el.querySelector('.clickable-student-name'), c = el.querySelector('.student-code');
+    return `${(n ? n.textContent : '').trim()}\t${(c ? c.textContent : '').trim()}`;
+  });
+  copyText(`${label} (${names.length}):\n` + names.join('\n'), `تم نسخ ${names.length} اسماً ✓`);
 };
 
-window.copyAllNotRegistered = function() {
-  const allRows = Array.from(document.querySelectorAll('.copyable-name')).map(el => `${el.querySelector('.clickable-student-name')?.textContent.trim() || ''}\t${el.querySelector('.student-code')?.textContent.trim() || ''}\tجروب ${el.dataset.group || ''}`);
-  navigator.clipboard.writeText(`قائمة الطلاب غير المسجلين بالدورة الثانية:\n` + allRows.join('\n')).then(() => alert(`تم نسخ ${allRows.length} اسماً بنجاح ✓`));
+window.copyAllNotRegistered = function () {
+  const allRows = Array.from(document.querySelectorAll('#page-not-registered .copyable-name')).map((el) => {
+    const n = el.querySelector('.clickable-student-name'), c = el.querySelector('.student-code');
+    return `${(n ? n.textContent : '').trim()}\t${(c ? c.textContent : '').trim()}\tجروب ${el.dataset.group || ''}`;
+  });
+  if (!allRows.length) { toast('لا توجد أسماء لنسخها'); return; }
+  copyText('قائمة الطلاب غير المسجلين بالدورة الثانية:\n' + allRows.join('\n'), `تم نسخ ${allRows.length} اسماً ✓`);
 };
 
-function escapeAttr(str) { return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+/* ═══ أزرار صفحة غير المسجلين — عبر المعالج الموحّد ═══ */
+registerAction('copy-block', (el) => copyBlock(el.dataset.block, el.dataset.label || ''));
+registerAction('copy-all-nr', () => copyAllNotRegistered());

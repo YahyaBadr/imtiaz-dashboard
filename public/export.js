@@ -136,12 +136,16 @@
       return m + color; // وسم مفتوح يتبعه إغلاق لاحق
     });
     zip.file('xl/workbook.xml', wbx);
-    // 2) RTL لكل ورقة: إضافة rightToLeft="1" إلى <sheetView .../> في كل worksheet
+    // 2) RTL + تجميد الصف الأول لكل ورقة: حقن rightToLeft="1" و<pane .../> في <sheetView>
+    //    (xlsx-js-style 1.2.0 لا يكتب !freeze إطلاقاً — محقَّن يدويًا هنا، والنتيجة موثقة باختبار فعلي)
     const jobs = [];
     zip.forEach((path, entry) => {
       if (/^xl\/worksheets\/sheet\d+\.xml$/.test(path)) {
         jobs.push(entry.async('string').then((s) => {
-          s = s.replace(/<sheetView\b([^>]*?)\/>/g, (m0, attrs) => /rightToLeft/.test(attrs) ? m0 : `<sheetView${attrs} rightToLeft="1"/>`);
+          s = s.replace(/<sheetView\b([^>]*?)\/>/g, (m0, attrs) => {   // وسم ذاتي الإغلاق فقط
+            const open = `<sheetView${/rightToLeft/.test(attrs) ? attrs : attrs + ' rightToLeft="1"'}`;
+            return `${open}><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/></sheetView>`;
+          });
           zip.file(path, s);
         }));
       }

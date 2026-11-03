@@ -29,6 +29,23 @@ window.VERIFY = {
   }
 };
 
+// ── NEW FORMATTING HELPERS ──
+window.formatDate = function(dateStr) {
+  if (!dateStr) return 'غير محدد';
+  const str = String(dateStr);
+  if (str.includes('T')) return str.split('T')[0]; // Removes the time part
+  return str;
+};
+
+window.formatPhone = function(phone) {
+  if (!phone) return '';
+  let p = String(phone).replace(/\D/g, ''); // Keep only numbers
+  // If it's 10 digits and starts with 1 (Egyptian number missing zero)
+  if (p.length === 10 && p.startsWith('1')) return '0' + p;
+  return p;
+};
+// ─────────────────────────────
+
 function loadCSV(filename) {
   if (window.APP_CONFIG && window.APP_CONFIG.API_URL) {
     const sheetName = filename.replace('.csv', '');
@@ -59,14 +76,17 @@ window.getTodayStr = function() {
 window.computeStatus = function(startDate, endDate) {
   if (!startDate || !endDate) return 'upcoming';
   const today = getTodayStr();
-  if (today > endDate) return 'finished';
-  if (today >= startDate && today <= endDate) return 'current';
+  const sDate = formatDate(startDate);
+  const eDate = formatDate(endDate);
+  if (today > eDate) return 'finished';
+  if (today >= sDate && today <= eDate) return 'current';
   return 'upcoming';
 };
 
 window.computeAge = function(birthDateStr) {
   if (!birthDateStr) return 'غير محدد';
-  const bdate = new Date(birthDateStr);
+  const cleanDate = formatDate(birthDateStr);
+  const bdate = new Date(cleanDate);
   if (isNaN(bdate.getTime())) return 'غير محدد';
   const today = new Date(getTodayStr());
   let age = today.getFullYear() - bdate.getFullYear();
@@ -111,7 +131,6 @@ window.getInitials = function(name) {
   return parts.length === 1 ? parts[0].substring(0, 2) : parts[0].substring(0, 1) + parts[1].substring(0, 1);
 };
 
-// ── The New Clean Student List (Requested Bug Fix #2) ──
 window.renderStudentListModal = function(title, students, breadcrumb = '') {
   const html = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -125,7 +144,7 @@ window.renderStudentListModal = function(title, students, breadcrumb = '') {
         <tbody id="student-list-body">
           ${students.map(s => {
             if (!s) return '';
-            const key = `${s.group_id}_${s.code_short}`.replace(/\s+/g, ''); // Clean key to prevent errors
+            const key = `${s.group_id}_${s.code_short}`.replace(/\s+/g, ''); 
             return `
               <tr class="clickable-row" onclick="openStudentProfile('${key}')">
                 <td>
@@ -148,7 +167,6 @@ window.filterStudentList = function(input) { const q = input.value.toLowerCase()
 window.openStudentDirectoryModal = function() { renderStudentListModal('دليل كامل طلاب الدفعة', DB.students, 'الرئيسية › الدليل'); };
 window.openGroupRosterModal = function(groupId) { const st = DB.students.filter(s => String(s.group_id) === String(groupId)); renderStudentListModal(`قائمة طلاب جروب ${groupId}`, st); };
 
-// ── YOUR ORIGINAL PROFILE PANEL (With the fix applied) ──
 window.openStudentProfile = function(rawKey) {
   try {
     const cleanKey = String(rawKey).replace(/\s+/g, '');
@@ -159,19 +177,25 @@ window.openStudentProfile = function(rawKey) {
     const old = document.getElementById('profile-panel-overlay');
     if (old) old.remove();
 
-    // FORCE STRING TO PREVENT trim() ERRORS
+    // Format phone and dates
     const rawPhone = String(student.phone || '').trim();
-    const phoneEmpty = !rawPhone;
-    const phoneClean = rawPhone.replace(/\D/g, '');
+    const displayPhone = formatPhone(rawPhone); 
+    const phoneEmpty = !displayPhone;
+    const phoneClean = displayPhone.replace(/\D/g, '');
     const phoneForWa = phoneClean.startsWith('0') ? phoneClean.slice(1) : phoneClean;
     const isPhoneCheck = student.phone_status === 'check';
+    
     const emailVal = String(student.email || '').trim();
     const emailEmpty = !emailVal;
 
     const rawNid = String(student.national_id || '').trim();
     const isNidCheck = student.nid_status === 'check';
     const maskedNid = rawNid ? '••••••••••' + (rawNid.length >= 4 ? rawNid.slice(-4) : '') : 'غير متوفر';
-    const ageStr = computeAge(student.birth_date);
+    
+    // Format Dates
+    const displayBirthDate = formatDate(student.birth_date);
+    const displayRegDate = formatDate(student.registered_at);
+    const ageStr = computeAge(displayBirthDate);
 
     const prefFields = ['pref_FoodSafety_QC', 'pref_SmallAnimal', 'pref_Pharma_Vaccines', 'pref_Equine', 'pref_Poultry', 'pref_LargeAnimal'];
     const studentPrefs = prefFields.map(key => ({ key, arabicName: DB.fieldsMap[key] || key, rank: parseInt(student[key], 10) || 99 })).sort((a, b) => a.rank - b.rank);
@@ -219,12 +243,12 @@ window.openStudentProfile = function(rawKey) {
               <div>
                 <div style="font-size:0.78rem; color:var(--c-text-muted)">تاريخ الميلاد / السن</div>
                 <div style="font-weight:700; font-size:0.95rem; margin-top:2px">
-                  <span class="num">${student.birth_date || 'غير محدد'}</span>
+                  <span class="num">${displayBirthDate}</span>
                   <span style="font-size:0.8rem; color:var(--c-text-muted); font-weight:400">(${ageStr})</span>
                 </div>
               </div>
               <div style="grid-column: span 2; border-top:1px solid var(--c-border); padding-top:8px">
-                <div style="font-size:0.76rem; color:var(--c-text-muted)">تاريخ التسجيل: <strong class="num">${student.registered_at || 'غير متوفر'}</strong></div>
+                <div style="font-size:0.76rem; color:var(--c-text-muted)">تاريخ التسجيل: <strong class="num">${displayRegDate}</strong></div>
               </div>
             </div>
           </div>
@@ -236,7 +260,7 @@ window.openStudentProfile = function(rawKey) {
                 <div style="flex:1">
                   <div style="font-size:0.8rem; color:var(--c-text-muted)">رقم الهاتف المحمول</div>
                   <div style="font-weight:700; font-size:1.05rem; display:flex; align-items:center; gap:6px">
-                    ${phoneEmpty ? '<span style="color:var(--c-text-subtle)">غير متوفر</span>' : `<span class="num">${rawPhone}</span>`}
+                    ${phoneEmpty ? '<span style="color:var(--c-text-subtle)">غير متوفر</span>' : `<span class="num">${displayPhone}</span>`}
                     ${isPhoneCheck ? '<span class="badge badge-amber" style="font-size:0.75rem">⚠️ هاتف يحتاج مراجعة</span>' : ''}
                   </div>
                 </div>
@@ -244,7 +268,7 @@ window.openStudentProfile = function(rawKey) {
                   <div class="contact-actions">
                     <a href="tel:${phoneClean}" class="btn btn-plum btn-sm">📞 اتصال</a>
                     <a href="https://wa.me/20${phoneForWa}" target="_blank" class="btn btn-emerald btn-sm">💬 واتساب</a>
-                    <button class="btn btn-surface btn-sm" onclick="navigator.clipboard.writeText('${rawPhone}'); alert('تم نسخ رقم الهاتف');">📋 نسخ</button>
+                    <button class="btn btn-surface btn-sm" onclick="navigator.clipboard.writeText('${displayPhone}'); alert('تم نسخ رقم الهاتف');">📋 نسخ</button>
                   </div>
                 ` : ''}
               </div>
@@ -318,16 +342,25 @@ function buildStudentJourney(student) {
   const gid = student.group_id; const sCode = student.student_code;
   const groupRounds = DB.roundSchedule.filter(r => r.group_id === gid).sort((a,b) => parseInt(a.round_order,10) - parseInt(b.round_order,10));
   const steps = [];
+  
   const r1 = groupRounds.find(r => r.round_order === '1') || {};
-  steps.push({ roundName: `الراوند 1 — ${r1.round_name_ar || 'أقسام الكلية'}`, dates: r1.start_date ? `${r1.start_date} إلى ${r1.end_date}` : 'غير متاح', station: 'غير متاح بعد', status: computeStatus(r1.start_date || '2026-09-20', r1.end_date || '2026-11-03') });
+  const r1Dates = r1.start_date ? `${formatDate(r1.start_date)} إلى ${formatDate(r1.end_date)}` : 'غير متاح';
+  steps.push({ roundName: `الراوند 1 — ${r1.round_name_ar || 'أقسام الكلية'}`, dates: r1Dates, station: 'غير متاح بعد', status: computeStatus(r1.start_date || '2026-09-20', r1.end_date || '2026-11-03') });
+  
   const r2 = groupRounds.find(r => r.round_order === '2') || {};
   const assignR2 = DB.assignments.find(a => (a.group_id === gid && a.code_short === student.code_short) || a.student_code === sCode);
   const r2Station = assignR2 ? (assignR2.unit_name || assignR2.round_name_ar || 'مسجل') : 'غير مسجل';
-  steps.push({ roundName: `الراوند 2 — ${r2.round_name_ar || 'وحدات بيطرية'}`, dates: r2.start_date ? `${r2.start_date} إلى ${r2.end_date}` : 'غير متاح', station: r2Station, status: computeStatus(r2.start_date || '2026-11-07', r2.end_date || '2026-12-24') });
+  const r2Dates = r2.start_date ? `${formatDate(r2.start_date)} إلى ${formatDate(r2.end_date)}` : 'غير متاح';
+  steps.push({ roundName: `الراوند 2 — ${r2.round_name_ar || 'وحدات بيطرية'}`, dates: r2Dates, station: r2Station, status: computeStatus(r2.start_date || '2026-11-07', r2.end_date || '2026-12-24') });
+  
   const r3 = groupRounds.find(r => r.round_order === '3') || {};
-  steps.push({ roundName: `الراوند 3 — ${r3.round_name_ar || 'دواجن'}`, dates: r3.start_date ? `${r3.start_date} إلى ${r3.end_date}` : 'غير متاح', station: 'غير متاح بعد', status: computeStatus(r3.start_date || '2026-12-26', r3.end_date || '2027-02-09') });
+  const r3Dates = r3.start_date ? `${formatDate(r3.start_date)} إلى ${formatDate(r3.end_date)}` : 'غير متاح';
+  steps.push({ roundName: `الراوند 3 — ${r3.round_name_ar || 'دواجن'}`, dates: r3Dates, station: 'غير متاح بعد', status: computeStatus(r3.start_date || '2026-12-26', r3.end_date || '2027-02-09') });
+  
   const r4 = groupRounds.find(r => r.round_order === '4') || {};
-  steps.push({ roundName: `الراوند 4 — ${r4.round_name_ar || 'مجازر / خيل'}`, dates: r4.start_date ? `${r4.start_date} إلى ${r4.end_date}` : 'غير متاح', station: 'غير متاح بعد', status: computeStatus(r4.start_date || '2027-02-07', r4.end_date || '2027-03-30') });
+  const r4Dates = r4.start_date ? `${formatDate(r4.start_date)} إلى ${formatDate(r4.end_date)}` : 'غير متاح';
+  steps.push({ roundName: `الراوند 4 — ${r4.round_name_ar || 'مجازر / خيل'}`, dates: r4Dates, station: 'غير متاح بعد', status: computeStatus(r4.start_date || '2027-02-07', r4.end_date || '2027-03-30') });
+  
   return steps;
 }
 
@@ -388,7 +421,7 @@ async function loadAllData() {
 
   DB.studentLookup = {};
   DB.students.forEach(s => {
-    const cleanKey = `${s.group_id}_${s.code_short}`.replace(/\s+/g, ''); // THE CRITICAL FIX
+    const cleanKey = `${s.group_id}_${s.code_short}`.replace(/\s+/g, ''); 
     DB.studentLookup[cleanKey] = s;
     DB.studentLookup[String(s.student_code).replace(/\s+/g, '')] = s;
   });

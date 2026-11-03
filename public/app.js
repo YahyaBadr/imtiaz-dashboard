@@ -265,7 +265,7 @@ window.Gate = (function () {
     if (modeName === 'sheet') { user = String(userOrPass || '').trim(); pwd = String(pass === undefined ? confirmPass : pass || '').trim(); }
     else { pwd = String(confirmPass !== undefined && pass !== undefined ? pass : (userOrPass || '')).trim(); }
 
-    /* 🔒 لا نكتب كلمة المرور في localStorage إطلاقاً — اسم المستخدم فقط */
+    /* لا نكتب كلمة المرور في localStorage إطلاقاً — اسم المستخدم فقط */
     const rememberUser = (u) => { try { if (u) ls.set('imtiaz_gate_last_user_v1', String(u).trim()); } catch (e) {} };
 
     const left = lockoutLeft();
@@ -306,7 +306,7 @@ window.Gate = (function () {
       if (confirmPass !== undefined && confirmPass !== pwd) { showGate('الرمزان غير متطابقين.'); return false; }
       ls.set(LOCAL_KEY, await sha256(pwd));
       markUnlocked('');
-      toast('✓ تم ضبط الرمز — احتفظ به، لا يمكن استعادته');
+      toast('تم ضبط الرمز — احتفظ به، لا يمكن استعادته');
       return true;
     }
     if (await check(pwd)) { markUnlocked(''); return true; }
@@ -355,7 +355,7 @@ window.Gate = (function () {
     try { const o = JSON.parse(ls.get(USERS_LS_KEY) || 'null'); if (o && Array.isArray(o.list)) { n = o.list.length; ts = o.ts || 0; } } catch (e) {}
     if (!n) { el.classList.add('hidden'); return; }
     const mins = ts ? Math.max(0, Math.round((Date.now() - ts) / 60000)) : null;
-    el.textContent = `✓ قائمة الحسابات متاحة على هذا الجهاز (${n} حساباً${mins !== null ? ' · آخر قراءة قبل ' + mins + ' دقيقة' : ''})`;
+    el.textContent = `قائمة الحسابات متاحة على هذا الجهاز (${n} حساباً${mins !== null ? ' · آخر قراءة قبل ' + mins + ' دقيقة' : ''})`;
     el.classList.remove('hidden');
   }
 
@@ -425,7 +425,7 @@ window.toast = function (msg, ms) {
 };
 
 window.copyText = function (text, okMsg) {
-  const done = () => toast(okMsg || 'تم النسخ ✓');
+  const done = () => toast(okMsg || 'تم النسخ');
   const fallback = () => {
     try {
       const ta = document.createElement('textarea');
@@ -898,7 +898,7 @@ document.addEventListener('input', (e) => {
 
 window.openUnknownStudent = function (row, opts) {
   const rows = [['الاسم', row.full_name], ['الكود', row.code_short], ['الجروب', row.group_id || 'غير محدد'], ['الوحدة / الراوند', row.unit_name || roundLabel(row.round_key)], ['الهاتف', formatPhone(row.phone)], ['ملاحظة', row.issue]].filter((r) => r[1]);
-  openModal('بيانات الطالب', `<div class="alert-item alert-amber static" style="margin-bottom:12px"><span class="alert-icon">ℹ️</span><div>هذا الاسم غير موجود في ملفات الجروبات، لذلك لا يتوفر له ملف كامل.</div></div>
+  openModal('بيانات الطالب', `<div class="alert-item alert-amber static" style="margin-bottom:12px"><span class="alert-icon">${ico('info')}</span><div>هذا الاسم غير موجود في ملفات الجروبات، لذلك لا يتوفر له ملف كامل.</div></div>
     <div class="kv-list">${rows.map((r) => `<div class="kv"><span>${esc(r[0])}</span><strong>${esc(r[1])}</strong></div>`).join('')}</div>`, opts);
 };
 
@@ -918,7 +918,7 @@ function buildStudentJourney(student) {
   };
   const r2stationText = (m, miss) => m.length
     ? m.map((a) => a.unit_name || a.round_name_ar || 'مسجل').filter((v, i, arr) => arr.indexOf(v) === i).join(' + ')
-    : (miss ? 'غير مسجل ⚠️' : 'غير مسجل');
+    : (miss ? 'غير مسجل' : 'غير مسجل');
   // محطة الدورة الحالية لكل طالب — تُقرأ من جدول الجروبات تلقائياً (تعمل لأي دورة قادمة بدون تعديل كود)
   const todayStr = getTodayStr();
   let curRow = sched.find((r) => { const s = formatDate(r.start_date), e = formatDate(r.end_date); return s && e && todayStr >= s && todayStr <= e; });
@@ -970,7 +970,7 @@ window.openStudentProfile = function (rawKey, opts) {
         <div class="profile-header">
           <div class="profile-head-main">
             <div class="profile-chips">
-              <span class="badge ${student.gender === 'F' ? 'badge-rose' : 'badge-plum'}">${student.gender === 'F' ? 'أنثى ♀' : student.gender === 'M' ? 'ذكر ♂' : 'غير محدد'}</span>
+              <span class="badge ${student.gender === 'F' ? 'badge-rose' : 'badge-plum'}">${student.gender === 'F' ? 'أنثى' : student.gender === 'M' ? 'ذكر' : 'غير محدد'}</span>
               <span class="cartouche-badge-dark">جروب ${esc(student.group_id || '—')}</span>
               <span class="student-code">${esc(student.code_short || '—')}</span>
             </div>
@@ -979,59 +979,59 @@ window.openStudentProfile = function (rawKey, opts) {
               <div><h2>${esc(student.full_name || 'غير محدد')}</h2><div class="profile-sub">الكود الأكاديمي: <span class="num">${esc(student.student_code || '—')}</span></div></div>
             </div>
           </div>
-          <button type="button" class="modal-close" data-action="close-overlay" aria-label="إغلاق">✕</button>
+          <button type="button" class="modal-close" data-action="close-overlay" aria-label="إغلاق">${ico('x')}</button>
         </div>
 
         <div class="profile-body">
-          ${student.student_notes ? `<div class="alert-item alert-amber static"><span class="alert-icon">📌</span><div><strong>ملاحظة إدارية:</strong> ${esc(student.student_notes)}</div></div>` : ''}
+          ${student.student_notes ? `<div class="alert-item alert-amber static"><span class="alert-icon">${ico('pin')}</span><div><strong>ملاحظة إدارية:</strong> ${esc(student.student_notes)}</div></div>` : ''}
 
           <div class="profile-section">
-            <div class="profile-section-title">🪪 البيانات الشخصية</div>
+            <div class="profile-section-title">${ico('id-card')} البيانات الشخصية</div>
             <div class="personal-info-card">
               <div><div class="k">الرقم القومي</div>
                 <div class="v"><span id="nid-display" class="num" data-masked="${showNid ? '0' : '1'}">${esc(showNid ? rawNid || masked : masked)}</span>
-                ${rawNid ? `<button type="button" class="btn btn-surface btn-sm" id="nid-toggle-btn" data-action="toggle-nid" data-sid="${esc(sid)}" aria-label="إظهار/إخفاء الرقم القومي">${showNid ? '🙈' : '👁️'}</button>` : ''}</div>
-                ${student.nid_status === 'check' ? '<span class="badge badge-amber">⚠️ يحتاج مراجعة</span>' : ''}</div>
+                ${rawNid ? `<button type="button" class="btn btn-surface btn-sm" id="nid-toggle-btn" data-action="toggle-nid" data-sid="${esc(sid)}" aria-label="إظهار/إخفاء الرقم القومي">${showNid ? ico('eye-off') : ico('eye')}</button>` : ''}</div>
+                ${student.nid_status === 'check' ? "<span class=\"badge badge-amber\">${ico('warning')} يحتاج مراجعة</span>" : ''}</div>
               <div><div class="k">تاريخ الميلاد / السن</div><div class="v"><span class="num">${esc(birth || 'غير محدد')}</span> <small class="muted">(${esc(computeAge(birth))})</small></div></div>
               <div class="span2 divider"><span class="k">تاريخ التسجيل:</span> <strong class="num">${esc(reg || 'غير محدد')}</strong></div>
             </div>
           </div>
 
           <div class="profile-section hide-in-presentation">
-            <div class="profile-section-title">📞 بيانات التواصل</div>
+            <div class="profile-section-title">${ico('phone')} بيانات التواصل</div>
             <div class="contact-box">
               <div class="contact-row">
                 <div class="grow"><div class="k">رقم الهاتف</div>
                   <div class="v big">${phoneEmpty ? '<span class="muted">غير متوفر</span>' : `<span class="num" dir="ltr">${esc(phone)}</span>`}
-                  ${student.phone_status === 'check' ? '<span class="badge badge-amber">⚠️ يحتاج مراجعة</span>' : ''}</div></div>
+                  ${student.phone_status === 'check' ? "<span class=\"badge badge-amber\">${ico('warning')} يحتاج مراجعة</span>" : ''}</div></div>
                 ${phoneEmpty ? '' : `<div class="contact-actions">
-                  <a href="tel:${esc(phone)}" class="btn btn-plum btn-sm">📞 اتصال</a>
-                  <a href="${esc(wa)}" target="_blank" rel="noopener" class="btn btn-emerald btn-sm">💬 واتساب</a>
-                  <button type="button" class="btn btn-surface btn-sm" data-action="copy" data-text="${esc(phone)}" data-msg="تم نسخ رقم الهاتف ✓">📋 نسخ</button></div>`}
+                  <a href="tel:${esc(phone)}" class="btn btn-plum btn-sm">${ico('phone')} اتصال</a>
+                  <a href="${esc(wa)}" target="_blank" rel="noopener" class="btn btn-emerald btn-sm">${ico('whatsapp')} واتساب</a>
+                  <button type="button" class="btn btn-surface btn-sm" data-action="copy" data-text="${esc(phone)}" data-msg="تم نسخ رقم الهاتف">${ico('copy')} نسخ</button></div>`}
               </div>
               <div class="contact-row divider-top">
                 <div class="grow"><div class="k">البريد الإلكتروني</div><div class="v email">${email ? esc(email) : '<span class="muted">غير متوفر</span>'}</div></div>
                 ${email ? `<div class="contact-actions">
-                  <a href="mailto:${esc(email)}" class="btn btn-plum btn-sm">✉️ مراسلة</a>
-                  <button type="button" class="btn btn-surface btn-sm" data-action="copy" data-text="${esc(email)}" data-msg="تم نسخ البريد ✓">📋 نسخ</button></div>` : ''}
+                  <a href="mailto:${esc(email)}" class="btn btn-plum btn-sm">${ico('mail')} مراسلة</a>
+                  <button type="button" class="btn btn-surface btn-sm" data-action="copy" data-text="${esc(email)}" data-msg="تم نسخ البريد">${ico('copy')} نسخ</button></div>` : ''}
               </div>
             </div>
           </div>
 
           <div class="profile-section">
-            <div class="profile-section-title">🗺️ المسار التدريبي</div>
+            <div class="profile-section-title">المسار التدريبي</div>
             <div class="journey-timeline">
               ${journey.map((st) => `<div class="journey-step ${st.status}"><div class="journey-bullet"></div>
                 <div class="journey-content">
                   <div class="journey-top"><span class="journey-name">${esc(st.roundName)}</span>${statusBadge(st.status)}</div>
-                  <div class="journey-dates">📅 <span class="num">${esc(st.dates)}</span></div>
-                  <div>📍 موقع التدريب: <strong>${esc(st.station)}</strong></div>
+                  <div class="journey-dates">${ico('calendar')} <span class="num">${esc(st.dates)}</span></div>
+                  <div>${ico('map-pin')} موقع التدريب: <strong>${esc(st.station)}</strong></div>
                 </div></div>`).join('')}
             </div>
           </div>
 
           <div class="profile-section">
-            <div class="profile-section-title">⭐ ترتيب الرغبات</div>
+            <div class="profile-section-title">${ico('star')} ترتيب الرغبات</div>
             <div class="pref-list">
               ${prefs.map((p, i) => `<div class="pref-item"><span class="pref-rank-badge num">#${i + 1}</span><span class="pref-name">${esc(p.arabicName)}</span><span class="pref-score">الرغبة: <strong class="num">${p.rank < 99 ? p.rank : '—'}</strong></span></div>`).join('')}
             </div>
@@ -1052,9 +1052,9 @@ window.openGlobalSearch = function () {
   const overlay = document.createElement('div');
   overlay.id = 'search-modal-overlay'; overlay.className = 'modal-overlay search-overlay';
   overlay.innerHTML = `<div class="search-modal-box" role="dialog" aria-modal="true" aria-label="بحث">
-    <div class="search-input-wrap"><span class="search-icon" aria-hidden="true">🔍</span>
+    <div class="search-input-wrap"><span class="search-icon" aria-hidden="true">${ico('search')}</span>
       <input type="search" id="global-search-input" class="search-box-input" placeholder="ابحث باسم الطالب أو الكود أو الهاتف أو الوحدة…" autocomplete="off" enterkeyhint="search">
-      <button type="button" class="modal-close dark" data-action="close-overlay" aria-label="إغلاق">✕</button></div>
+      <button type="button" class="modal-close dark" data-action="close-overlay" aria-label="إغلاق">${ico('x')}</button></div>
     <div class="search-results-list" id="search-results-list"><div class="empty-note">اكتب للبحث في الطلاب والجروبات والوحدات.</div></div></div>`;
   Overlays.open(overlay);
   const input = overlay.querySelector('#global-search-input'), out = overlay.querySelector('#search-results-list');
@@ -1073,7 +1073,7 @@ window.openGlobalSearch = function () {
     if (groups.length) html += '<div class="search-category-header">الجروبات</div>' + groups.map((g) => `
       <div class="search-result-row"${act('group-roster', { gid: g.group_id, replace: 1 })}><span class="cartouche-badge">جروب ${esc(g.group_id)}</span><div class="grow"><small>${esc(g.total_students || 0)} طالب/ة</small></div><span class="slist-arrow">‹</span></div>`).join('');
     if (units.length) html += '<div class="search-category-header">الوحدات</div>' + units.map((u) => `
-      <div class="search-result-row"${act('goto-unit', { unit: u.unit_name })}><span>🏥</span><div class="grow"><strong>${esc(u.unit_name)}</strong><br><small>${esc(u.governorate || '')} · ${esc(u.registered || 0)} مقيد</small></div><span class="slist-arrow">‹</span></div>`).join('');
+      <div class="search-result-row"${act('goto-unit', { unit: u.unit_name })}><span>${ico("hospital")}</span><div class="grow"><strong>${esc(u.unit_name)}</strong><br><small>${esc(u.governorate || '')} · ${esc(u.registered || 0)} مقيد</small></div><span class="slist-arrow">‹</span></div>`).join('');
     out.innerHTML = html || '<div class="empty-note">لا توجد نتائج مطابقة.</div>';
   };
   input.addEventListener('input', render);
@@ -1118,11 +1118,11 @@ window.VERIFY = {
     badge.classList.remove('hidden');
     clearTimeout(this._t);
     if (!failed.length) {
-      badge.className = 'verify-badge verify-ok'; badge.innerHTML = `✓ تدقيق متطابق (${results.length} فحص)`;
+      badge.className = 'verify-badge verify-ok'; badge.innerHTML = `تدقيق متطابق (${results.length} فحص)`;
       this._t = setTimeout(() => badge.classList.add('hidden'), 3500);
     } else {
       badge.className = 'verify-badge verify-fail';
-      badge.innerHTML = `<button type="button" class="verify-x" data-action="hide-verify" aria-label="إغلاق">✕</button>⚠️ عدم تطابق في ${failed.length} رقم:<br>` + failed.map((f) => `<small>${esc(f.label)}: المعروض <b>${f.countValue}</b> ≠ القائمة <b>${f.listLen}</b></small>`).join('<br>');
+      badge.innerHTML = `<button type="button" class="verify-x" data-action="hide-verify" aria-label="إغلاق">${ico('x')}</button>${ico("warning")} عدم تطابق في ${failed.length} رقم:<br>` + failed.map((f) => `<small>${esc(f.label)}: المعروض <b>${f.countValue}</b> ≠ القائمة <b>${f.listLen}</b></small>`).join('<br>');
     }
   }
 };
@@ -1141,7 +1141,7 @@ const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.
 function setInstallVisible(v) {
   const b = document.getElementById('install-btn'), x = document.getElementById('install-close');
   if (b) b.classList.toggle('hidden', !v);
-  if (x) x.classList.toggle('hidden', !v);            // زر ✕ يظهر فقط عندما يظهر زر التثبيت
+  if (x) x.classList.toggle('hidden', !v);            // زر ${ico('x')} يظهر فقط عندما يظهر زر التثبيت
 }
 function canShowInstall() { return !isStandalone() && !installDismissed; }
 
@@ -1152,12 +1152,12 @@ window.dismissInstall = function () {
 };
 
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; setInstallVisible(canShowInstall()); });
-window.addEventListener('appinstalled', () => { deferredPrompt = null; setInstallVisible(false); toast('تم تثبيت التطبيق ✓ — افتحه من أيقونة الشاشة الرئيسية'); });
+window.addEventListener('appinstalled', () => { deferredPrompt = null; setInstallVisible(false); toast('تم تثبيت التطبيق — افتحه من أيقونة الشاشة الرئيسية'); });
 
 window.installApp = async function () {
   if (deferredPrompt) {                                   // Chrome/Edge/Android: native install dialog
     try { deferredPrompt.prompt(); } catch (e) { /* ignore */ }
-    try { const r = await deferredPrompt.userChoice; if (r && r.outcome === 'accepted') { setInstallVisible(false); toast('تم التثبيت ✓'); } } catch (e) { /* ignore */ }
+    try { const r = await deferredPrompt.userChoice; if (r && r.outcome === 'accepted') { setInstallVisible(false); toast('تم التثبيت'); } } catch (e) { /* ignore */ }
     deferredPrompt = null;
     return;
   }
@@ -1207,6 +1207,8 @@ window.showPage = function (pageId) {
   document.querySelectorAll('.page').forEach((p) => p.classList.add('hidden'));
   pageEl.classList.remove('hidden');
   document.querySelectorAll('.nav-btn').forEach((b) => { const on = b.dataset.page === pageId; b.classList.toggle('active', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  window.moveNavIndicator && window.moveNavIndicator(pageId);
+  window.updateNavBadges && window.updateNavBadges();
   if (!pageEl.dataset.rendered) {
     try { PAGE_RENDERERS[pageId](); pageEl.dataset.rendered = 'true'; }
     catch (err) { console.error(err); pageEl.innerHTML = `<div class="card error-card"><h3>تعذّر عرض هذه الصفحة</h3><p class="muted">${esc(err.message)}</p><button type="button" class="btn btn-plum" data-action="refresh">إعادة تحميل البيانات</button></div>`; }
@@ -1227,7 +1229,26 @@ function setUpdateBadge(extra) {
   const el = document.getElementById('header-last-update'); if (!el) return;
   el.textContent = `آخر تحديث للبيانات: ${CFG().LAST_DATA_UPDATE || '—'}${extra ? ' · ' + extra : ''}`;
 }
-function showBanner(msg) { const b = document.getElementById('offline-banner'); if (!b) return; if (msg) { b.textContent = msg; b.classList.remove('hidden'); } else b.classList.add('hidden'); }
+/* إشعار عدم الاتصال: توست دائري مضغوط تحت الهيدر — overlay لا يزيح التخطيط */
+window.showBanner = function (msg) {
+  let host = document.getElementById('offline-toast');
+  if (!msg) { if (host) host.classList.add('hidden'); return; }
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'offline-toast';
+    host.className = 'offline-toast';
+    host.setAttribute('role', 'status');
+    host.setAttribute('aria-live', 'polite');
+    host.innerHTML = '<div class="offline-pill">' +
+      '<span class="offline-ico" aria-hidden="true">' + ico('wifi-off') + '</span>' +
+      '<span class="offline-txt"></span>' +
+      '<button type="button" class="offline-retry" data-action="refresh">' + ico('refresh') + ' إعادة المحاولة</button>' +
+      '</div>';
+    document.body.appendChild(host);
+  }
+  host.querySelector('.offline-txt').textContent = msg;
+  host.classList.remove('hidden');
+};
 function hash(str) { let h = 0; for (let i = 0; i < str.length; i++) { h = ((h << 5) - h + str.charCodeAt(i)) | 0; } return h; }
 function fingerprint(sheets) { try { const j = JSON.stringify(sheets); return j.length + ':' + hash(j); } catch (e) { return String(Date.now()); } }
 
@@ -1236,10 +1257,10 @@ function showError(errors) {
   const el = document.getElementById('error-screen'); const ld = document.getElementById('loading-screen'); if (ld) ld.classList.add('hidden');
   document.querySelectorAll('.page').forEach((p) => p.classList.add('hidden'));
   el.classList.remove('hidden');
-  el.innerHTML = `<div class="card error-card"><div class="error-ico">📡</div><h2>تعذّر تحميل البيانات</h2>
+  el.innerHTML = `<div class="card error-card"><div class="error-ico">${ico('satellite-dish')}</div><h2>تعذّر تحميل البيانات</h2>
     <p class="muted">تأكد من الاتصال بالإنترنت، ثم أعد المحاولة. إن استمرت المشكلة فتأكد أن رابط Google Apps Script منشور بصلاحية «أي شخص» وأن أسماء الشيتات صحيحة.</p>
     ${keys.length ? `<details class="err-details"><summary>تفاصيل فنية</summary><ul>${keys.map((k) => `<li><code>${esc(SHEETS[k])}</code>: ${esc(errors[k])}</li>`).join('')}</ul></details>` : ''}
-    <button type="button" class="btn btn-plum" data-action="retry">🔄 إعادة المحاولة</button></div>`;
+    <button type="button" class="btn btn-plum" data-action="retry">${ico('refresh')} إعادة المحاولة</button></div>`;
 }
 
 let _loading = false, _lastFp = null;
@@ -1267,9 +1288,9 @@ async function refreshData(opts) {
       _lastFp = fp; buildDB(merged);
       const ld = document.getElementById('loading-screen'); if (ld) ld.classList.add('hidden');
       document.getElementById('error-screen').classList.add('hidden');
-      if (opts.firstPaint) { showPage('overview'); } else { rerenderAll(); if (opts.silent) toast('تم تحديث البيانات ✓'); }
+      if (opts.firstPaint) { showPage('overview'); } else { rerenderAll(); if (opts.silent) toast('تم تحديث البيانات'); }
     }
-    if (opts.manual && freshAll) toast('البيانات محدّثة ✓');
+    if (opts.manual && freshAll) toast('البيانات محدّثة');
     setUpdateBadge();
   } finally { _loading = false; if (btn) btn.classList.remove('spinning'); }
 }
@@ -1370,7 +1391,7 @@ const ACTIONS = {
     const s = DB.studentLookup[el.dataset.sid]; const out = document.getElementById('nid-display'); if (!s || !out) return;
     const nid = String(s.national_id || ''); const masked = '••••••••••' + nid.slice(-4);
     const wasMasked = out.dataset.masked === '1';
-    out.textContent = wasMasked ? nid : masked; out.dataset.masked = wasMasked ? '0' : '1'; el.textContent = wasMasked ? '🙈' : '👁️';
+    out.textContent = wasMasked ? nid : masked; out.dataset.masked = wasMasked ? '0' : '1'; el.textContent = wasMasked ? '' : '';
   },
 
   /* ── بوابة الدخول ── */
@@ -1379,13 +1400,13 @@ const ACTIONS = {
     const inp = document.getElementById('gate-pass'); if (!inp) return;
     const show = inp.type === 'password';
     inp.type = show ? 'text' : 'password';
-    el.textContent = show ? '🙈' : '👁️';
+    el.textContent = show ? '' : '';
     el.setAttribute('aria-label', show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
     try { inp.focus(); } catch (e) {}
   },
   'gate-reload-accounts': async () => {
     const ok = await Gate.reloadAccounts();
-    toast(ok ? 'تم تحديث قائمة الحسابات ✓' : 'تعذّر قراءة تبويب الحسابات');
+    toast(ok ? 'تم تحديث قائمة الحسابات' : 'تعذّر قراءة تبويب الحسابات');
   },
   'gate-forget': () => {
     const c = Gate.gateCfg();
@@ -1398,7 +1419,7 @@ const ACTIONS = {
           <li>عدّل الصف الخاص بك (اسم المستخدم / كلمة المرور).</li>
           <li>اضغط «تحديث قائمة الحسابات» بالأسفل أو أعد المحاولة بعد دقيقة.</li>
         </ol>
-        <div class="modal-actions">${btn('🔄 تحديث قائمة الحسابات', 'gate-reload-accounts', null, 'btn-gold')}</div>`);
+        <div class="modal-actions">${btn('تحديث قائمة الحسابات', 'gate-reload-accounts', null, 'btn-gold')}</div>`);
       return;
     }
     if (c.PASSPHRASE) { toast('الرمز مضبوط من ملف الإعدادات (config.js) — غيّره هناك ثم أعد النشر.'); return; }
@@ -1409,7 +1430,7 @@ const ACTIONS = {
         <li>اختر رمزاً جديداً (٤ أحرف أو أكثر).</li>
         <li>احتفظ بالرمز في مكان آمن — لا توجد رسالة استعادة.</li>
       </ol>
-      <div class="modal-actions">${btn('🗑️ حذف الرمز وبدء إعداد جديد', 'gate-clear-local', null, 'btn-rose')}</div>`);
+      <div class="modal-actions">${btn('حذف الرمز وبدء إعداد جديد', 'gate-clear-local', null, 'btn-rose')}</div>`);
   },
   'gate-clear-local': () => { Overlays.closeAll(); Gate.clearDevicePass(); },
   'gate-help': () => {

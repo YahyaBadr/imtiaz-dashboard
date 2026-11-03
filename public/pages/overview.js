@@ -24,22 +24,22 @@ function renderOverview(container) {
   container.innerHTML = `
     <section class="hero-band">
       <div class="hero-header">
-        <div class="hero-title"><span aria-hidden="true">🏛️</span><span>المؤشرات الرئيسية للإمتياز البيطري</span></div>
+        <div class="hero-title"><span aria-hidden="true">${ico('landmark')}</span><span>المؤشرات الرئيسية للإمتياز البيطري</span></div>
         <span class="hero-tag">${esc(r2Tag)}</span>
       </div>
       <div class="hero-stats-grid">
-        <div class="hero-stat-card"${act('directory')}><div class="hero-stat-number num" id="hero-cnt-students">0</div><div class="hero-stat-label">إجمالي طلاب الدفعة المقيدين <span class="go">↗</span></div></div>
-        <div class="hero-stat-card"${act('r2-registered')}><div class="hero-stat-number num" id="hero-cnt-reg">0</div><div class="hero-stat-label">مسجلون في مواقع التدريب (دورة 2) <span class="go">↗</span></div></div>
-        <div class="hero-stat-card"${act('goto-page', { page: 'not-registered' })}><div class="hero-stat-number num amber" id="hero-cnt-missing">0</div><div class="hero-stat-label">طلاب غير مسجلين (دورة 2) <span class="go">↗</span></div></div>
+        <div class="hero-stat-card"${act('directory')}><div class="hero-stat-number num" id="hero-cnt-students">0</div><div class="hero-stat-label">إجمالي طلاب الدفعة المقيدين <span class="go">${ico('external')}</span></div></div>
+        <div class="hero-stat-card"${act('r2-registered')}><div class="hero-stat-number num" id="hero-cnt-reg">0</div><div class="hero-stat-label">مسجلون في مواقع التدريب (دورة 2) <span class="go">${ico('external')}</span></div></div>
+        <div class="hero-stat-card"${act('goto-page', { page: 'not-registered' })}><div class="hero-stat-number num amber" id="hero-cnt-missing">0</div><div class="hero-stat-label">طلاب غير مسجلين (دورة 2) <span class="go">${ico('external')}</span></div></div>
       </div>
     </section>
 
     ${alerts.length ? `<h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>تنبيهات هامة ومتابعات فورية</h2>
-      <div class="alerts-strip">${alerts.map((a) => `<div class="alert-item alert-${a.type}"${a.attrs}><span class="alert-icon">${a.icon}</span><div class="grow">${a.html}</div><span class="alert-go">عرض ↗</span></div>`).join('')}</div>` : ''}
+      <div class="alerts-strip">${alerts.map((a) => `<div class="alert-item alert-${a.type}"${a.attrs}><span class="alert-icon">${a.icon}</span><div class="grow">${a.html}</div><span class="alert-go">عرض ${ico('external')}</span></div>`).join('')}</div>` : ''}
 
     <div class="two-col">
       <section>
-        <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>📊 توزيع التدريب بالدورة الثانية (R2)</h2>
+        <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('bar-chart')} توزيع التدريب بالدورة الثانية (R2)</h2>
         <div class="round-summary-grid">
           ${DB.round2Summary.map((r) => {
             const reg = parseInt(r.registered, 10) || 0, exp = parseInt(r.expected_students, 10) || 0, miss = parseInt(r.not_registered, 10) || 0;
@@ -47,23 +47,23 @@ function renderOverview(container) {
             return `
               <div class="round-card">
                 <div class="round-card-name">
-                  <span>${meta.icon || '📌'} ${esc(r.round_name_ar || roundLabel(rk))}</span>
-                  ${miss > 0 ? `<span class="badge badge-amber num tap"${act('r2-unregistered', { round: rk })}>${miss} غير مسجل ↗</span>` : '<span class="badge badge-emerald">مكتمل ✓</span>'}
+                  <span>${roundIcon(rk)} ${esc(r.round_name_ar || roundLabel(rk))}</span>
+                  ${miss > 0 ? `<span class="badge badge-amber num tap"${act('r2-unregistered', { round: rk })}>${miss} غير مسجل ${ico("external")}</span>` : '<span class="badge badge-emerald">مكتمل</span>'}
                 </div>
                 <div class="round-reg-numbers num">
                   <button type="button" class="num-link"${act('r2-registered', { round: rk })} aria-label="المسجلون">${reg}</button>
                   <span class="sep">/</span>
-                  <button type="button" class="num-link muted"${act('r2-expected', { round: rk })} aria-label="المتوقعون">${exp} ↗</button>
+                  <button type="button" class="num-link muted"${act('r2-expected', { round: rk })} aria-label="المتوقعون">${exp} ${ico('external')}</button>
                 </div>
                 <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill ${miss > 0 ? 'warn' : ''}" style="width:${Math.min(pct, 100)}%"></div></div><span class="num">${pct}%</span></div>
-                <div class="round-groups-label"${act('goto-page', { page: 'schedule' })}>الجروبات المعنية: <strong>${esc(r.groups || '—')}</strong> ↗</div>
+                <div class="round-groups-label"${act('goto-page', { page: 'schedule' })}>الجروبات المعنية: <strong>${esc(r.groups || '—')}</strong> ${ico('external')}</div>
               </div>`;
           }).join('') || '<div class="empty-note">لا توجد بيانات توزيع.</div>'}
         </div>
       </section>
 
       <section>
-        <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>⭐ المجالات الأكثر طلباً</h2>
+        <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('star')} المجالات الأكثر طلباً</h2>
         <div class="card field-pref-card">
           <div class="muted small">متوسط ترتيب الرغبات (اضغط على أي مجال لعرض من اختاروه أولاً):</div>
           ${prefAverages.map((item, idx) => {
@@ -72,7 +72,7 @@ function renderOverview(container) {
               <div class="field-bar-item"${act('field-pref', { field: item.field })}>
                 <div class="field-bar-top">
                   <span class="field-name"><span class="badge badge-gold">#${idx + 1}</span>${esc(item.arabicName)}</span>
-                  <span class="field-avg">متوسط: <strong class="num">${item.avg}</strong> · <span class="num">${item.first}</span> اختاروه أولاً ↗</span>
+                  <span class="field-avg">متوسط: <strong class="num">${item.avg}</strong> · <span class="num">${item.first}</span> اختاروه أولاً ${ico('external')}</span>
                 </div>
                 <div class="progress-bar thick"><div class="progress-fill plum" style="width:${barWidth}%"></div></div>
               </div>`;
@@ -81,7 +81,7 @@ function renderOverview(container) {
       </section>
     </div>
 
-    <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>🔄 موقع كل جروب الآن في مصفوفة التدريب</h2>
+    <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('refresh')} موقع كل جروب الآن في مصفوفة التدريب</h2>
     <div class="status-grid">
       ${DB.groups.map((g) => {
         const sched = DB.roundSchedule.filter((r) => String(r.group_id) === String(g.group_id)).sort((a, b) => (+a.round_order || 0) - (+b.round_order || 0));
@@ -90,13 +90,13 @@ function renderOverview(container) {
         const cur = sched.find((r) => st(r) === 'current') || sched.find((r) => st(r) === 'upcoming') || sched[sched.length - 1];
         const meta = ROUND_META[cur.round_key] || {};
         return `<div class="status-card"${act('round-detail', { round: cur.round_key, title: cur.round_name_ar || roundLabel(cur.round_key), gid: g.group_id, count: g.total_students || 0, matrix: cur.round_order + '_' + cur.round_key })}>
-          <div><div class="status-group-name">جروب ${esc(g.group_id)}</div><div class="status-round-name">${meta.icon || ''} ${esc(cur.round_name_ar || roundLabel(cur.round_key))}</div></div>${statusBadge(st(cur))}</div>`;
+          <div><div class="status-group-name">جروب ${esc(g.group_id)}</div><div class="status-round-name">${roundIcon(cur.round_key)} ${esc(cur.round_name_ar || roundLabel(cur.round_key))}</div></div>${statusBadge(st(cur))}</div>`;
       }).join('')}
     </div>
 
-    <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>👥 بيانات ومطابقة قوام الجروبات</h2>
+    <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('users')} بيانات ومطابقة قوام الجروبات</h2>
     <div class="table-wrap">
-      <div class="table-header"><span class="table-title">قائمة الجروبات وتوزيع الجنس</span><input type="search" class="table-search" id="groups-search" placeholder="🔍 تصفية الجروبات…" autocomplete="off"></div>
+      <div class="table-header"><span class="table-title">قائمة الجروبات وتوزيع الجنس</span><input type="search" class="table-search" id="groups-search" placeholder="${ico('search')} تصفية الجروبات…" autocomplete="off"></div>
       <div class="table-scroll">
         <table id="groups-table" class="table-cards">
           <thead><tr><th data-col="group_id">رقم الجروب</th><th data-col="group_name">اسم الجروب</th><th data-col="total_students">الإجمالي</th><th data-col="female_count">طالبات</th><th data-col="male_count">طلاب</th><th data-col="unknown">غير محدد</th><th data-col="type">التصنيف</th></tr></thead>
@@ -105,7 +105,7 @@ function renderOverview(container) {
               const tot = parseInt(g.total_students, 10) || 0, f = parseInt(g.female_count, 10) || 0, m = parseInt(g.male_count, 10) || 0, unk = Math.max(0, tot - (f + m));
               return `<tr class="clickable-row"${act('group-roster', { gid: g.group_id })}>
                 <td class="num" data-col="group_id" data-label="الجروب" data-sort="${esc(g.group_id)}"><span class="cartouche-badge">جروب ${esc(g.group_id)}</span></td>
-                <td data-col="group_name" data-label="الاسم"><strong>${esc(g.group_name || '—')} ↗</strong></td>
+                <td data-col="group_name" data-label="الاسم"><strong>${esc(g.group_name || '—')} ${ico('external')}</strong></td>
                 <td class="num" data-col="total_students" data-label="الإجمالي"><b>${tot}</b></td>
                 <td class="num gender-f" data-col="female_count" data-label="طالبات">${f}</td>
                 <td class="num gender-m" data-col="male_count" data-label="طلاب">${m}</td>
@@ -136,11 +136,11 @@ function buildOverviewAlerts() {
   const alerts = [];
   DB.stationsUnits.forEach((u) => {
     const cap = parseInt(u.capacity, 10), reg = parseInt(u.registered, 10);
-    if (!isNaN(cap) && cap > 0 && !isNaN(reg) && reg > cap) alerts.push({ type: 'rose', icon: '🚨', attrs: act('goto-unit', { unit: u.unit_name }), html: `<strong>${esc(u.unit_name)}:</strong> تجاوزت الطاقة الاستيعابية — مسجل <strong class="num">${reg}</strong> وطاقتها <strong class="num">${cap}</strong>.` });
+    if (!isNaN(cap) && cap > 0 && !isNaN(reg) && reg > cap) alerts.push({ type: 'rose', icon: ico('alert-triangle'), attrs: act('goto-unit', { unit: u.unit_name }), html: `<strong>${esc(u.unit_name)}:</strong> تجاوزت الطاقة الاستيعابية — مسجل <strong class="num">${reg}</strong> وطاقتها <strong class="num">${cap}</strong>.` });
   });
-  if (DB.unregistered.length) alerts.push({ type: 'amber', icon: '⚠️', attrs: act('goto-page', { page: 'not-registered' }), html: `يوجد <strong class="num">${DB.unregistered.length}</strong> طالب/ة غير مسجلين في الدورة الثانية حتى الآن.` });
+  if (DB.unregistered.length) alerts.push({ type: 'amber', icon: ico('warning'), attrs: act('goto-page', { page: 'not-registered' }), html: `يوجد <strong class="num">${DB.unregistered.length}</strong> طالب/ة غير مسجلين في الدورة الثانية حتى الآن.` });
   const issues = (DB.issues || []).length + (DB.issuesR2 || []).length;
-  if (CFG().SHOW_DATA_NOTES && issues) alerts.push({ type: 'plum', icon: '🧾', attrs: act('data-notes'), html: `ملاحظات جودة البيانات: <strong class="num">${issues}</strong> ملاحظة.` });
+  if (CFG().SHOW_DATA_NOTES && issues) alerts.push({ type: 'plum', icon: ico('receipt'), attrs: act('data-notes'), html: `ملاحظات جودة البيانات: <strong class="num">${issues}</strong> ملاحظة.` });
   return alerts;
 }
 

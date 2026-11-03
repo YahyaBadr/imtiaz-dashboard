@@ -19,17 +19,17 @@ function renderNotRegistered(container) {
     <div class="card card-sm" style="margin-bottom: calc(var(--gap)*1.5); background:#FFFFFF; border-right:4px solid var(--c-amber)">
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:1.4rem">⚠️</span>
+          <span class="empty-ico">${ico('warning')}</span>
           <div>
             <div style="font-size:1.15rem; font-weight:700; color:var(--c-plum); display:flex; align-items:center; gap:8px">${lotusSvg}<span>الطلاب غير المسجلين بالدورة الثانية (R2)</span></div>
             <div style="font-size:0.86rem; color:var(--c-text-muted); margin-top:2px">الإجمالي: <strong class="num" style="color:var(--c-rose)">${totalMissing}</strong> طالب/ة لم يعتمد تسجيلهم حتى الآن</div>
           </div>
         </div>
-        ${btn('📋 نسخ جميع الأسماء غير المسجلة', 'copy-all-nr', null, 'btn-plum')}
+        ${btn('نسخ جميع الأسماء غير المسجلة', 'copy-all-nr', null, 'btn-plum')}
       </div>
     </div>
 
-    ${totalMissing === 0 ? `<div class="card" style="text-align:center; padding:48px; color:var(--c-green)"><p style="font-size:2.5rem; margin-bottom:12px">✓</p><p style="font-weight:700; font-size:1.1rem">جميع الطلاب مسجلون في الدورة الثانية بالكامل</p></div>` : sortedRounds.map(rk => buildRoundSection(rk, byRound[rk])).join('')}
+    ${totalMissing === 0 ? `<div class="card" style="text-align:center; padding:48px; color:var(--c-green)"><p style="font-size:2.5rem; margin-bottom:12px">${ico('check')}</p><p style="font-weight:700; font-size:1.1rem">جميع الطلاب مسجلون في الدورة الثانية بالكامل</p></div>` : sortedRounds.map(rk => buildRoundSection(rk, byRound[rk])).join('')}
   `;
 }
 
@@ -48,7 +48,7 @@ function buildRoundSection(roundKey, groupsMap) {
 function buildGroupBlock(groupId, students, roundKey) {
   const blockId = 'nr-block-' + roundKey + '-g' + groupId;
   const rows = students.map(s => {
-    const gIcon = s.gender === 'M' ? '<span class="gender-m">♂</span>' : s.gender === 'F' ? '<span class="gender-f">♀</span>' : '';
+    const gIcon = s.gender === 'M' ? "<span class=\"gender-m\">${ico('male')}</span>" : s.gender === 'F' ? "<span class=\"gender-f\">${ico('female')}</span>" : '';
     const sKey = `${groupId}_${s.code_short}`.replace(/\s+/g, ''); 
     return `<div class="copyable-name" data-name="${esc(s.full_name)}" data-code="${esc(s.code_short || '')}" data-group="${esc(groupId)}">${gIcon}<span class="clickable-student-name"${act('student', { sid: sKey })} title="اضغط لفتح الملف الكامل للطالب">${esc(s.full_name || 'غير محدد')}</span><span class="student-code">${esc(s.code_short || '—')}</span></div>`;
   }).join('');
@@ -57,7 +57,7 @@ function buildGroupBlock(groupId, students, roundKey) {
     <div style="margin-bottom: var(--gap)">
       <div class="nr-header">
         <div style="display:flex; align-items:center; gap:8px"><span class="cartouche-badge">جروب ${groupId}</span><span style="font-weight:700; font-size:0.92rem; color:var(--c-plum)">طلاب غير مسجلين</span></div>
-        <div style="display:flex; gap:8px; align-items:center"><span class="badge badge-grey num">${students.length} طلاب</span>${btn('📋 نسخ', 'copy-block', { block: blockId, label: 'جروب ' + groupId + ' — ' + roundLabel(roundKey) }, 'btn-surface btn-sm')}</div>
+        <div style="display:flex; gap:8px; align-items:center"><span class="badge badge-grey num">${students.length} طلاب</span>${btn('نسخ', 'copy-block', { block: blockId, label: 'جروب ' + groupId + ' — ' + roundLabel(roundKey) }, 'btn-surface btn-sm')}</div>
       </div>
       <div class="copyable-list"><div class="copyable-list-inner" id="${blockId}">${rows}</div></div>
     </div>`;
@@ -69,7 +69,7 @@ window.copyBlock = function (blockId, label) {
     const n = el.querySelector('.clickable-student-name'), c = el.querySelector('.student-code');
     return `${(n ? n.textContent : '').trim()}\t${(c ? c.textContent : '').trim()}`;
   });
-  copyText(`${label} (${names.length}):\n` + names.join('\n'), `تم نسخ ${names.length} اسماً ✓`);
+  copyText(`${label} (${names.length}):\n` + names.join('\n'), `تم نسخ ${names.length} اسماً ${ico('check')}`);
 };
 
 window.copyAllNotRegistered = function () {
@@ -78,7 +78,7 @@ window.copyAllNotRegistered = function () {
     return `${(n ? n.textContent : '').trim()}\t${(c ? c.textContent : '').trim()}\tجروب ${el.dataset.group || ''}`;
   });
   if (!allRows.length) { toast('لا توجد أسماء لنسخها'); return; }
-  copyText('قائمة الطلاب غير المسجلين بالدورة الثانية:\n' + allRows.join('\n'), `تم نسخ ${allRows.length} اسماً ✓`);
+  copyText('قائمة الطلاب غير المسجلين بالدورة الثانية:\n' + allRows.join('\n'), `تم نسخ ${allRows.length} اسماً ${ico('check')}`);
 };
 
 

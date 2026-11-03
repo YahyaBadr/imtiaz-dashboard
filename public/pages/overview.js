@@ -96,7 +96,7 @@ function renderOverview(container) {
 
     <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('users')} بيانات ومطابقة قوام الجروبات</h2>
     <div class="table-wrap">
-      <div class="table-header"><span class="table-title">قائمة الجروبات وتوزيع الجنس</span><input type="search" class="table-search" id="groups-search" placeholder="${ico('search')} تصفية الجروبات…" autocomplete="off"></div>
+      <div class="table-header"><span class="table-title">قائمة الجروبات وتوزيع الجنس</span><input type="search" class="table-search" id="groups-search" placeholder="تصفية الجروبات…" aria-label="تصفية الجروبات" autocomplete="off"></div>
       <div class="table-scroll">
         <table id="groups-table" class="table-cards">
           <thead><tr><th data-col="group_id">رقم الجروب</th><th data-col="group_name">اسم الجروب</th><th data-col="total_students">الإجمالي</th><th data-col="female_count">طالبات</th><th data-col="male_count">طلاب</th><th data-col="unknown">غير محدد</th><th data-col="type">التصنيف</th></tr></thead>

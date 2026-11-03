@@ -991,7 +991,7 @@ window.openStudentProfile = function (rawKey, opts) {
               <div><div class="k">الرقم القومي</div>
                 <div class="v"><span id="nid-display" class="num" data-masked="${showNid ? '0' : '1'}">${esc(showNid ? rawNid || masked : masked)}</span>
                 ${rawNid ? `<button type="button" class="btn btn-surface btn-sm" id="nid-toggle-btn" data-action="toggle-nid" data-sid="${esc(sid)}" aria-label="إظهار/إخفاء الرقم القومي">${showNid ? ico('eye-off') : ico('eye')}</button>` : ''}</div>
-                ${student.nid_status === 'check' ? "<span class=\"badge badge-amber\">${ico('warning')} يحتاج مراجعة</span>" : ''}</div>
+                ${student.nid_status === 'check' ? `<span class="badge badge-amber">${ico('warning')} يحتاج مراجعة</span>` : ''}</div>
               <div><div class="k">تاريخ الميلاد / السن</div><div class="v"><span class="num">${esc(birth || 'غير محدد')}</span> <small class="muted">(${esc(computeAge(birth))})</small></div></div>
               <div class="span2 divider"><span class="k">تاريخ التسجيل:</span> <strong class="num">${esc(reg || 'غير محدد')}</strong></div>
             </div>
@@ -1003,7 +1003,7 @@ window.openStudentProfile = function (rawKey, opts) {
               <div class="contact-row">
                 <div class="grow"><div class="k">رقم الهاتف</div>
                   <div class="v big">${phoneEmpty ? '<span class="muted">غير متوفر</span>' : `<span class="num" dir="ltr">${esc(phone)}</span>`}
-                  ${student.phone_status === 'check' ? "<span class=\"badge badge-amber\">${ico('warning')} يحتاج مراجعة</span>" : ''}</div></div>
+                  ${student.phone_status === 'check' ? `<span class="badge badge-amber">${ico('warning')} يحتاج مراجعة</span>` : ''}</div></div>
                 ${phoneEmpty ? '' : `<div class="contact-actions">
                   <a href="tel:${esc(phone)}" class="btn btn-plum btn-sm">${ico('phone')} اتصال</a>
                   <a href="${esc(wa)}" target="_blank" rel="noopener" class="btn btn-emerald btn-sm">${ico('whatsapp')} واتساب</a>

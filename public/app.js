@@ -1236,6 +1236,21 @@ window.updateNavBadges = function () {
 };
 window.addEventListener('resize', () => { window.moveNavIndicator && window.moveNavIndicator(); }, { passive: true });
 
+/* البند 2 (دورة الإصلاحات الدقيقة): إعادة رسم المصفوفة عند عبور حد 1200px
+   لأن الصياغة الرأسية تُبنى من نفس الـ HTML — لا داعي لإعادة الرسم قبل اكتمال بناء DB */
+(function () {
+  let wasWide = null;
+  const mq = window.matchMedia('(min-width: 1200px)');
+  const apply = () => {
+    if (wasWide === null) { wasWide = mq.matches; return; }   // أول قياس — الرسم الأول يتم عبر التنقل العادي
+    if (wasWide === mq.matches) return;
+    wasWide = mq.matches;
+    const el = document.getElementById('page-schedule');
+    if (el && typeof renderSchedule === 'function' && window.DB && DB.groups) { try { renderSchedule(el); } catch (e) { console.warn('gantt remount:', e); } }
+  };
+  if (mq.addEventListener) mq.addEventListener('change', apply); else mq.addListener(apply);
+})();
+
 window.showPage = function (pageId) {
   const pageEl = document.getElementById('page-' + pageId);
   if (!pageEl) return;

@@ -1042,6 +1042,12 @@ html.dark .nav-btn.active .nav-ico { color: var(--c-gold); }
   pointer-events: none; z-index: 2;
 }
 .nav-indicator.show { opacity: 1; }
+@media (max-width: 480px) {
+  /* الشريط قابل للتمرير الأفقي النظيف؛ المؤشر عنصر داخل تدفق .nav-inner فيتبع التمرير تلقائياً */
+  .nav-inner { scroll-snap-type: x proximity; }
+  .nav-btn { flex-shrink: 0; white-space: nowrap; scroll-snap-align: start; }
+  .nav-count { flex-shrink: 0; }
+}
 /* حذف المؤثر القديم ::after من كل تبويب — المؤشر المنزلق وحده يكفي */
 .nav-btn::after { content: none !important; }
 /* شريط أفقي مع قناع تلاشٍ عند الحافتين على الشاشات الصغيرة */
@@ -1088,3 +1094,39 @@ html.dark .gantt-row:nth-child(even) .gantt-cell { background: rgba(255, 255, 25
 
 /* عطل 4: دعم data-theme="dark" بجانب html.dark حتى يتطابق أي مُبدِّل ثيم مع الـ tokens */
 html[data-theme="dark"] { color-scheme: dark; }
+
+/* ═══════ دورة الموبايل (≤480px) — بنود 2–5 ═══════ */
+@media (max-width: 480px) {
+  /* البند 2: شريط الأدوات — صف واحد نظيف، أزرار موحّدة ≥44px، صفر التفاف نص، صفر قصّ عند الحواف */
+  .header-actions { flex-wrap: nowrap; justify-content: flex-start; overflow: visible; gap: 8px; margin: 0 calc(var(--gap) * -1); padding: 0 var(--gap); }
+  .header-btn, .header-btn-icon {
+    height: 44px; min-width: 44px; padding: 0 10px; border-radius: 12px;
+    font-size: 0.8rem; white-space: nowrap; flex-shrink: 0;
+  }
+  .header-btn .btn-txt { display: none; }                 /* كل الأزرار icon-only… */
+  #export-btn .btn-txt { display: inline; }               /* …عدا "تصدير" (أيقونة + نص + سهم قائمة) */
+  .seg-group { gap: 8px; flex-shrink: 0; }
+  .export-caret svg { width: 14px; height: 14px; }
+  /* toggle الثيم: pill كاملة وليست نصف دائرة */
+  #theme-toggle, #theme-toggle.header-btn-icon { width: 56px; border-radius: 999px; padding: 0; justify-content: center; }
+  .who-chip { max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* زر التثبيت ونصه: لا يلتف على سطرين */
+  #install-btn { white-space: nowrap; }
+  #install-btn .btn-txt { display: none; }                /* على الموبايل أيقونة فقط بلمسة ≥44 */
+
+  /* البند 4: المصفوفة — عرض راوند ≥260px، snap، بداية التمرير من أول عمود (الحافة اليمنى RTL) */
+  .gantt-matrix-table th:not(.gantt-sticky-head), .gantt-cell { min-width: 260px; }
+  .gantt-scroll { scroll-snap-type: x proximity; overscroll-behavior-x: contain; }
+  .gantt-scroll .gantt-cell { scroll-snap-align: start; }
+  /* شارة الجروب sticky بخلفية معتمة تطابق الثيم */
+  .gantt-sticky-col { background: rgba(247, 242, 232, 0.92); backdrop-filter: blur(4px); }
+  html.dark .gantt-sticky-col { background: rgba(30, 22, 34, 0.92); }
+}
+
+/* البند 5: safe-area + منع أي تمرير أفقي عام */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .site-nav { padding-inline: env(safe-area-inset-left) env(safe-area-inset-right); }
+  .main-content { padding-bottom: calc(var(--gap) + env(safe-area-inset-bottom)); }
+  .toast, .verify-badge { bottom: calc(12px + env(safe-area-inset-bottom)); }
+}
+

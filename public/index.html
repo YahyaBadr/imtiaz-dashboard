@@ -48,14 +48,11 @@
           <button type="button" class="header-btn header-btn-icon hidden" id="install-close" data-action="dismiss-install" title="إخفاء زر التثبيت" aria-label="إخفاء زر التثبيت">
             <span class="btn-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
           </button>
-          <button type="button" class="header-btn" id="refresh-btn" data-action="refresh" title="تحديث البيانات">
-            <span class="btn-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg></span><span class="btn-txt">تحديث</span>
+          <button type="button" class="header-btn header-btn-icon" id="search-btn" data-action="search-open" title="بحث" aria-label="بحث">
+            <span class="btn-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
           </button>
-          <button type="button" class="header-btn" id="search-btn" data-action="search-open" title="بحث">
-            <span class="btn-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span><span class="btn-txt">بحث</span>
-          </button>
-          <button type="button" class="header-btn desk-only" id="presentation-btn" data-action="toggle-presentation" title="وضع العرض على الشاشة">
-            <span class="btn-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></span><span class="btn-txt">وضع العرض</span>
+          <button type="button" class="header-btn header-btn-icon desk-only" id="presentation-btn" data-action="toggle-presentation" title="وضع العرض على الشاشة" aria-label="وضع العرض على الشاشة">
+            <span class="btn-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></span>
           </button>
           <div class="seg-group" role="group" aria-label="أدوات اللوحة">
           <div class="export-wrap">
@@ -68,9 +65,6 @@
           </button>
           </div>
           <span class="who-chip hidden" id="who-chip" title="المستخدم الحالي"></span>
-          <button type="button" class="header-btn header-btn-lock" id="lock-btn" data-action="lock" title="قفل اللوحة" aria-label="قفل اللوحة">
-            <span class="btn-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="btn-txt">قفل</span>
-          </button>
         </div>
 
         <div class="logo-wrapper area-logo-l"><img src="assets/college_logo.png" alt="كلية الطب البيطري" class="header-logo" onerror="this.style.display='none'"></div>

@@ -374,9 +374,22 @@ window.openModal = function (title, bodyHTML, opts) {
   return overlay;
 };
 
+// زر عام قابل للضغط داخل أي نافذة/صفحة — يستخدم نفس معالج الضغطات الموحّد
+window.btn = function (label, action, data, cls) {
+  let s = `<button type="button" class="btn ${cls || 'btn-plum'}" data-action="${esc(action)}"`;
+  Object.keys(data || {}).forEach((k) => { if (data[k] !== undefined && data[k] !== null) s += ` data-${k}="${esc(data[k])}"`; });
+  return s + `>${label}</button>`;
+};
+
 /* ───────────────────────── 6) قوائم الطلاب ───────────────────────── */
 
 window._rawRows = [];
+
+// يتكرر في كل نافذة: منع تمرير الصفحة خلف النافذة + إخفاء بحث الهيدر على الهاتف
+document.addEventListener('click', (e) => {
+  const box = e.target.closest && e.target.closest('.modal-box');
+  if (box) box.style.overflowY = 'auto';
+});
 
 window.renderStudentListModal = function (title, rows, opts) {
   opts = opts || {};
@@ -394,7 +407,7 @@ window.renderStudentListModal = function (title, rows, opts) {
   const html = `
     ${opts.breadcrumb ? `<div class="breadcrumb-bar">${esc(opts.breadcrumb)}</div>` : ''}
     <div class="list-toolbar">
-      <input type="search" class="table-search grow" placeholder="🔍 بحث في القائمة…" data-filter-list="#student-list-body" autocomplete="off">
+      <input type="search" class="table-search grow" placeholder="🔍 بحث في القائمة…" data-filter-list="#student-list-body" autocomplete="off" enterkeyhint="search">
       <span class="badge badge-plum num" id="list-count">${items.length}</span>
     </div>
     <div class="slist" id="student-list-body">
@@ -642,21 +655,39 @@ window.VERIFY = {
 /* ───────────────────────── 11) التثبيت (PWA) ───────────────────────── */
 
 let deferredPrompt = null;
-const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-function setInstallVisible(v) { const b = document.getElementById('install-btn'); if (b) b.classList.toggle('hidden', !v); }
+let installDismissed = false;
+try { installDismissed = sessionStorage.getItem('imtiaz_install_dismissed') === '1'; } catch (e) { /* ignore */ }
 
-window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; if (!isStandalone()) setInstallVisible(true); });
-window.addEventListener('appinstalled', () => { deferredPrompt = null; setInstallVisible(false); toast('تم تثبيت التطبيق ✓'); });
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches
+  || window.matchMedia('(display-mode: fullscreen)').matches
+  || window.navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+function setInstallVisible(v) {
+  const b = document.getElementById('install-btn'), x = document.getElementById('install-close');
+  if (b) b.classList.toggle('hidden', !v);
+  if (x) x.classList.toggle('hidden', !v);            // زر ✕ يظهر فقط عندما يظهر زر التثبيت
+}
+function canShowInstall() { return !isStandalone() && !installDismissed; }
+
+window.dismissInstall = function () {
+  installDismissed = true;
+  try { sessionStorage.setItem('imtiaz_install_dismissed', '1'); } catch (e) { /* ignore */ }
+  setInstallVisible(false);
+};
+
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; setInstallVisible(canShowInstall()); });
+window.addEventListener('appinstalled', () => { deferredPrompt = null; setInstallVisible(false); toast('تم تثبيت التطبيق ✓ — افتحه من أيقونة الشاشة الرئيسية'); });
 
 window.installApp = async function () {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    try { const r = await deferredPrompt.userChoice; if (r && r.outcome === 'accepted') setInstallVisible(false); } catch (e) { /* ignore */ }
-    deferredPrompt = null; return;
+  if (deferredPrompt) {                                   // Chrome/Edge/Android: native install dialog
+    try { deferredPrompt.prompt(); } catch (e) { /* ignore */ }
+    try { const r = await deferredPrompt.userChoice; if (r && r.outcome === 'accepted') { setInstallVisible(false); toast('تم التثبيت ✓'); } } catch (e) { /* ignore */ }
+    deferredPrompt = null;
+    return;
   }
   const ios = isIOS();
-  openModal('تثبيت التطبيق', ios ? `
+  openModal('تثبيت التطبيق على جهازك', ios ? `
     <ol class="install-steps">
       <li>افتح الموقع في متصفح <strong>Safari</strong>.</li>
       <li>اضغط زر <strong>المشاركة</strong> <span class="kbd">⬆︎</span> أسفل الشاشة.</li>
@@ -672,7 +703,8 @@ window.installApp = async function () {
 
 function initInstallUI() {
   if (isStandalone()) { setInstallVisible(false); return; }
-  if (isIOS()) setInstallVisible(true);          // iOS لا يرسل beforeinstallprompt → نعرض الزر مع شرح الخطوات
+  setInstallVisible(canShowInstall());           // نعرض الزر دائماً حتى يتم التثبيت أو يُغلق يدوياً
+  window.addEventListener('focus', () => { if (!deferredPrompt) setInstallVisible(canShowInstall()); });
 }
 
 function registerSW() {
@@ -802,6 +834,8 @@ const ACTIONS = {
   'retry': () => { document.getElementById('error-screen').classList.add('hidden'); const ld = document.getElementById('loading-screen'); ld.classList.remove('hidden'); refreshData({ firstPaint: true }).catch((e) => { console.error(e); showError({ students: e.message }); }); },
   'print': () => window.print(),
   'install': () => installApp(),
+  'dismiss-install': () => dismissInstall(),
+  'round-detail': (el) => openRoundDetailModal(el.dataset.round, el.dataset.title || roundLabel(el.dataset.round), el.dataset.gid, el.dataset.count, el.dataset.matrix),
   'toggle-presentation': () => togglePresentationMode(),
   'close-overlay': (el) => { const ov = el.closest('.modal-overlay'); if (ov) Overlays.closeEl(ov); },
   'hide-verify': () => document.getElementById('verify-badge').classList.add('hidden'),
@@ -814,6 +848,24 @@ const ACTIONS = {
   }
 };
 window.registerAction = function (name, fn) { ACTIONS[name] = fn; };
+
+// فتح صفحة الوحدات البيطرية مع فتح وحدة بعينها وتمرير الشاشة إليها
+registerAction('goto-unit', (el) => {
+  Overlays.closeAll();
+  showPage('units');
+  const want = String(el.dataset.unit || '').trim();
+  setTimeout(() => {
+    const cards = document.querySelectorAll('#units-grid .unit-card');
+    for (const card of cards) {
+      const name = card.querySelector('.unit-name');
+      if (name && normAr(name.textContent) === normAr(want)) {
+        card.classList.add('open');
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+  }, 120);
+});
 
 document.addEventListener('click', (e) => {
   const ov = e.target;

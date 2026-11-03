@@ -1,157 +1,175 @@
 'use strict';
 
-function renderOverview(container) {
-  const totalStudents = DB.groups.reduce((acc, g) => acc + (parseInt(g.total_students, 10) || 0), 0);
-  const r2TotalReg = DB.round2Summary.reduce((acc, r) => acc + (parseInt(r.registered, 10) || 0), 0);
-  const r2TotalMissing = DB.round2Summary.reduce((acc, r) => acc + (parseInt(r.not_registered, 10) || 0), 0);
+/* ═══ صفحة الملخص — كل عنصر هنا قابل للضغط (data-action) ═══ */
 
-  const todayStr = getTodayStr();
-  const r2StartDate = '2026-11-07';
-  let r2TagText = '';
-  if (todayStr < r2StartDate) {
-    const msDiff = new Date(r2StartDate + 'T00:00:00') - new Date(todayStr + 'T00:00:00');
-    const daysRemaining = Math.max(1, Math.ceil(msDiff / (1000 * 60 * 60 * 24)));
-    r2TagText = `الدورة الثانية: تبدأ خلال ${daysRemaining} أيام (${r2StartDate})`;
-  } else if (todayStr <= '2026-12-24') {
-    r2TagText = 'الدورة الثانية (الجارية)';
-  } else {
-    r2TagText = 'الدورة الثانية (انتهت)';
+function renderOverview(container) {
+  const totalStudents = DB.groups.reduce((a, g) => a + (parseInt(g.total_students, 10) || 0), 0) || DB.students.length;
+  const r2Reg = DB.round2Summary.reduce((a, r) => a + (parseInt(r.registered, 10) || 0), 0);
+  const r2Missing = DB.round2Summary.reduce((a, r) => a + (parseInt(r.not_registered, 10) || 0), 0);
+
+  // وسم الدورة الثانية — التواريخ من شيت 09_round_dates وليست ثابتة في الكود
+  const d2 = getRoundDates('2');
+  let r2Tag = 'الدورة الثانية';
+  if (d2.start) {
+    const left = daysUntil(d2.start);
+    if (left !== null && left > 0) r2Tag = `الدورة الثانية: تبدأ خلال ${left} ${left === 1 ? 'يوم' : left === 2 ? 'يومين' : left <= 10 ? 'أيام' : 'يوماً'} (${d2.start})`;
+    else if (computeStatus(d2.start, d2.end) === 'current') r2Tag = 'الدورة الثانية (الجارية الآن)';
+    else if (computeStatus(d2.start, d2.end) === 'finished') r2Tag = 'الدورة الثانية (انتهت)';
+    else r2Tag = `الدورة الثانية: تبدأ اليوم (${d2.start})`;
   }
 
   const prefAverages = computeFieldPreferences();
   const alerts = buildOverviewAlerts();
 
   container.innerHTML = `
-    <div class="hero-band">
+    <section class="hero-band">
       <div class="hero-header">
-        <div class="hero-title"><span>🏛️</span><span>المؤشرات الرئيسية للإمتياز البيطري</span></div>
-        <span class="hero-tag" id="hero-r2-tag">${r2TagText}</span>
+        <div class="hero-title"><span aria-hidden="true">🏛️</span><span>المؤشرات الرئيسية للإمتياز البيطري</span></div>
+        <span class="hero-tag">${esc(r2Tag)}</span>
       </div>
       <div class="hero-stats-grid">
-        <div class="hero-stat-card" onclick="openStudentDirectoryModal()"><div class="hero-stat-number num" id="hero-cnt-students">0</div><div class="hero-stat-label">إجمالي طلاب الدفعة المقيدين ↗</div></div>
-        <div class="hero-stat-card" onclick="openRegisteredR2Modal()"><div class="hero-stat-number num" id="hero-cnt-reg">0</div><div class="hero-stat-label">مسجلون في مواقع التدريب (دورة 2) ↗</div></div>
-        <div class="hero-stat-card" onclick="showPage('not-registered')"><div class="hero-stat-number num" id="hero-cnt-missing" style="color:var(--c-amber)">0</div><div class="hero-stat-label">طلاب غير مسجلين (دورة 2) ↗</div></div>
+        <div class="hero-stat-card"${act('directory')}><div class="hero-stat-number num" id="hero-cnt-students">0</div><div class="hero-stat-label">إجمالي طلاب الدفعة المقيدين <span class="go">↗</span></div></div>
+        <div class="hero-stat-card"${act('r2-registered')}><div class="hero-stat-number num" id="hero-cnt-reg">0</div><div class="hero-stat-label">مسجلون في مواقع التدريب (دورة 2) <span class="go">↗</span></div></div>
+        <div class="hero-stat-card"${act('goto-page', { page: 'not-registered' })}><div class="hero-stat-number num amber" id="hero-cnt-missing">0</div><div class="hero-stat-label">طلاب غير مسجلين (دورة 2) <span class="go">↗</span></div></div>
       </div>
-    </div>
+    </section>
 
-    ${alerts.length > 0 ? `<h2 class="section-title">⚠️ تنبيهات هامة ومتابعات فورية</h2><div class="alerts-strip">${alerts.map(a => `<div class="alert-item alert-${a.type}" onclick="${a.action}"><span class="alert-icon">${a.icon}</span><div style="flex:1">${a.html}</div><span style="font-size:0.8rem; color:var(--c-text-muted)">عرض ↗</span></div>`).join('')}</div>` : ''}
+    ${alerts.length ? `<h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>تنبيهات هامة ومتابعات فورية</h2>
+      <div class="alerts-strip">${alerts.map((a) => `<div class="alert-item alert-${a.type}"${a.attrs}><span class="alert-icon">${a.icon}</span><div class="grow">${a.html}</div><span class="alert-go">عرض ↗</span></div>`).join('')}</div>` : ''}
 
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:var(--gap); margin-bottom:calc(var(--gap)*1.5)">
-      <div>
-        <h2 class="section-title">📊 توزيع التدريب بالدورة الثانية (R2)</h2>
-        <div class="round-summary-grid" style="grid-template-columns:1fr; gap:10px; margin-bottom:0">
-          ${DB.round2Summary.map(r => {
-            const reg = parseInt(r.registered, 10) || 0; const exp = parseInt(r.expected_students, 10) || 0; const miss = parseInt(r.not_registered, 10) || 0;
-            const pct = exp > 0 ? Math.round((reg / exp) * 100) : 0; const rKey = r.round_key;
+    <div class="two-col">
+      <section>
+        <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>📊 توزيع التدريب بالدورة الثانية (R2)</h2>
+        <div class="round-summary-grid">
+          ${DB.round2Summary.map((r) => {
+            const reg = parseInt(r.registered, 10) || 0, exp = parseInt(r.expected_students, 10) || 0, miss = parseInt(r.not_registered, 10) || 0;
+            const pct = exp > 0 ? Math.round((reg / exp) * 100) : 0, rk = r.round_key, meta = ROUND_META[rk] || {};
             return `
-              <div class="round-card" style="cursor:default">
+              <div class="round-card">
                 <div class="round-card-name">
-                  <span>${r.round_name_ar || roundLabel(rKey)}</span>
-                  ${miss > 0 ? `<span class="badge badge-amber num" style="cursor:pointer" onclick="openUnregisteredR2Modal('${rKey}')">${miss} غير مسجل ↗</span>` : `<span class="badge badge-emerald">مكتمل ✓</span>`}
+                  <span>${meta.icon || '📌'} ${esc(r.round_name_ar || roundLabel(rk))}</span>
+                  ${miss > 0 ? `<span class="badge badge-amber num tap"${act('r2-unregistered', { round: rk })}>${miss} غير مسجل ↗</span>` : '<span class="badge badge-emerald">مكتمل ✓</span>'}
                 </div>
                 <div class="round-reg-numbers num">
-                  <span style="cursor:pointer" onclick="openRegisteredR2Modal('${rKey}')">${reg}</span> <span style="font-size:0.9rem; color:var(--c-text-muted)">/</span> <span style="cursor:pointer; color:var(--c-text-muted); font-size:1.2rem;" onclick="openExpectedR2Modal('${rKey}')">${exp} ↗</span>
+                  <button type="button" class="num-link"${act('r2-registered', { round: rk })} aria-label="المسجلون">${reg}</button>
+                  <span class="sep">/</span>
+                  <button type="button" class="num-link muted"${act('r2-expected', { round: rk })} aria-label="المتوقعون">${exp} ↗</button>
                 </div>
                 <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill ${miss > 0 ? 'warn' : ''}" style="width:${Math.min(pct, 100)}%"></div></div><span class="num">${pct}%</span></div>
-                <div class="round-groups-label" style="cursor:pointer" onclick="showPage('schedule')">الجروبات المعنية: <strong>${r.groups || '—'}</strong> ↗</div>
+                <div class="round-groups-label"${act('goto-page', { page: 'schedule' })}>الجروبات المعنية: <strong>${esc(r.groups || '—')}</strong> ↗</div>
+              </div>`;
+          }).join('') || '<div class="empty-note">لا توجد بيانات توزيع.</div>'}
+        </div>
+      </section>
+
+      <section>
+        <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>⭐ المجالات الأكثر طلباً</h2>
+        <div class="card field-pref-card">
+          <div class="muted small">متوسط ترتيب الرغبات (اضغط على أي مجال لعرض من اختاروه أولاً):</div>
+          ${prefAverages.map((item, idx) => {
+            const barWidth = Math.max(15, Math.round(((6 - parseFloat(item.avg)) / 5) * 100));
+            return `
+              <div class="field-bar-item"${act('field-pref', { field: item.field })}>
+                <div class="field-bar-top">
+                  <span class="field-name"><span class="badge badge-gold">#${idx + 1}</span>${esc(item.arabicName)}</span>
+                  <span class="field-avg">متوسط: <strong class="num">${item.avg}</strong> · <span class="num">${item.first}</span> اختاروه أولاً ↗</span>
+                </div>
+                <div class="progress-bar thick"><div class="progress-fill plum" style="width:${barWidth}%"></div></div>
               </div>`;
           }).join('')}
         </div>
-      </div>
-
-      <div>
-        <h2 class="section-title">⭐ المجالات الأكثر طلباً</h2>
-        <div class="card field-pref-card">
-          <div style="font-size:0.84rem; color:var(--c-text-muted); margin-bottom:4px">متوسط ترتيب الرغبات (انقر على أي مجال لعرض الطلاب):</div>
-          <div style="display:flex; flex-direction:column; gap:6px">
-            ${prefAverages.map((item, idx) => {
-              const barWidth = Math.max(15, Math.round(((6 - parseFloat(item.avg)) / 5) * 100));
-              return `
-                <div class="field-bar-item" onclick="openFieldPreferencesModal('${item.field}')">
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:0.86rem">
-                    <span style="font-weight:700; color:var(--c-plum)"><span class="badge badge-gold" style="margin-left:6px; font-size:0.75rem">#${idx + 1}</span>${item.arabicName}</span>
-                    <span style="color:var(--c-text-muted); font-size:0.82rem">متوسط: <strong class="num" style="color:var(--c-plum)">${item.avg}</strong> ↗</span>
-                  </div>
-                  <div class="progress-bar" style="height:8px"><div class="progress-fill" style="width:${barWidth}%; background:var(--c-plum)"></div></div>
-                </div>`;
-            }).join('')}
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
 
-    <h2 class="section-title">🔄 موقع كل جروب الآن في مصفوفة التدريب</h2>
+    <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>🔄 موقع كل جروب الآن في مصفوفة التدريب</h2>
     <div class="status-grid">
-      ${DB.groups.map(g => {
-        const sched = DB.roundSchedule.filter(r => r.group_id === g.group_id);
-        const cur = sched.find(r => computeStatus(r.start_date, r.end_date) === 'current') || sched.find(r => computeStatus(r.start_date, r.end_date) === 'upcoming') || sched[0];
-        return `<div class="status-card" onclick="showPage('schedule')"><div><div class="status-group-name">جروب ${g.group_id}</div><div class="status-round-name">${cur.round_name_ar || roundLabel(cur.round_key)}</div></div>${statusBadge(computeStatus(cur.start_date, cur.end_date))}</div>`;
+      ${DB.groups.map((g) => {
+        const sched = DB.roundSchedule.filter((r) => String(r.group_id) === String(g.group_id)).sort((a, b) => (+a.round_order || 0) - (+b.round_order || 0));
+        if (!sched.length) return `<div class="status-card"${act('group-roster', { gid: g.group_id })}><div><div class="status-group-name">جروب ${esc(g.group_id)}</div><div class="status-round-name">لا يوجد جدول</div></div></div>`;
+        const st = (r) => computeStatus(r.start_date, r.end_date);
+        const cur = sched.find((r) => st(r) === 'current') || sched.find((r) => st(r) === 'upcoming') || sched[sched.length - 1];
+        const meta = ROUND_META[cur.round_key] || {};
+        return `<div class="status-card"${act('round-detail', { round: cur.round_key, title: cur.round_name_ar || roundLabel(cur.round_key), gid: g.group_id, count: g.total_students || 0, matrix: cur.round_order + '_' + cur.round_key })}>
+          <div><div class="status-group-name">جروب ${esc(g.group_id)}</div><div class="status-round-name">${meta.icon || ''} ${esc(cur.round_name_ar || roundLabel(cur.round_key))}</div></div>${statusBadge(st(cur))}</div>`;
       }).join('')}
     </div>
 
-    <h2 class="section-title">👥 بيانات ومطابقة قوام الجروبات</h2>
+    <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>👥 بيانات ومطابقة قوام الجروبات</h2>
     <div class="table-wrap">
-      <div class="table-header"><span class="table-title">قائمة الجروبات وتوزيع الجنس</span><input type="text" class="table-search" id="groups-search" placeholder="🔍 تصفية الجروبات…"></div>
-      <div style="overflow-x:auto">
-        <table id="groups-table">
+      <div class="table-header"><span class="table-title">قائمة الجروبات وتوزيع الجنس</span><input type="search" class="table-search" id="groups-search" placeholder="🔍 تصفية الجروبات…" autocomplete="off"></div>
+      <div class="table-scroll">
+        <table id="groups-table" class="table-cards">
           <thead><tr><th data-col="group_id">رقم الجروب</th><th data-col="group_name">اسم الجروب</th><th data-col="total_students">الإجمالي</th><th data-col="female_count">طالبات</th><th data-col="male_count">طلاب</th><th data-col="unknown">غير محدد</th><th data-col="type">التصنيف</th></tr></thead>
           <tbody>
-            ${DB.groups.map(g => {
-              const tot = parseInt(g.total_students, 10) || 0; const f = parseInt(g.female_count, 10) || 0; const m = parseInt(g.male_count, 10) || 0; const unk = tot - (f + m);
-              const unkBadge = unk > 0 ? `<span class="badge badge-amber num">غير محدد: ${unk}</span>` : `<span style="color:var(--c-text-subtle)">0</span>`;
-              return `<tr class="clickable-row" onclick="openGroupRosterModal('${g.group_id}')"><td class="num" data-col="group_id"><span class="cartouche-badge">جروب ${g.group_id}</span></td><td data-col="group_name"><strong>${g.group_name || '—'} ↗</strong></td><td class="num" data-col="total_students"><b>${tot}</b></td><td class="num gender-f" data-col="female_count">${f}</td><td class="num gender-m" data-col="male_count">${m}</td><td data-col="unknown">${unkBadge}</td><td data-col="type"><span class="badge badge-grey">${g.type || '—'}</span></td></tr>`;
+            ${DB.groups.map((g) => {
+              const tot = parseInt(g.total_students, 10) || 0, f = parseInt(g.female_count, 10) || 0, m = parseInt(g.male_count, 10) || 0, unk = Math.max(0, tot - (f + m));
+              return `<tr class="clickable-row"${act('group-roster', { gid: g.group_id })}>
+                <td class="num" data-col="group_id" data-label="الجروب" data-sort="${esc(g.group_id)}"><span class="cartouche-badge">جروب ${esc(g.group_id)}</span></td>
+                <td data-col="group_name" data-label="الاسم"><strong>${esc(g.group_name || '—')} ↗</strong></td>
+                <td class="num" data-col="total_students" data-label="الإجمالي"><b>${tot}</b></td>
+                <td class="num gender-f" data-col="female_count" data-label="طالبات">${f}</td>
+                <td class="num gender-m" data-col="male_count" data-label="طلاب">${m}</td>
+                <td data-col="unknown" data-label="غير محدد" data-sort="${unk}">${unk > 0 ? `<span class="badge badge-amber num">غير محدد: ${unk}</span>` : '<span class="muted">0</span>'}</td>
+                <td data-col="type" data-label="التصنيف"><span class="badge badge-grey">${esc(g.type || '—')}</span></td></tr>`;
             }).join('')}
           </tbody>
         </table>
       </div>
-    </div>
-  `;
+    </div>`;
 
   animateCountUp(document.getElementById('hero-cnt-students'), totalStudents);
-  animateCountUp(document.getElementById('hero-cnt-reg'), r2TotalReg);
-  animateCountUp(document.getElementById('hero-cnt-missing'), r2TotalMissing);
-
+  animateCountUp(document.getElementById('hero-cnt-reg'), r2Reg);
+  animateCountUp(document.getElementById('hero-cnt-missing'), r2Missing);
   makeTableSortable(document.getElementById('groups-table'));
   makeTableSearchable(document.getElementById('groups-search'), document.getElementById('groups-table'));
 }
 
 function computeFieldPreferences() {
-  const prefs = ['pref_Poultry', 'pref_Equine', 'pref_Pharma_Vaccines', 'pref_FoodSafety_QC', 'pref_LargeAnimal', 'pref_SmallAnimal'];
-  const sums = {}, counts = {};
-  prefs.forEach(p => { sums[p] = 0; counts[p] = 0; });
-  DB.students.forEach(s => { prefs.forEach(p => { const val = parseFloat(s[p]); if (!isNaN(val) && val > 0) { sums[p] += val; counts[p]++; } }); });
-  return prefs.map(p => ({ field: p, arabicName: DB.fieldsMap[p] || p, avg: counts[p] ? (sums[p] / counts[p]).toFixed(2) : '0', count: counts[p] })).sort((a, b) => parseFloat(a.avg) - parseFloat(b.avg));
+  const prefs = DB.prefColumns, sums = {}, counts = {}, first = {};
+  prefs.forEach((p) => { sums[p] = 0; counts[p] = 0; first[p] = 0; });
+  DB.students.forEach((s) => prefs.forEach((p) => { const v = parseFloat(s[p]); if (!isNaN(v) && v > 0) { sums[p] += v; counts[p]++; if (v === 1) first[p]++; } }));
+  return prefs.map((p) => ({ field: p, arabicName: DB.fieldsMap[p] || p, avg: counts[p] ? (sums[p] / counts[p]).toFixed(2) : '0.00', first: first[p] }))
+    .sort((a, b) => parseFloat(a.avg) - parseFloat(b.avg));
 }
 
 function buildOverviewAlerts() {
   const alerts = [];
-  const overCapUnits = DB.stationsUnits.filter(u => { const cap = parseInt(u.capacity, 10); const reg = parseInt(u.registered, 10); return !isNaN(cap) && cap > 0 && !isNaN(reg) && reg > cap; });
-  overCapUnits.forEach(u => alerts.push({ type: 'rose', icon: '🚨', action: "showPage('units')", html: `<strong>${u.unit_name}:</strong> تجاوزت الطاقة الاستيعابية — مسجل <strong class="num">${u.registered}</strong> وطاقتها <strong class="num">${u.capacity}</strong>.` }));
-  const missingCount = DB.unregistered.length;
-  if (missingCount > 0) alerts.push({ type: 'amber', icon: '⚠️', action: "showPage('not-registered')", html: `يوجد <strong class="num">${missingCount}</strong> طالب/ة غير مسجلين في الدورة الثانية حتى الآن.` });
+  DB.stationsUnits.forEach((u) => {
+    const cap = parseInt(u.capacity, 10), reg = parseInt(u.registered, 10);
+    if (!isNaN(cap) && cap > 0 && !isNaN(reg) && reg > cap) alerts.push({ type: 'rose', icon: '🚨', attrs: act('goto-unit', { unit: u.unit_name }), html: `<strong>${esc(u.unit_name)}:</strong> تجاوزت الطاقة الاستيعابية — مسجل <strong class="num">${reg}</strong> وطاقتها <strong class="num">${cap}</strong>.` });
+  });
+  if (DB.unregistered.length) alerts.push({ type: 'amber', icon: '⚠️', attrs: act('goto-page', { page: 'not-registered' }), html: `يوجد <strong class="num">${DB.unregistered.length}</strong> طالب/ة غير مسجلين في الدورة الثانية حتى الآن.` });
+  const issues = (DB.issues || []).length + (DB.issuesR2 || []).length;
+  if (CFG().SHOW_DATA_NOTES && issues) alerts.push({ type: 'plum', icon: '🧾', attrs: act('data-notes'), html: `ملاحظات جودة البيانات: <strong class="num">${issues}</strong> ملاحظة.` });
   return alerts;
 }
 
-window.openRegisteredR2Modal = function(roundKey = null) {
-  const filtered = roundKey ? DB.assignments.filter(a => a.round_key === roundKey) : DB.assignments;
-  const students = filtered.map(a => DB.studentLookup[`${a.group_id}_${a.code_short}`.replace(/\s+/g, '')] || a);
-  renderStudentListModal(roundKey ? `المسجلون في ${roundLabel(roundKey)}` : 'مسجلون بالدورة الثانية', students);
+/* ── قوائم الدورة الثانية ── */
+function rowsToStudents(rows) { return rows.map((a) => resolveStudent(a) || a); }
+
+window.openRegisteredR2Modal = function (roundKey, opts) {
+  const rows = roundKey ? DB.assignments.filter((a) => a.round_key === roundKey) : DB.assignments;
+  return renderStudentListModal(roundKey ? `المسجلون في ${roundLabel(roundKey)}` : 'المسجلون بالدورة الثانية', rows, opts);
+};
+window.openUnregisteredR2Modal = function (roundKey, opts) {
+  return renderStudentListModal(`غير المسجلين في ${roundLabel(roundKey)}`, DB.unregistered.filter((u) => u.round_key === roundKey), opts);
+};
+window.openExpectedR2Modal = function (roundKey, opts) {
+  const all = [...DB.assignments.filter((a) => a.round_key === roundKey), ...DB.unregistered.filter((u) => u.round_key === roundKey)];
+  const seen = new Set(), unique = [];
+  all.forEach((it) => { const k = it.student_code || (it.group_id + '_' + it.code_short); if (!seen.has(k)) { seen.add(k); unique.push(it); } });
+  return renderStudentListModal(`الطلاب المتوقعون في ${roundLabel(roundKey)}`, unique, opts);
+};
+window.openFieldPreferencesModal = function (fieldKey) {
+  return renderStudentListModal(`الرغبة الأولى: ${DB.fieldsMap[fieldKey] || fieldKey}`, DB.students.filter((s) => parseInt(s[fieldKey], 10) === 1));
+};
+window.openDataNotesModal = function () {
+  const rows = [...(DB.issues || []).map((r) => ({ who: r.name, code: r.code, grp: r.group, txt: r.problem })), ...(DB.issuesR2 || []).map((r) => ({ who: r.full_name, code: r.code_short, grp: r.group_id, txt: r.issue }))];
+  openModal('ملاحظات جودة البيانات', `<div class="slist">${rows.map((r) => `<div class="slist-row static"><div class="slist-main"><div class="slist-name">${esc(r.who || '—')}</div><div class="slist-sub">جروب ${esc(r.grp || '—')} · كود ${esc(r.code || '—')}</div><div class="issue-txt">${esc(r.txt || '')}</div></div></div>`).join('')}</div>`);
 };
 
-window.openUnregisteredR2Modal = function(roundKey) {
-  const filtered = DB.unregistered.filter(u => u.round_key === roundKey);
-  const students = filtered.map(u => DB.studentLookup[`${u.group_id}_${u.code_short}`.replace(/\s+/g, '')] || u);
-  renderStudentListModal(`غير المسجلين في ${roundLabel(roundKey)}`, students);
-};
-
-window.openExpectedR2Modal = function(roundKey) {
-  const all = [...DB.assignments.filter(a => a.round_key === roundKey), ...DB.unregistered.filter(u => u.round_key === roundKey)];
-  const unique = []; const seen = new Set();
-  all.forEach(item => { const key = `${item.group_id}_${item.code_short}`.replace(/\s+/g, ''); if (!seen.has(key)) { seen.add(key); unique.push(DB.studentLookup[key] || item); } });
-  renderStudentListModal(`الطلاب المتوقعين في ${roundLabel(roundKey)}`, unique);
-};
-
-window.openFieldPreferencesModal = function(fieldKey) {
-  const topStudents = DB.students.filter(s => parseInt(s[fieldKey], 10) === 1);
-  renderStudentListModal(`الرغبة الأولى: ${DB.fieldsMap[fieldKey] || fieldKey}`, topStudents);
-};
+registerAction('r2-registered', (el) => openRegisteredR2Modal(el.dataset.round || null));
+registerAction('r2-unregistered', (el) => openUnregisteredR2Modal(el.dataset.round));
+registerAction('r2-expected', (el) => openExpectedR2Modal(el.dataset.round));
+registerAction('field-pref', (el) => openFieldPreferencesModal(el.dataset.field));
+registerAction('data-notes', () => openDataNotesModal());

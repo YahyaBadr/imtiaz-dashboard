@@ -45,6 +45,18 @@ window.VERIFY = {
 
 // ─── CSV Loader via local PapaParse ──────────────────────────────────────────
 function loadCSV(filename) {
+  // Check if an API URL is configured in config.js
+  if (window.APP_CONFIG && window.APP_CONFIG.API_URL) {
+    const sheetName = filename.replace('.csv', '');
+    return fetch(`${window.APP_CONFIG.API_URL}?sheet=${sheetName}`)
+      .then(res => res.json())
+      .catch(err => {
+        console.error("Error fetching from Google Sheets:", err);
+        return [];
+      });
+  }
+
+  // --- Fallback to local CSV files if API_URL is not set ---
   return new Promise((resolve, reject) => {
     Papa.parse('./data/' + filename, {
       download: true,
@@ -55,7 +67,6 @@ function loadCSV(filename) {
     });
   });
 }
-
 // ─── Clean float group ID ───────────────────────────────────────────────────
 window.cleanGroupId = function(val) {
   if (val === null || val === undefined) return '';

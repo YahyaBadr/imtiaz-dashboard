@@ -13,7 +13,8 @@ function renderNotRegistered(container) {
   const sortedRounds = Object.keys(byRound).sort((a, b) => roundOrder.indexOf(a) - roundOrder.indexOf(b));
   const totalMissing = rows.length;
 
-  const lotusSvg = `<svg class="title-ornament" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
+  // THE FIX: Hardcoded dimensions directly into the SVG
+  const lotusSvg = `<svg class="title-ornament" width="22" height="12" style="width:22px !important; height:12px !important; max-width:22px !important; max-height:12px !important;" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
 
   container.innerHTML = `
     <div class="card card-sm" style="margin-bottom: calc(var(--gap)*1.5); background:#FFFFFF; border-right:4px solid var(--c-amber)">
@@ -49,13 +50,8 @@ function buildGroupBlock(groupId, students, roundKey) {
   const blockId = 'nr-block-' + roundKey + '-g' + groupId;
   const rows = students.map(s => {
     const gIcon = s.gender === 'M' ? '<span class="gender-m">♂</span>' : s.gender === 'F' ? '<span class="gender-f">♀</span>' : '';
-    const sKey = `${groupId}_${s.code_short}`.replace(/\s+/g, ''); // Fixed Key
-    return `
-      <div class="copyable-name" data-name="${escapeAttr(s.full_name)}" data-code="${s.code_short || ''}" data-group="${groupId}">
-        ${gIcon}
-        <span class="clickable-student-name" onclick="openStudentProfile('${sKey}')" title="اضغط لفتح الملف الكامل للطالب">${s.full_name || 'غير محدد'}</span>
-        <span class="student-code">${s.code_short || '—'}</span>
-      </div>`;
+    const sKey = `${groupId}_${s.code_short}`.replace(/\s+/g, ''); 
+    return `<div class="copyable-name" data-name="${escapeAttr(s.full_name)}" data-code="${s.code_short || ''}" data-group="${groupId}">${gIcon}<span class="clickable-student-name" onclick="openStudentProfile('${sKey}')" title="اضغط لفتح الملف الكامل للطالب">${s.full_name || 'غير محدد'}</span><span class="student-code">${s.code_short || '—'}</span></div>`;
   }).join('');
 
   return `

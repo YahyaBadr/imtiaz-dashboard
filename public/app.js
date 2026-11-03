@@ -17,6 +17,7 @@ window.Gate = (function () {
   const SESSION_KEY = 'imtiaz_gate_session_v1';
   const LOCAL_KEY = 'imtiaz_gate_local_pass_v1';
   const ATTEMPTS_KEY = 'imtiaz_gate_attempts_v1';
+  const CACHE_DATA_KEY = 'imtiaz_data_cache_v2';        // كاش بيانات اللوحة (يُمسح عند القفل)
   let unlocked = false, idleTimer = null;
 
   const cfg = () => Object.assign({ ENABLED: true, PASSPHRASE: '', REMEMBER_HOURS: 12, AUTO_LOCK_MINUTES: 0, MAX_ATTEMPTS: 5, LOCKOUT_SECONDS: 30 }, CFG().GATE || {});
@@ -65,8 +66,38 @@ window.Gate = (function () {
   /* ── وضع الجدول: قراءة تبويب Accounts (Username | Password) من نفس Apps Script ── */
   const USERS_LS_KEY = 'imtiaz_gate_users_v1';           // نسخة احتياطية للعمل بدون اتصال
   let usersCache = null;                                  // [{u,p}] في الذاكرة
+  let currentRole = '';                                   // لو أضفت عمود Role في التبويب
 
+  // تطبيع اسم المستخدم فقط — كلمة المرور تُقارَن كما كُتبت في الجدول تماماً
   function normUser(v) { return String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' '); }
+
+  /* ── hash خفيف لكلمات المرور داخل الجدول (FNV-1a مزدوج — لا يُخزَّن نص كلمة المرور) ── */
+  function passHash(s) {
+    const str = String(s || '');
+    let h1 = 0x811c9dc5 >>> 0, h2 = 0x01000193 >>> 0;
+    for (let i = 0; i < str.length; i++) {
+      const cc = str.charCodeAt(i);
+      h1 = Math.imul(h1 ^ cc, 16777619) >>> 0;
+      h2 = Math.imul(h2 + cc + i, 2246822519) >>> 0;
+    }
+    return ('00000000' + h1.toString(16)).slice(-8) + ('00000000' + h2.toString(16)).slice(-8);
+  }
+
+  /* يقرأ أي ترتيب للأعمدة: Username|Password أو user|pass أو «اسم المستخدم»|«كلمة المرور» */
+  function pickPair(r) {
+    const keys = Object.keys(r || {});
+    if (!keys.length) return null;
+    const nk = keys.map((k) => normKey(k));
+    const byName = (list) => { for (let i = 0; i < nk.length; i++) { if (list.indexOf(nk[i]) > -1) return i; } return -1; };
+    let ui = byName(['username', 'user', 'login', 'email', 'id', 'المستخدم', 'اسم_المستخدم', 'اسم_المستخدم']);
+    let pi = byName(['password', 'pass', 'pwd', 'secret', 'الرمز', 'كلمة_المرور', 'كلمة_السر']);
+    if (ui === -1) ui = 0;
+    if (pi === -1) pi = keys.length > 1 ? 1 : -1;
+    if (ui === pi || pi === -1) return null;
+    const u = r[keys[ui]], p = r[keys[pi]];
+    if (!String(u == null ? '' : u).trim() || !String(p == null ? '' : p).trim()) return null;
+    return { u: normUser(u), p: String(p).trim(), role: String(r[nk.indexOf('role') > -1 ? keys[nk.indexOf('role')] : ''] || '').trim() };
+  }
 
   function saveUsersLocal(list) { try { ls.set(USERS_LS_KEY, JSON.stringify({ ts: Date.now(), list: list })); } catch (e) {} }
   function loadUsersLocal() {
@@ -88,31 +119,35 @@ window.Gate = (function () {
       } catch (e) {}
     }
     const name = c.USERS_SHEET_NAME || 'Accounts';
-    const rows = await window.__gateFetchSheet(name);     // دالة تحقن لاحقاً (تتخطى فحص القفل)
+    let rows = [];
+    try {
+      rows = await window.__gateFetchSheet(name);         // دالة تحقن لاحقاً (تتخطى فحص القفل)
+    } catch (err) {
+      const alt = c.USERS_SHEET_NAME_ALT || '';
+      if (!alt || alt === name) throw err;
+      rows = await window.__gateFetchSheet(alt);          // تجربة الاسم البديل (عربي/إنجليزي)
+    }
     const list = [];
-    (rows || []).forEach((r) => {
-      const keys = Object.keys(r);
-      // العمود الأول = اسم المستخدم، الثاني = كلمة المرور (يتوافق مع أي أسماء رؤوس)
-      const u = r[keys[0]] !== undefined ? r[keys[0]] : (r.username || r.Username || r.user || '');
-      const p = r[keys[1]] !== undefined ? r[keys[1]] : (r.password || r.Password || r.pass || '');
-      if (String(u).trim() && String(p).trim()) list.push({ u: normUser(u), p: String(p).trim() });
-    });
+    (rows || []).forEach((r) => { const pair = pickPair(r); if (pair) list.push(pair); });
     if (!list.length) throw new Error('EMPTY_ACCOUNTS');
     usersCache = list; saveUsersLocal(list);
     return list;
   }
 
+  /* كلمة المرور لا تُرسَل إلى Apps Script إطلاقاً — نطلب التبويب مرة واحدة فقط */
   async function verifyAgainstSheet(user, pass) {
     let list;
     try { list = await fetchAccounts(false); }
     catch (e) {
       const fb = loadUsersLocal();
-      if (!fb) throw e;
+      if (!fb) { const ne = new Error('NO_ACCOUNTS_SOURCE'); ne.cause = e; throw ne; }
       list = fb;                                          // بدون إنترنت — استخدم آخر نسخة آمنة
     }
-    const u = normUser(user), p = String(pass || '').trim();
-    const hit = list.find((x) => x.u === u && x.p === p);
-    return !!hit;
+    const u = normUser(user), raw = String(pass || '').trim(), p = passHash(raw);
+    const hit = list.find((x) => x.u === u && (passHash(x.p) === p || x.p === raw));
+    if (hit) { currentRole = hit.role || ''; return true; }
+    const knownUser = list.some((x) => x.u === u);
+    throw Object.assign(new Error(knownUser ? 'WRONG_PASS' : 'UNKNOWN_USER'), { accounts: list.length });
   }
 
   function currentUserName() {
@@ -151,8 +186,12 @@ window.Gate = (function () {
     const el = document.getElementById('who-chip');
     if (!el) return;
     const nm = currentUserName();
-    if (nm) { el.textContent = '👤 ' + nm; el.classList.remove('hidden'); }
-    else { el.classList.add('hidden'); }
+    if (nm) {
+      const role = currentRole ? ' · ' + currentRole : '';
+      el.innerHTML = `<span class="who-avatar" aria-hidden="true">${esc(nm.slice(0, 1).toUpperCase())}</span><span class="who-name">${esc(nm)}</span>${role ? `<span class="who-role">${esc(role.replace(/^ · /, ''))}</span>` : ''}`;
+      el.title = 'المستخدم الحالي' + (role ? ' · الصلاحية: ' + currentRole : '');
+      el.classList.remove('hidden');
+    } else { el.classList.add('hidden'); el.textContent = ''; }
   }
 
   function showGate(msg) {
@@ -199,13 +238,14 @@ window.Gate = (function () {
   }
 
   async function lock() {
-    unlocked = false;
+    unlocked = false; currentRole = '';
     ls.del(SESSION_KEY);
     usersCache = null;
+    try { localStorage.removeItem(CACHE_DATA_KEY); } catch (e) {}                 // 🧹 لا بيانات طلاب على الجهاز بعد القفل
     updateWhoChip();
     closeAllForLock();
     showGate('تم قفل اللوحة.');
-    toast('🔒 تم قفل اللوحة');
+    toast('🔒 تم قفل اللوحة وحذف البيانات المخزّنة');
   }
 
   function closeAllForLock() {
@@ -223,28 +263,39 @@ window.Gate = (function () {
     if (modeName === 'sheet') { user = String(userOrPass || '').trim(); pwd = String(pass === undefined ? confirmPass : pass || '').trim(); }
     else { pwd = String(confirmPass !== undefined && pass !== undefined ? pass : (userOrPass || '')).trim(); }
 
+    /* 🔒 لا نكتب كلمة المرور في localStorage إطلاقاً — اسم المستخدم فقط */
+    const rememberUser = (u) => { try { if (u) ls.set('imtiaz_gate_last_user_v1', String(u).trim()); } catch (e) {} };
+
     const left = lockoutLeft();
     if (left > 0) { showGate(`محاولات كثيرة — انتظر ${left} ثانية ثم أعد المحاولة.`); return false; }
 
     if (modeName === 'sheet') {
       if (!user || !pwd) { showGate('أدخل اسم المستخدم وكلمة المرور معاً.'); return false; }
       // باب طوارئ اختياري من config
-      if (c.PASSPHRASE && pwd === String(c.PASSPHRASE)) { ls.set('imtiaz_gate_last_user_v1', user); markUnlocked(user); return true; }
+      if (c.PASSPHRASE && pwd === String(c.PASSPHRASE)) { rememberUser(user); markUnlocked(user); return true; }
+      let diag = '';
       try {
-        const ok = await verifyAgainstSheet(user, pwd);
-        if (ok) { ls.set('imtiaz_gate_last_user_v1', user); markUnlocked(user); toast('أهلاً بك 👋'); return true; }
+        await verifyAgainstSheet(user, pwd);
+        rememberUser(user); markUnlocked(user);
+        toast('أهلاً بك 👋' + (currentRole ? ' · ' + currentRole : ''));
+        return true;
       } catch (e) {
-        const msg = (e && e.message) === 'EMPTY_ACCOUNTS'
-          ? 'تبويب الحسابات فارغ — أضف صفّاً باسم مستخدم وكلمة مرور في Google Sheet.'
-          : (navigator.onLine === false
-            ? 'لا يوجد اتصال ولا نسخة محفوظة من الحسابات على هذا الجهاز.'
-            : 'تعذّر التحقق من الحسابات الآن. تحقّق من الاتصال أو اسم التبويب في config.js.');
-        showGate(msg); return false;
+        const m = (e && e.message) || '';
+        if (m === 'EMPTY_ACCOUNTS') diag = 'تبويب الحسابات فارغ أو أعمدته غير مفهومة — الصف يجب أن يكون: العمود الأول اسم مستخدم، الثاني كلمة مرور.';
+        else if (m === 'UNKNOWN_USER') diag = 'اسم المستخدم غير موجود في قائمة الحسابات. المحاولات المتبقية: ';
+        else if (m === 'WRONG_PASS') diag = 'كلمة المرور غير صحيحة لهذا الحساب. المحاولات المتبقية: ';
+        else if (m === 'NO_ACCOUNTS_SOURCE') diag = (navigator.onLine === false)
+          ? 'لا يوجد اتصال بالإنترنت ولا نسخة محفوظة من الحسابات على هذا الجهاز.'
+          : `تعذّر قراءة تبويب الحسابات «${c.USERS_SHEET_NAME || 'Accounts'}». تأكد من الاسم ومن أن الـ API يعمل.`;
+        else diag = 'تعذّر التحقق من الحسابات الآن. تحقّق من الاتصال أو اسم التبويب في config.js.';
+        if (m === 'UNKNOWN_USER' || m === 'WRONG_PASS') {
+          const a = bumpAttempts();
+          const remain = Math.max(0, c.MAX_ATTEMPTS - (a.n || 0));
+          showGate(a.until ? `تم إيقاف المحاولات مؤقتاً لمدة ${c.LOCKOUT_SECONDS} ثانية.` : diag + remain + '.');
+          return false;
+        }
+        showGate(diag); return false;
       }
-      const a = bumpAttempts();
-      const remain = Math.max(0, c.MAX_ATTEMPTS - (a.n || 0));
-      showGate(a.until ? `تم إيقاف المحاولات مؤقتاً لمدة ${c.LOCKOUT_SECONDS} ثانية.` : 'بيانات الدخول غير صحيحة. المحاولات المتبقية: ' + remain + '.');
-      return false;
     }
 
     // ── الوضع المحلي (بدون جدول) ──
@@ -267,12 +318,50 @@ window.Gate = (function () {
     const form = $('gate-form');
     if (form) form.addEventListener('submit', (e) => {
       e.preventDefault();
+      setBusy(true);
       const u = $('gate-user') ? $('gate-user').value : '';
       const p = $('gate-pass') ? $('gate-pass').value : '';
-      onPass(u, p);
+      Promise.resolve(onPass(u, p)).then(() => setBusy(false)).catch(() => setBusy(false));
     });
     const setupBtn = document.querySelector('[data-action="gate-set-pass"]');
     if (setupBtn) setupBtn.addEventListener('click', () => onPass('', $('gate-pass') ? $('gate-pass').value : '', $('gate-pass2') ? $('gate-pass2').value : ''));
+
+    // تنبيه Caps Lock + عدّاد الحسابات في تذييل البوابة
+    const pass = $('gate-pass'), caps = $('gate-caps');
+    if (pass && caps) {
+      const chk = (e) => { try { if (e.getModifierState) caps.classList.toggle('hidden', !e.getModifierState('CapsLock')); } catch (err) {} };
+      pass.addEventListener('keyup', chk); pass.addEventListener('keydown', chk);
+      pass.addEventListener('blur', () => caps.classList.add('hidden'));
+    }
+    updateAccountsHint();
+  }
+
+  function setBusy(on) {
+    const b = $('gate-submit'); if (!b) return;
+    const spin = b.querySelector('.gate-spin'), txt = b.querySelector('.gate-submit-txt');
+    b.disabled = !!on; b.classList.toggle('busy', !!on);
+    if (spin) spin.classList.toggle('hidden', !on);
+    if (txt) txt.textContent = on ? 'جارٍ التحقق…' : 'دخول آمن';
+  }
+
+  /* سطر صغير يطمئن المستخدم: كم حساباً معروفاً في الجدول (بدون كشف أي أسماء/كلمات مرور) */
+  function updateAccountsHint() {
+    const el = $('gate-accounts'); if (!el) return;
+    const c = cfg();
+    if (String(c.MODE || 'sheet').toLowerCase() === 'local') { el.classList.add('hidden'); return; }
+    let n = 0, ts = 0;
+    try { const o = JSON.parse(ls.get(USERS_LS_KEY) || 'null'); if (o && Array.isArray(o.list)) { n = o.list.length; ts = o.ts || 0; } } catch (e) {}
+    if (!n) { el.classList.add('hidden'); return; }
+    const mins = ts ? Math.max(0, Math.round((Date.now() - ts) / 60000)) : null;
+    el.textContent = `✓ قائمة الحسابات متاحة على هذا الجهاز (${n} حساباً${mins !== null ? ' · آخر قراءة قبل ' + mins + ' دقيقة' : ''})`;
+    el.classList.remove('hidden');
+  }
+
+  /* نجاح/فشل التحقق → إعادة ضبط زر «دخول آمن» وتحديث سطر الحسابات */
+  function afterSubmit(ok) {
+    setBusy(false);
+    updateAccountsHint();
+    return ok;
   }
 
   function init(onPass) {
@@ -285,11 +374,12 @@ window.Gate = (function () {
   }
 
   return {
-    init, submit, lock, showGate, hideGate, clearDevicePass,
+    init, submit, lock, showGate, hideGate, clearDevicePass, afterSubmit,
     isUnlocked: () => unlocked,
     userName: currentUserName,
+    role: () => currentRole,
     whoChip: updateWhoChip,
-    reloadAccounts: () => fetchAccounts(true).then(() => true).catch(() => false),
+    reloadAccounts: () => fetchAccounts(true).then(() => { updateAccountsHint(); return true; }).catch(() => false),
     hasConfiguredPass: () => !!cfg().PASSPHRASE || !!ls.get(LOCAL_KEY),
     gateCfg: cfg
   };
@@ -1096,6 +1186,27 @@ async function refreshData(opts) {
   } finally { _loading = false; if (btn) btn.classList.remove('spinning'); }
 }
 
+/* ═════════════ 12.5) SPLASH — شاشة الاستقبال الفاخرة (تظهر فوراً قبل تحميل البيانات) ═════════════
+   تُعرض من index.html مباشرة (لا انتظار JS) ثم تُطوى تلقائياً بعد أول رسم للوحة.        */
+
+window.Splash = (function () {
+  let timer = null, done = false;
+  function reveal() {
+    const el = document.getElementById('gate-splash'); if (!el) return;
+    requestAnimationFrame(() => { el.classList.add('go'); });                    // تشغيل حركة النقر الذهبي
+    clearTimeout(timer); timer = setTimeout(dismiss, 2600);                      // أمان: تختفي وحدها
+  }
+  function dismiss(instant) {
+    if (done) return; done = true; clearTimeout(timer);
+    const el = document.getElementById('gate-splash'); if (!el) return;
+    if (instant || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { el.remove(); return; }
+    el.classList.add('out');
+    setTimeout(() => { try { el.remove(); } catch (e) {} }, 620);
+  }
+  function skip() { dismiss(); }
+  return { reveal, dismiss, skip };
+})();
+
 async function init() {
   setUpdateBadge();
   if (CFG().PRESENTATION_MODE) document.body.classList.add('presentation-mode');
@@ -1104,6 +1215,7 @@ async function init() {
   const passedNow = Gate.init((user, pass, confirm) => onGateSubmit(user, pass, confirm));
   if (!passedNow) {
     const ld = document.getElementById('loading-screen'); if (ld) ld.classList.add('hidden');
+    window.Splash && Splash.dismiss(true);                                       // جلسة محفوظة →الانتقال مباشرة اللوحة
     return;
   }
   bootAfterUnlock();
@@ -1112,6 +1224,7 @@ async function init() {
 function bootAfterUnlock() {
   Gate.whoChip();
   initInstallUI(); registerSW();
+  const afterPaint = () => { window.Splash && Splash.dismiss(); VERIFY.run(); };
 
   const cached = readCache();
   if (cached && hasRequired(cached.sheets)) {
@@ -1120,17 +1233,23 @@ function bootAfterUnlock() {
     document.getElementById('loading-screen').classList.add('hidden');
     showPage('overview');
     setUpdateBadge('جارٍ التحديث…');
+    afterPaint();
     refreshData({ silent: true }).catch((e) => { console.error(e); showBanner('أنت تعمل بدون اتصال — يتم عرض آخر نسخة محفوظة.'); setUpdateBadge(); });
     return;
   }
-  refreshData({ firstPaint: true }).catch((e) => { console.error(e); showError({ students: e.message }); });
+  refreshData({ firstPaint: true })
+    .then(afterPaint)
+    .catch((e) => { console.error(e); afterPaint(); showError({ students: e.message }); });
 }
 
-// نجاح الدخول → مسح كاش قديم إن طُلب، ثم تحميل البيانات
+// نجاح الدخول → شاشة الاستقبال ثم تحميل البيانات (البيانات المحفوظة تُمسح عند القفل)
 async function onGateSubmit(user, pass, confirm) {
   const ok = await Gate.submit(user, pass, confirm);
+  Gate.afterSubmit(ok);                                                          // إعادة ضبط زر «دخول آمن»
   if (!ok) return;
+  window.Splash && Splash.reveal();                                              // لحظة الانتقال الجميلة
   const ld = document.getElementById('loading-screen'); if (ld) ld.classList.remove('hidden');
+  setTimeout(() => { window.Splash && Splash.dismiss(); }, 1500);                // احتياط إن طال التحميل
   if (!_booted) { _booted = true; bootAfterUnlock(); }
   else { rerenderAll(); }
 }
@@ -1221,7 +1340,8 @@ const ACTIONS = {
         <li><strong>Apps Script:</strong> اجعل السكربت يطلب <code>?token=...</code> صحيحاً، وضع نفس القيمة في <code>GATE.API_TOKEN</code> داخل config.js، وقيّد مشاركة جدول Google على حسابات الكلية فقط.</li>
       </ol>
       <p class="muted" style="margin-top:10px">بهذا لا يستطيع أي شخص قراءة البيانات حتى لو عرف الرابط.</p>`);
-  }
+  },
+  'splash-skip': () => { window.Splash && Splash.dismiss(); }
 };
 window.registerAction = function (name, fn) { ACTIONS[name] = fn; };
 

@@ -20,10 +20,10 @@
 
   <link rel="preload" href="assets/fonts/cairo-400-arabic-0.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/cairo-700-arabic-6.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="cairo.css?v=302">
-  <link rel="stylesheet" href="style.css?v=302">
-  <link rel="stylesheet" href="print.css?v=302" media="print">
-  <script src="config.js?v=302"></script>
+  <link rel="stylesheet" href="cairo.css?v=303">
+  <link rel="stylesheet" href="style.css?v=303">
+  <link rel="stylesheet" href="print.css?v=303" media="print">
+  <script src="config.js?v=303"></script>
 </head>
 <body>
 
@@ -94,6 +94,18 @@
   <div id="verify-badge" class="verify-badge hidden"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <!-- ═══════ شاشة الاستقبال الفاخرة (تظهر فوراً — تُطوى بعد الدخول/التحميل) ═══════ -->
+  <div id="gate-splash" class="splash hidden" role="presentation">
+    <button type="button" class="splash-skip" data-action="splash-skip">تخطّي ←</button>
+    <div class="splash-inner">
+      <div class="splash-ring"><img src="assets/college_logo.png" alt="" onerror="this.style.display='none'"></div>
+      <h2 class="splash-title">لوحة متابعة الإمتياز البيطري</h2>
+      <p class="splash-sub">كلية الطب البيطري · جامعة القاهرة</p>
+      <div class="splash-line"><i></i></div>
+      <span class="cartouche-badge-dark splash-year">2026 / 2027</span>
+    </div>
+  </div>
+
   <!-- ═══════ بوابة الدخول (Access Gate) ═══════
        تظهر قبل أي شيء. لا تُعرض أي بيانات قبل اجتيازها. -->
   <div id="gate-overlay" class="gate-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="gate-title">
@@ -121,9 +133,15 @@
           <button type="button" class="gate-eye" id="gate-eye" data-action="gate-eye" title="إظهار/إخفاء" aria-label="إظهار كلمة المرور">👁️</button>
         </div>
 
-        <button type="submit" class="btn btn-plum gate-submit" id="gate-submit">دخول آمن</button>
+        <p class="gate-caps hidden" id="gate-caps">⚠️ مفتاح Caps Lock مُفعَّل</p>
+
+        <button type="submit" class="btn btn-plum gate-submit" id="gate-submit">
+          <span class="gate-submit-txt">دخول آمن</span><span class="gate-spin hidden" aria-hidden="true"></span>
+        </button>
         <p class="gate-err hidden" id="gate-err" role="alert"></p>
       </form>
+
+      <p class="gate-accounts hidden" id="gate-accounts"></p>
 
       <div class="gate-extra hidden" id="gate-setup">
         <label class="gate-label" for="gate-pass2">تأكيد الرمز الجديد</label>
@@ -141,11 +159,18 @@
       </div>
     </div>
 
-  <script src="app.js?v=302"></script>
-  <script src="pages/overview.js?v=302"></script>
-  <script src="pages/schedule.js?v=302"></script>
-  <script src="pages/units.js?v=302"></script>
-  <script src="pages/not-registered.js?v=302"></script>
-  <script>window.AppBoot && window.AppBoot();</script>
+  <script src="app.js?v=303"></script>
+  <script src="pages/overview.js?v=303"></script>
+  <script src="pages/schedule.js?v=303"></script>
+  <script src="pages/units.js?v=303"></script>
+  <script src="pages/not-registered.js?v=303"></script>
+  <script>
+    (function () {
+      // شاشة الاستقبال تظهر فوراً (حتى قبل تحميل بقية السكربتات) وتختفي تلقائياً
+      var sp = document.getElementById('gate-splash');
+      if (sp) { sp.classList.remove('hidden'); requestAnimationFrame(function () { sp.classList.add('go'); }); }
+      window.AppBoot && window.AppBoot();
+    })();
+  </script>
 </body>
 </html>

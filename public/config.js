@@ -35,8 +35,9 @@ window.APP_CONFIG = {
   GATE: {
     ENABLED: true,              // false = بدون بوابة دخول
     MODE: 'sheet',              // 'sheet' | 'local'
-    USERS_SHEET_NAME: 'Accounts',
-    PASSPHRASE: '',             // رمز طوارئ عام (اختياري — يُفضّل تركه فارغاً)
+    USERS_SHEET_NAME: 'Accounts',           // اسم التبويب كما هو في Google Sheets
+    USERS_SHEET_NAME_ALT: '',               // بديل إن كان الاسم مختلفاً (مثال: 'الحسابات')
+    PASSPHRASE: '',                         // رمز طوارئ عام (اختياري — يُفضّل تركه فارغاً)
     SESSION_HOURS: 8,           // مدة البقاء داخل اللوحة بعد الدخول
     REMEMBER_HOURS: 8,          // (قديم — لنفس الغرض)
     AUTO_LOCK_MINUTES: 0,       // قفل تلقائي بعد الخمول (0 = لا قفل تلقائي)

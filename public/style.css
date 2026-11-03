@@ -452,8 +452,6 @@ tr.clickable-row:hover td { background: var(--c-gold-light); }
 .error-card p { max-width: 620px; }
 .toast { position: fixed; bottom: calc(24px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%) translateY(20px); background: var(--c-plum); color: #FFFFFF; padding: 11px 20px; border-radius: var(--radius-pill); font-size: 0.88rem; font-weight: 600; box-shadow: 0 8px 24px rgba(43, 26, 43, 0.3); opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; z-index: 600; max-width: 92vw; text-align: center; border: 1px solid var(--c-gold); }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.offline-banner { background: var(--c-amber-bg); color: #92400E; border-bottom: 1px solid var(--c-amber-border); padding: 9px var(--gap); font-size: 0.86rem; font-weight: 600; text-align: center; }
-.offline-banner.hidden { display: none; }
 @keyframes btnSpin { to { transform: rotate(360deg); } }
 .header-btn.spinning .btn-ico { display: inline-block; animation: btnSpin 0.9s linear infinite; }
 
@@ -806,6 +804,87 @@ html.dark .header-btn { color: var(--c-text-main); }
 html.dark .site-header { background: linear-gradient(180deg, #1E121E, #17111B); }
 html.dark img.header-logo { filter: brightness(1.15); }
 
+/* ═══ طبقة الأسطح الداكنة — خريطة كاملة (أرضيات/أسطر/حدود/نصوص ثابتة الفاتح) ═══ */
+/* أسطح بيضاء/كريميه → سطح داكن */
+html.dark .rot-card,
+html.dark .gantt-cell-inner,
+html.dark .table-header,
+html.dark .modal-body,
+html.dark .profile-body,
+html.dark .alert-item,
+html.dark .unit-card-header:hover,
+html.dark .unit-card.open .unit-card-header,
+html.dark .search-input-wrap,
+html.dark .kv,
+html.dark .journey-content,
+html.dark .contact-box,
+html.dark .personal-info-card,
+html.dark .table-cards tbody tr { background: var(--c-surface); }
+
+/* نصوص داكنة فوق الأسطح الجديدة → نص أساسي فاتح */
+html.dark .rot-title,
+html.dark .round-card-name,
+html.dark .status-group-name,
+html.dark .table-title,
+html.dark .unit-name,
+html.dark .gantt-round-name,
+html.dark .profile-section-title,
+html.dark .pref-name,
+html.dark .search-box-input,
+html.dark .kv strong,
+html.dark .install-steps li strong,
+html.dark .journey-name,
+html.dark .field-name,
+html.dark .error-card h2,
+html.dark .gate-brand h2,
+html.dark .slist-name,
+html.dark .btn-surface,
+html.dark .breadcrumb-bar a,
+html.dark .breadcrumb-bar button,
+html.dark th:hover { color: var(--c-text-main); }
+
+/* أزرار ذهبية: النص البلاّوم الداكن مقروء فوق الذهبي في الوضعين — لا تغيير */
+
+/* رقائق/badges فاتحة → أرضيات داكنة مع حدود وألوان مُخفَّفة التباين */
+html.dark .g-chip { background: rgba(255, 255, 255, 0.06); border-color: var(--c-border); color: var(--c-text-muted); }
+html.dark .g-chip.num { color: var(--c-text-main); }
+html.dark .rot-foot .g-chip { background: rgba(255, 255, 255, 0.08); }
+html.dark .badge-plum { background: #342A39; color: #E6DCE8; border-color: #4A3B50; }
+html.dark .badge-gold { color: #F2CE84; }
+html.dark .badge-emerald { color: #6FD8AC; }
+html.dark .badge-amber { color: #F5C26A; }
+html.dark .badge-rose { color: #F2A0A0; }
+html.dark .badge-round-units { background: #14303B; color: #7FC8DD; border-color: #2A5A6E; }
+html.dark .badge-round-college { background: #35211B; color: #DE9B85; border-color: #5C3A2E; }
+html.dark .badge-round-poultry { background: #12332A; color: #6FD8AC; border-color: #1F5C46; }
+html.dark .badge-round-slaughter { background: #33260D; color: #EBCB74; border-color: #6B4E14; }
+html.dark .badge-round-equine { background: #14202F; color: #9FB6DC; border-color: #2C4468; }
+html.dark .badge-round-elective { background: #222A1F; color: #B5C7A8; border-color: #40503A; }
+html.dark .cartouche-badge { background: var(--c-gold-light); color: var(--c-text-main); }
+html.dark .clickable-student-name { color: var(--c-text-main); }
+html.dark .student-code { color: var(--c-text-main); }
+html.dark .gender-m { color: #6EC5DE; }
+html.dark .gender-f { color: #DE9B85; }
+
+/* جداول البيانات: رؤوس + صفوف متناوبة + hover */
+html.dark th { background: #241B2A; color: var(--c-text-muted); }
+html.dark td { border-bottom-color: var(--c-border); }
+html.dark tr:hover td { background: rgba(255, 255, 255, 0.04); }
+html.dark tr.clickable-row:hover td { background: var(--c-gold-light); }
+html.dark .data-table tbody tr:hover { background: var(--c-gold-light); }
+html.dark .slist-row:hover { background: var(--c-gold-light); }
+html.dark .search-result-row:hover, html.dark .search-result-row.selected { background: var(--c-gold-light); }
+
+/* شريط التنبيهات في الوضع الداكن */
+html.dark .alert-item.alert-rose { color: #F2A0A0; }
+html.dark .alert-item.alert-amber { color: #F5C26A; }
+html.dark .alert-item.alert-plum { border-color: var(--c-border-gold); }
+
+/* رحلة الطالب داخل المودال */
+html.dark .journey-bullet { border-color: var(--c-surface); }
+
+/* توست عام فوق الأسطح الداكنة يبقى كما هو (بلاّوم + ذهبي) */
+
 /* ═══════════════════════════════════════════════════════════════════════════
    14) VISUAL REGRESSION FIXES (v304)
    أ) بطاقات مصفوفة التدوير — هيكل صارم من ثلاث مناطق · ارتفاعات متساوية
@@ -875,40 +954,7 @@ html.dark .ico-chip { filter: brightness(1.35); }
 .profile-section-title .ico { width: 16px; height: 16px; color: var(--c-gold-hover); }
 .search-icon .ico { width: 20px; height: 20px; }
 
-/* ── ب) توست عدم الاتصال — overlay مضغوط لا يزيح التخطيط ── */
-.offline-toast {
-  position: fixed; top: calc(var(--nav-h, 52px) + 8px); right: 0; left: 0;
-  z-index: 58; pointer-events: none;
-  display: flex; justify-content: center; padding-inline: 12px;
-}
-.offline-toast.hidden { display: none !important; }
-.offline-pill {
-  pointer-events: auto;
-  display: inline-flex; align-items: center; gap: 8px;
-  max-width: max-content; min-width: 0; margin-inline: auto;
-  background: var(--c-amber-bg); color: #92400E;
-  border: 1px solid var(--c-amber-border); border-radius: 999px;
-  padding: 7px 14px; font-size: .82rem; font-weight: 700; line-height: 1.4;
-  box-shadow: var(--e-shadow-sm, 0 2px 10px rgba(43, 26, 43, 0.07));
-  animation: offlineSlideDown .28s cubic-bezier(.2, .7, .2, 1) both;
-}
-@keyframes offlineSlideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-.offline-ico { display: inline-flex; flex: 0 0 auto; color: var(--c-amber); }
-.offline-ico .ico, .offline-ico svg { width: 16px; height: 16px; }
-.offline-txt { white-space: normal; min-width: 0; }
-.offline-retry {
-  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px;
-  border: 1px solid var(--c-amber-border); background: #FFFFFF; color: #92400E;
-  border-radius: 999px; padding: 3px 10px; font-family: inherit;
-  font-size: .74rem; font-weight: 800; cursor: pointer; transition: background .15s ease, border-color .15s ease;
-}
-.offline-retry:hover { background: #FEF3C7; border-color: var(--c-amber); }
-.offline-retry .ico { width: 12px; height: 12px; }
-html.dark .offline-pill { color: #FDE68A; }
-@media (max-width: 480px) {
-  .offline-pill { font-size: .74rem; padding: 6px 10px; gap: 6px; }
-  .offline-retry { padding: 3px 8px; }
-}
+/* ── ب) [تم الحذف] توست عدم الاتصال — الكاش يعمل بصمت عبر Service Worker بلا أي إشعار ── */
 
 /* ── ج) شريط التبويبات — الوضع الفاتح: الخلفية بلاّوم داكن دائماً،
       والتبويب النشط يتميّز بأرضية بيضاء + نص بلاّوم (AAA) وليس بلون ذهبي باهت. ── */
@@ -983,7 +1029,6 @@ html.dark .gantt-row:nth-child(even) .gantt-cell { background: rgba(255, 255, 25
 @media (prefers-reduced-motion: reduce) {
   .rot-card, .gantt-cell-inner { transition: none; }
   .rot-card:hover, .gantt-cell-inner:hover { transform: none; }
-  .offline-pill { animation: none; }
   .nav-indicator { transition: none; }
 }
-@media print { .offline-toast, .nav-indicator { display: none !important; } }
+@media print { .nav-indicator { display: none !important; } }

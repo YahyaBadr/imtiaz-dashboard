@@ -330,7 +330,7 @@
     const meta = document.getElementById('meta-theme-color');
     if (meta) meta.setAttribute('content', dark ? '#14101A' : '#2B1A2B');
     try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (err) {}
-    if (announce) toast(dark ? 'الوضع الداكن' : 'الوضع الفاتح');
+    if (announce) { /* صامت: لا ليبل عائم فوق المحتوى عند تبديل الثيم */ }
   }
 
   function initTheme() {

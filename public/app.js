@@ -1255,26 +1255,8 @@ function setUpdateBadge(extra) {
   const el = document.getElementById('header-last-update'); if (!el) return;
   el.textContent = `آخر تحديث للبيانات: ${CFG().LAST_DATA_UPDATE || '—'}${extra ? ' · ' + extra : ''}`;
 }
-/* إشعار عدم الاتصال: توست دائري مضغوط تحت الهيدر — overlay لا يزيح التخطيط */
-window.showBanner = function (msg) {
-  let host = document.getElementById('offline-toast');
-  if (!msg) { if (host) host.classList.add('hidden'); return; }
-  if (!host) {
-    host = document.createElement('div');
-    host.id = 'offline-toast';
-    host.className = 'offline-toast';
-    host.setAttribute('role', 'status');
-    host.setAttribute('aria-live', 'polite');
-    host.innerHTML = '<div class="offline-pill">' +
-      '<span class="offline-ico" aria-hidden="true">' + ico('wifi-off') + '</span>' +
-      '<span class="offline-txt"></span>' +
-      '<button type="button" class="offline-retry" data-action="refresh">' + ico('refresh') + ' إعادة المحاولة</button>' +
-      '</div>';
-    document.body.appendChild(host);
-  }
-  host.querySelector('.offline-txt').textContent = msg;
-  host.classList.remove('hidden');
-};
+/* سياسة عدم الاتصال: الكاش يعمل بصمت عبر Service Worker + localStorage —
+   بدون أي banner أو toast أو زر إعادة محاولة. دالة showBanner أُزيلت نهائياً. */
 function hash(str) { let h = 0; for (let i = 0; i < str.length; i++) { h = ((h << 5) - h + str.charCodeAt(i)) | 0; } return h; }
 function fingerprint(sheets) { try { const j = JSON.stringify(sheets); return j.length + ':' + hash(j); } catch (e) { return String(Date.now()); } }
 
@@ -1302,13 +1284,12 @@ async function refreshData(opts) {
     const merged = { ...(cached ? cached.sheets : {}), ...sheets };          // شيت فشل؟ نستخدم آخر نسخة محفوظة له
     const failedRequired = REQUIRED.filter((k) => !sheets[k]);
 
-    if (!hasRequired(merged)) { if (!opts.silent || !DB.students) showError(errors); else showBanner('تعذّر تحديث البيانات الآن.'); return; }
+    if (!hasRequired(merged)) { if (!opts.silent || !DB.students) showError(errors); return; }
 
     const fp = fingerprint(merged);
     const freshAll = failedRequired.length === 0;
-    if (freshAll) { writeCache(merged); showBanner(null); }
-    else if (!Object.keys(sheets).length) showBanner('لا يوجد اتصال — يتم عرض آخر نسخة محفوظة من البيانات.');
-    else showBanner('تعذّر تحديث بعض الجداول — يتم عرض آخر نسخة محفوظة لها.');
+    if (freshAll) writeCache(merged);
+    // فشل التحديث؟ نتجاهله بصمت — اللوحة تستمر عرض آخر نسخة محفوظة (كاش صامت بلا إشعارات).
 
     if (fp !== _lastFp) {
       _lastFp = fp; buildDB(merged);
@@ -1369,7 +1350,7 @@ function bootAfterUnlock() {
     showPage('overview');
     setUpdateBadge('جارٍ التحديث…');
     afterPaint();
-    refreshData({ silent: true }).catch((e) => { console.error(e); showBanner('أنت تعمل بدون اتصال — يتم عرض آخر نسخة محفوظة.'); setUpdateBadge(); });
+    refreshData({ silent: true }).catch((e) => { console.error(e); setUpdateBadge(); }); // كاش صامت — بلا إشعار عدم اتصال
     return;
   }
   refreshData({ firstPaint: true })
@@ -1405,7 +1386,6 @@ const ACTIONS = {
   'search-open': () => openGlobalSearch(),
   'refresh': () => refreshData({ silent: false, manual: true }).catch((e) => { console.error(e); toast('تعذّر التحديث'); }),
   'retry': () => { document.getElementById('error-screen').classList.add('hidden'); const ld = document.getElementById('loading-screen'); ld.classList.remove('hidden'); refreshData({ firstPaint: true }).catch((e) => { console.error(e); showError({ students: e.message }); }); },
-  'print': () => window.print(),
   'install': () => installApp(),
   'dismiss-install': () => dismissInstall(),
   'round-detail': (el) => openRoundDetailModal(el.dataset.round, el.dataset.title || roundLabel(el.dataset.round), el.dataset.gid, el.dataset.count, el.dataset.matrix),

@@ -567,12 +567,19 @@ window.normRoundKey = function (key) {
 };
 
 window.ROUND_META = {
-  units:           { icon: '🏥', label: 'وحدات بيطرية',       cls: 'badge-round-units' },
-  college:         { icon: '🏛️', label: 'أقسام الكلية',       cls: 'badge-round-college' },
-  poultry:         { icon: '🐔', label: 'دواجن',              cls: 'badge-round-poultry' },
-  slaughter:       { icon: '🥩', label: 'مجازر وسلامة غذاء', cls: 'badge-round-slaughter' },
-  equine_lab_fish: { icon: '🔬', label: 'خيل ومعامل وسمك',    cls: 'badge-round-equine' },
-  elective:        { icon: '🌟', label: 'تدريب اختياري',      cls: 'badge-round-elective' }
+  units:           { icon: 'hospital',   svg: true, label: 'وحدات بيطرية',       cls: 'badge-round-units', tone: 'tone-teal' },
+  college:         { icon: 'landmark',   svg: true, label: 'أقسام الكلية',       cls: 'badge-round-college', tone: 'tone-rust' },
+  poultry:         { icon: 'chicken',    svg: true, label: 'دواجن',              cls: 'badge-round-poultry', tone: 'tone-green' },
+  slaughter:       { icon: 'meat',       svg: true, label: 'مجازر وسلامة غذاء', cls: 'badge-round-slaughter', tone: 'tone-mustard' },
+  equine_lab_fish: { icon: 'microscope', svg: true, label: 'خيل ومعامل وسمك',    cls: 'badge-round-equine', tone: 'tone-navy' },
+  elective:        { icon: 'star',       svg: true, label: 'تدريب اختياري',      cls: 'badge-round-elective', tone: 'tone-olive' }
+};
+// إرجاع أيقونة SVG موحّدة لراوند (مع fallback للرموز القديمة إن وُجدت)
+window.roundIcon = function (rKey, chip) {
+  const meta = (window.ROUND_META && ROUND_META[rKey]) || null;
+  const name = meta ? meta.icon : 'pin';
+  if (chip) return `<span class="ico-chip ${meta && meta.tone ? meta.tone : 'tone-gold'}" aria-hidden="true">${iconSvg(name)}</span>`;
+  return iconSvg(name);
 };
 window.ROUND_ORDER = ['units', 'equine_lab_fish', 'poultry', 'slaughter', 'college', 'elective', 'unknown'];
 

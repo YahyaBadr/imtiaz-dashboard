@@ -155,10 +155,17 @@ body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; dir
 .alert-icon { font-size: 1.2rem; flex-shrink: 0; }
 
 .progress-wrap { display: flex; align-items: center; gap: 10px; font-size: 0.84rem; }
-.progress-bar { flex: 1; height: 6px; background: var(--c-surface); border-radius: var(--radius-pill); overflow: hidden; }
+.progress-bar { flex: 1; height: 6px; background: var(--c-surface); border-radius: var(--radius-pill); overflow: hidden; box-shadow: inset 0 0 0 1px var(--c-border); }
 .progress-fill { height: 100%; border-radius: var(--radius-pill); transition: width 0.5s ease; background: var(--c-green); }
 .progress-fill.warn   { background: var(--c-mustard); }
 .progress-fill.danger { background: var(--c-rose); }
+/* بند 1 (دورة الإصلاحات الدقيقة): مسار عدادات «المجالات الأكثر طلبًا» — في الوضع الداكن
+   كان المسار #2A2130 والتعبئة plum غامقة فوقه ≈ صفر تباين. القاعدة الجديدة لكل وضع:
+   track محايد خافت واضح الحواف + fill ذهبي الهوية بتباين ≥4.5:1 مع المحيط. */
+.field-pref-card .progress-bar { background: rgba(31, 22, 32, 0.10); box-shadow: inset 0 0 0 1px rgba(31, 22, 32, 0.22); }
+.field-pref-card .progress-fill.plum { background: linear-gradient(90deg, var(--c-gold), var(--c-gold-hover)); }
+html.dark .field-pref-card .progress-bar { background: rgba(237, 230, 240, 0.12); box-shadow: inset 0 0 0 1px rgba(237, 230, 240, 0.28); }
+html.dark .field-pref-card .progress-fill.plum { background: linear-gradient(90deg, var(--c-gold), #F2CE84); }
 
 .round-summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--gap); margin-bottom: calc(var(--gap) * 1.5); }
 .round-card { background: var(--c-card-bg); border: 1px solid var(--c-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
@@ -505,7 +512,10 @@ body.gated { overflow: hidden; }
 .gantt-head-title { font-size: 0.82rem; font-weight: 800; color: var(--c-plum); }
 .gantt-head-dates { font-size: 0.72rem; color: var(--c-text-muted); font-weight: 600; }
 .gantt-head-status { margin-top: 3px; }
-.gantt-sticky-col { position: sticky; right: 0; z-index: 3; background: var(--c-card-bg); }
+/* البند 2 (دورة الإصلاحات الدقيقة): العمود اللاصق الأفقي أُلغي — كان ينتج البلوك الرمادي المشوه.
+   عمود الجروب أصبح رأس قسم عاديًا؛ التمييز الآن بحد أدنى فقط عند ≥1200px. */
+.gantt-group-col { background: var(--c-card-bg); }
+html.dark .gantt-group-col { background: var(--c-card-bg); }
 .gantt-group-cell { display: flex; flex-direction: column; gap: 2px; }
 .gantt-group-top { font-weight: 800; color: var(--c-plum); font-size: 0.9rem; }
 .gantt-group-count { font-size: 0.74rem; color: var(--c-text-muted); font-weight: 600; }
@@ -836,7 +846,7 @@ html.dark .table-wrap,
 html.dark .field-pref-card,
 html.dark .rot-card,
 html.dark .gantt-cell-inner,
-html.dark .gantt-sticky-col,
+html.dark .gantt-group-col,
 html.dark .table-header,
 html.dark .modal-body,
 html.dark .profile-body,
@@ -851,13 +861,15 @@ html.dark .personal-info-card,
 html.dark .pref-item,
 html.dark .copyable-name,
 html.dark .table-cards tbody tr { background: var(--c-surface); }
-/* أرضيات القطاعات الفاتحة داخل بطاقات المصفوفة → نظائرها الداكنة (عطل 4: كروت فاتحة داخل ثيم داكن) */
-html.dark .rot-card.units, html.dark .gantt-cell-inner.units           { background: #14303B; border-color: #2A5A6E; }
-html.dark .rot-card.college, html.dark .gantt-cell-inner.college       { background: #35211B; border-color: #5C3A2E; }
-html.dark .rot-card.poultry, html.dark .gantt-cell-inner.poultry       { background: #12332A; border-color: #1F5C46; }
-html.dark .rot-card.slaughter, html.dark .gantt-cell-inner.slaughter   { background: #33260D; border-color: #6B4E14; }
-html.dark .rot-card.equine_lab_fish, html.dark .gantt-cell-inner.equine_lab_fish { background: #14202F; border-color: #2C4468; }
-html.dark .rot-card.elective, html.dark .gantt-cell-inner.elective     { background: #222A1F; border-color: #40503A; }
+/* أرضيات القطاعات الفاتحة داخل الكروت → تينت مهذب منخفض التشبع (~14% من لون القسم فوق سطح الثيم)
+   + حدود 1px بلون القسم — دورة الإصلاحات الدقيقة بند 3 (بدل درجات طينية مشبعة مستوردة) */
+html.dark .rot-card, html.dark .gantt-cell-inner { background: var(--c-surface); }
+html.dark .rot-card.units, html.dark .gantt-cell-inner.units           { background: color-mix(in srgb, #5BB8D4 14%, var(--c-surface)); border-color: color-mix(in srgb, #5BB8D4 42%, var(--c-border)); }
+html.dark .rot-card.college, html.dark .gantt-cell-inner.college       { background: color-mix(in srgb, #C97B5A 14%, var(--c-surface)); border-color: color-mix(in srgb, #C97B5A 42%, var(--c-border)); }
+html.dark .rot-card.poultry, html.dark .gantt-cell-inner.poultry       { background: color-mix(in srgb, #4CC796 14%, var(--c-surface)); border-color: color-mix(in srgb, #4CC796 42%, var(--c-border)); }
+html.dark .rot-card.slaughter, html.dark .gantt-cell-inner.slaughter   { background: color-mix(in srgb, #E8C55F 14%, var(--c-surface)); border-color: color-mix(in srgb, #E8C55F 42%, var(--c-border)); }
+html.dark .rot-card.equine_lab_fish, html.dark .gantt-cell-inner.equine_lab_fish { background: color-mix(in srgb, #7FA6D9 14%, var(--c-surface)); border-color: color-mix(in srgb, #7FA6D9 42%, var(--c-border)); }
+html.dark .rot-card.elective, html.dark .gantt-cell-inner.elective     { background: color-mix(in srgb, #A8BF90 14%, var(--c-surface)); border-color: color-mix(in srgb, #A8BF90 42%, var(--c-border)); }
 html.dark .g-chip, html.dark .rot-foot .g-chip, html.dark .gantt-count-badge { background: rgba(255, 255, 255, 0.07); border-color: var(--c-border); color: var(--c-text-muted); }
 html.dark .g-chip.num, html.dark .gantt-count-badge { color: var(--c-text-main); }
 
@@ -1059,18 +1071,11 @@ html.dark .nav-btn.active .nav-ico { color: var(--c-gold); }
   .nav-btn { height: 36px; gap: 6px; padding: 6px 10px; }
   .nav-ico .ico, .nav-ico svg { width: 16px; height: 16px; }
 }
-/* ── د) إضافات المصفوفة: رأس + عمود ملتصقان · ظل الحواف · نقطة الحالة ── */
+/* ── د) إضافات المصفوفة: رأس ثابت عمودي · نقطة الحالة (العمود اللاصق الأفقي أُلغي — بند 2) ── */
 .gantt-matrix-table thead th { position: sticky; top: 0; z-index: 4; background: var(--c-card-bg, #fff); }
-.gantt-matrix-table thead th.gantt-sticky-head { z-index: 6; }
 .gantt-cell > .rot-card { width: 100%; }
 .gantt-empty { text-align: center; vertical-align: middle; }
-.gantt-scroll.has-fade {
-  mask-image: linear-gradient(to left, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to left, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
-}
-.gantt-sticky-head { position: sticky; right: 0; z-index: 5; background: var(--c-card-bg, #fff); box-shadow: -8px 0 10px -8px rgba(43, 26, 43, 0.18); }
-html.dark .gantt-sticky-head { background: var(--c-card-bg); }
-.gantt-row:nth-child(even) .gantt-cell:not(.gantt-sticky-col), .gantt-row:nth-child(even) .gantt-sticky-col { background: rgba(255, 255, 255, 0.45); }
+.gantt-row:nth-child(even) .gantt-cell:not(.gantt-group-col), .gantt-row:nth-child(even) .gantt-group-col { background: rgba(255, 255, 255, 0.45); }
 html.dark .gantt-row:nth-child(even) .gantt-cell { background: rgba(255, 255, 255, 0.03); }
 .cap-dot { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-inline-end: 6px; box-shadow: 0 0 0 2px rgba(255,255,255,.7); }
 .cap-dot.green { background: var(--c-green, #2A9D72); }
@@ -1121,13 +1126,78 @@ html[data-theme="dark"] { color-scheme: dark; }
   #install-btn { white-space: nowrap; }
   #install-btn .btn-txt { display: none; }                /* على الموبايل أيقونة فقط بلمسة ≥44 */
 
-  /* البند 4: المصفوفة — عرض راوند ≥260px، snap، بداية التمرير من أول عمود (الحافة اليمنى RTL) */
-  .gantt-matrix-table th:not(.gantt-sticky-head), .gantt-cell { min-width: 260px; }
-  .gantt-scroll { scroll-snap-type: x proximity; overscroll-behavior-x: contain; }
-  .gantt-scroll .gantt-cell { scroll-snap-align: start; }
-  /* شارة الجروب sticky بخلفية معتمة تطابق الثيم */
-  .gantt-sticky-col { background: rgba(247, 242, 232, 0.92); backdrop-filter: blur(4px); }
-  html.dark .gantt-sticky-col { background: rgba(30, 22, 34, 0.92); }
+  /* البند 2 (دورة الإصلاحات الدقيقة): صفر تمرير أفقي — الجدول يتسع داخل الـ viewport */
+  .gantt-matrix-table th:not(.gantt-group-head), .gantt-cell { min-width: 0; }
+  .gantt-scroll { overflow-x: visible; }
+}
+
+/* ═══════ دورة الإصلاحات الدقيقة — البند 2: منع أي slide أفقي نهائيًا في كل مكان ═══════ */
+/* <1200px: المصفوفة تُعاد صياغتها رأسيًا (قسم لكل جروب + كروت راونداته مكدسة)
+   والجدول الأفقي يُخفى كليًا — لا scroll أفقي في أي breakpoint. */
+.gantt-stack { display: none; }
+@media (max-width: 1199px) {
+  .gantt-table-only { display: none !important; }
+  .gantt-stack { display: flex; flex-direction: column; gap: var(--gap); }
+  /* أي حاوية كانت تعتمد السحب الأفقي تصبح كتلة عادية بلا scrollbar */
+  .table-scroll { overflow-x: visible; }
+  .gantt-scroll { overflow-x: visible; }
+  /* خلايا الصياغة الرأسية: td تُعرض ككتل مستقلة */
+  .gantt-stack-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .gantt-stack .gantt-cell { display: block; padding: 0; width: auto; min-width: 0; }
+  .gantt-stack .gantt-cell > .rot-card { min-height: 0; }
+  .gantt-stack-round-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px 6px; border-bottom: 1px dashed var(--c-border); margin-bottom: 6px; }
+  .gantt-stack-round-title { font-weight: 800; font-size: .78rem; color: var(--c-text-main); }
+  .gantt-stack-round-dates { font-size: .7rem; color: var(--c-text-muted); white-space: nowrap; }
+  .gantt-stack-group { padding: 16px; }
+  .gantt-stack-head { display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 12px; }
+  .gantt-stack-count { font-size: .8rem; font-weight: 700; color: var(--c-text-muted); }
+  .gantt-stack-count strong { color: var(--c-plum); font-size: .95rem; }
+  html.dark .gantt-stack-count strong { color: var(--c-gold); }
+  .gantt-stack-head .go { margin-inline-start: auto; opacity: .55; }
+}
+/* الهاتف: عمود واحد */
+@media (max-width: 640px) {
+  .gantt-stack-cards { grid-template-columns: 1fr; }
+}
+/* ≥1200px: أعمدة مرنة بعرض متناسب تتسع داخل الـ viewport بدون أي scroll أفقي،
+   مع ضغط داخلي للكروت (chips أصغر، التفاف بين الرقائق مسموح) حتى لا يُقص أي كارت */
+@media (min-width: 1200px) {
+  .gantt-matrix-table { table-layout: fixed; width: 100%; }
+  .gantt-matrix-table th, .gantt-matrix-table td { width: auto; }
+  .gantt-group-head, .gantt-group-col { width: 168px; }
+  .gantt-matrix-table th:not(.gantt-group-head) { width: calc((100% - 168px) / 5); }
+  .gantt-scroll { overflow-x: visible; }
+  .gantt-cell { padding: 5px; min-width: 0; }
+  .rot-card { min-height: 0; padding: 8px 10px; }
+  .rot-title { font-size: .82rem; }
+  .g-chip { font-size: .7rem; padding: 2px 7px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .g-chip.num { overflow: visible; }
+  .ico-chip { width: 26px; height: 26px; }
+  .ico-chip .ico { width: 14px; height: 14px; }
+}
+/* شارة الحالة داخل كروت المصفوفة الملونة: أرضية معتمة تتبع الثيم + لون الحالة نصًا فقط.
+   (لا نكتب فوق خلفية الـ badge نفسها حتى لا تتحول pills الحالات إلى رمادي موحد — بند 3) */
+.rot-card .rot-status-badge.badge-plum    { background: var(--c-card-bg); color: var(--c-plum); border-color: var(--c-border); }
+.rot-card .rot-status-badge.badge-emerald { background: var(--c-card-bg); color: var(--c-green); border-color: var(--c-border); }
+.rot-card .rot-status-badge.badge-grey    { background: var(--c-card-bg); color: var(--c-text-muted); border-color: var(--c-border); }
+html.dark .rot-card .rot-status-badge.badge-plum    { background: var(--c-card-bg); color: #E6DCE8; }
+html.dark .rot-card .rot-status-badge.badge-emerald { background: var(--c-card-bg); color: #6FD8AC; }
+html.dark .rot-card .rot-status-badge.badge-grey    { background: var(--c-card-bg); color: var(--c-text-muted); }
+
+/* رقائق/شارات بيضاء ثابتة فوق تينتات ملونة → أرضية معتمة تتبع الثيم (بند 3) */
+.g-chip { background: color-mix(in srgb, var(--c-card-bg) 70%, transparent); border-color: var(--c-border); color: var(--c-text-muted); }
+html.dark .g-chip { background: color-mix(in srgb, var(--c-card-bg) 70%, transparent); }
+.gantt-count-badge { background: color-mix(in srgb, var(--c-card-bg) 70%, transparent); border-color: var(--c-border); }
+
+/* البند 2 (شامل كل Views): جدول الجروبات في الملخص يصبح بطاقات رأسية عند ≤1199px
+   بدل الاعتماد على cutoff قديم عند 768 كان يتركه قابلًا للسحب بين 769–1199 */
+@media (max-width: 1199px) {
+  .table-cards thead { display: none; }
+  .table-cards, .table-cards tbody, .table-cards tr, .table-cards td { display: block; width: 100%; }
+  .table-cards tbody tr { background: var(--c-card-bg); border: 1px solid var(--c-border); border-radius: 12px; box-shadow: var(--shadow-xs); margin-bottom: 10px; padding: 4px 0; }
+  .table-cards td { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px dashed var(--c-surface); padding: 8px 14px; text-align: left; white-space: normal; }
+  .table-cards td:last-child { border-bottom: none; }
+  .table-cards td::before { content: attr(data-label); font-weight: 700; color: var(--c-text-muted); font-size: 0.8rem; text-align: right; flex-shrink: 0; }
 }
 
 /* البند 5: safe-area + منع أي تمرير أفقي عام */

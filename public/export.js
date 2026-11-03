@@ -240,9 +240,30 @@
     };
 
     const fname = window.ExportCore.fileStamp(scope, 'pdf');
-    await new Promise((res, rej) => {
-      try { pdfMake.createPdf(dd).download(fname, res, rej); } catch (e) { rej(e); }
-    });
+    const doc = pdfMake.createPdf(dd);
+    // download() يستخدم msSaveBlob في IE/Edge القديمة فقط؛ المتصفحات الحديثة تستخدم رابط Blob داخلياً.
+    // إن لم يكن هناك مسار تنزيل أصلي، نولّد الـ buffer وننزّله بأنفسنا عبر downloadBlob — بدون أي fallback صامت.
+    if (typeof navigator !== 'undefined' && (navigator.msSaveBlob || navigator.msSaveOrOpenBlob)) {
+      await new Promise((res, rej) => { try { doc.download(fname, res, rej); } catch (e) { rej(e); } });
+      return fname;
+    }
+    let usedNative = false;
+    const nativeUrl = (typeof URL !== 'undefined') ? URL.createObjectURL : null;
+    if (nativeUrl) {
+      try {
+        await new Promise((res, rej) => {
+          let settled = false;
+          URL.createObjectURL = function (b) { settled = true; usedNative = true; URL.createObjectURL = nativeUrl; res(); return nativeUrl.call(URL, b); };
+          try { doc.download(fname, () => {}, rej); } catch (e) { URL.createObjectURL = nativeUrl; rej(e); }
+          setTimeout(() => { URL.createObjectURL = nativeUrl; if (!settled) rej(new Error('مسار التنزيل الأصلي غير مدعوم')); }, 1500);
+        });
+      } catch (e) { URL.createObjectURL = nativeUrl; usedNative = false; }
+    }
+    if (!usedNative) {
+      const buf = await new Promise((res, rej) => { try { doc.getBuffer((b) => res(b), rej); } catch (e) { rej(e); } });
+      if (!buf || !buf.length) throw new Error('فشل توليد ملف PDF (مخرج فارغ)');
+      downloadBlob(new Blob([buf], { type: 'application/pdf' }), fname);
+    }
     return fname;
   }
 

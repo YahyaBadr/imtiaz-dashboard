@@ -2,40 +2,55 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#2B1A2B">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/college_logo.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
   <title>لوحة متابعة الإمتياز البيطري</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="print.css">
   <script src="config.js"></script>
-  <!-- Lucide Icons (Inline SVG replacer) -->
+  
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const iconMap = {
-        "📊": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>',
-        "📅": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
-        "🏥": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v4m0 4v4m-4-4h8m-4-8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path></svg>',
-        "⚠️": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
-        "🔍": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
-        "🖨️": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>',
-        "🖥️": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>',
-        "🔄": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>',
-        "📤": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>',
-        "🏛️": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="21" y2="22"></line><line x1="6" y1="18" x2="6" y2="11"></line><line x1="10" y1="18" x2="10" y2="11"></line><line x1="14" y1="18" x2="14" y2="11"></line><line x1="18" y1="18" x2="18" y2="11"></line><polygon points="12 2 20 7 4 7"></polygon></svg>',
-        "🐔": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"></path><path d="M16 12a4 4 0 0 1-8 0"></path><path d="M12 16v6"></path><path d="M8 22h8"></path></svg>',
-        "🥩": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 0-10 10c0 5.5 4.5 10 10 10s10-4.5 10-10A10 10 0 0 0 12 2z"></path><path d="M12 6a6 6 0 0 0-6 6"></path><path d="M12 10a2 2 0 0 0-2 2"></path></svg>',
-        "🔬": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2v6.5l6 6a2 2 0 0 1-2.8 2.8l-6-6H5.2a2 2 0 0 1-1.4-3.4L10 2z"></path><line x1="8" y1="2" x2="16" y2="2"></line></svg>',
-        "🌟": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
-        "📌": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-4-4-4-8a4 4 0 1 1 8 0c0 4-4 8-4 8z"></path><circle cx="12" cy="9" r="1"></circle></svg>'
+        "📊": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>',
+        "📅": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+        "🏥": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v4m0 4v4m-4-4h8m-4-8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>',
+        "⚠️": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+        "🔍": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+        "🖨️": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
+        "🖥️": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+        "📲": '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>'
       };
-
       document.querySelectorAll('.nav-btn span, .header-btn span, .hero-title span').forEach(el => {
         const text = el.textContent.trim();
-        if (iconMap[text]) {
-          el.innerHTML = iconMap[text];
-        }
+        if (iconMap[text]) el.innerHTML = iconMap[text];
       });
+    });
+
+    // PWA Install Logic
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('install-btn').style.display = 'flex';
+    });
+    window.installApp = async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') document.getElementById('install-btn').style.display = 'none';
+        deferredPrompt = null;
+      }
+    };
+    window.addEventListener('appinstalled', () => {
+      document.getElementById('install-btn').style.display = 'none';
     });
   </script>
 </head>
@@ -44,68 +59,60 @@
   <header class="site-header">
     <div class="header-inner">
       <div class="header-top-row">
-        <div class="logo-wrapper">
-          <img src="assets/university_logo.png" alt="شعار الجامعة" class="header-logo" onerror="this.style.display='none'">
+        <div class="header-logos-mobile">
+          <div class="logo-wrapper"><img src="assets/university_logo.png" alt="الجامعة" class="header-logo" onerror="this.style.display='none'"></div>
+          <div class="logo-wrapper"><img src="assets/college_logo.png" alt="الكلية" class="header-logo" onerror="this.style.display='none'"></div>
         </div>
+        
         <div class="header-title-box">
           <h1>لوحة متابعة الإمتياز البيطري</h1>
-          <p class="header-subtitle">مكتب السيد الأستاذ الدكتور / وكيل الكلية لشؤون التعليم والطلاب</p>
-          <div class="header-meta-badge" id="header-last-update">آخر تحديث للبيانات: 3 نوفمبر 2026</div>
+          <p class="header-subtitle">مكتب السيد الأستاذ الدكتور / وكيل الكلية</p>
+          <div class="header-meta-badge" id="header-last-update">جاري التحميل...</div>
         </div>
-        <div style="display:flex; align-items:center; gap:14px">
-          <div class="header-actions">
-            <button class="header-btn" onclick="openGlobalSearch()" type="button" title="بحث سريع (Ctrl+K)">
-              <span>🔍 بحث</span>
-              <kbd>Ctrl K</kbd>
-            </button>
-            <button class="header-btn" id="presentation-btn" onclick="togglePresentationMode()" type="button">
-              <span>🖥️ وضع العرض</span>
-            </button>
-            <button class="header-btn" onclick="window.print()" type="button">
-              <span>🖨️ طباعة / PDF</span>
-            </button>
-          </div>
-          <div class="logo-wrapper">
-            <img src="assets/college_logo.png" alt="شعار الكلية" class="header-logo" onerror="this.style.display='none'">
-          </div>
+
+        <div class="header-actions">
+          <button class="header-btn" id="install-btn" onclick="installApp()" style="display:none; background:var(--c-gold); color:var(--c-plum); font-weight:bold;">
+            <span>📲 تثبيت التطبيق</span>
+          </button>
+          <button class="header-btn" onclick="openGlobalSearch()"><span>🔍 بحث</span></button>
+          <button class="header-btn" onclick="window.print()"><span>🖨️ طباعة</span></button>
         </div>
       </div>
     </div>
   </header>
 
-  <nav class="site-nav" role="navigation">
+  <nav class="site-nav">
     <div class="nav-inner">
-      <button class="nav-btn active" data-page="overview" type="button"><span class="nav-icon">📊</span><span>الملخص العام</span></button>
-      <button class="nav-btn" data-page="schedule" type="button"><span class="nav-icon">📅</span><span>مصفوفة التدوير</span></button>
-      <button class="nav-btn" data-page="units" type="button"><span class="nav-icon">🏥</span><span>الوحدات البيطرية</span></button>
-      <button class="nav-btn" data-page="not-registered" type="button"><span class="nav-icon">⚠️</span><span>غير المسجلين</span></button>
-      <button class="nav-btn" onclick="openGlobalSearch()" type="button"><span class="nav-icon">🔍</span><span>بحث سريع</span></button>
-      <button class="nav-btn nav-disabled" disabled><span class="nav-icon">🔄</span><span>التدوير الداخلي</span><span class="nav-soon">قريباً</span></button>
-      <button class="nav-btn nav-disabled" disabled><span class="nav-icon">📤</span><span>تصدير للأطباء</span><span class="nav-soon">قريباً</span></button>
+      <button class="nav-btn active" data-page="overview"><span class="nav-icon">📊</span><span>الملخص</span></button>
+      <button class="nav-btn" data-page="schedule"><span class="nav-icon">📅</span><span>المصفوفة</span></button>
+      <button class="nav-btn" data-page="units"><span class="nav-icon">🏥</span><span>الوحدات</span></button>
+      <button class="nav-btn" data-page="not-registered"><span class="nav-icon">⚠️</span><span>غير المسجلين</span></button>
+      <button class="nav-btn" onclick="openGlobalSearch()"><span class="nav-icon">🔍</span><span>بحث</span></button>
     </div>
   </nav>
 
-  <main id="main-content" class="main-content" role="main">
-    <div id="loading-screen" class="loading-screen" role="status">
-      <div class="loading-spinner"></div>
-      <p>جاري قراءة وتدقيق بيانات الإمتياز…</p>
-    </div>
-
-    <div id="page-overview" class="page hidden" role="region"></div>
-    <div id="page-schedule" class="page hidden" role="region"></div>
-    <div id="page-units" class="page hidden" role="region"></div>
-    <div id="page-not-registered" class="page hidden" role="region"></div>
+  <main id="main-content" class="main-content">
+    <div id="loading-screen" class="loading-screen"><div class="loading-spinner"></div><p>جاري التحميل…</p></div>
+    <div id="page-overview" class="page hidden"></div>
+    <div id="page-schedule" class="page hidden"></div>
+    <div id="page-units" class="page hidden"></div>
+    <div id="page-not-registered" class="page hidden"></div>
   </main>
 
-  <div id="verify-badge" class="verify-badge hidden" role="status"></div>
+  <div id="verify-badge" class="verify-badge hidden"></div>
 
   <script src="lib/papaparse.min.js"></script>
-  <script src="lib/xlsx.mini.min.js"></script>
   <script src="app.js"></script>
   <script src="pages/overview.js"></script>
   <script src="pages/schedule.js"></script>
   <script src="pages/units.js"></script>
   <script src="pages/not-registered.js"></script>
-
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW failed', err));
+      });
+    }
+  </script>
 </body>
 </html>

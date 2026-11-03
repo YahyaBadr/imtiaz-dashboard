@@ -121,7 +121,8 @@ function renderSchedule(container) {
 }
 
 /* ── نافذة تفاصيل الدورة لجروب معيّن (كل الأزرار فيها data-action) ── */
-window.openRoundDetailModal = function (roundKey, roundTitle, groupId, studentCount, matrixKey) {
+window.openRoundDetailModal = function (rawKey, roundTitle, groupId, studentCount, matrixKey) {
+  const roundKey = normRoundKey(rawKey);                              // يقبل أي مسميات في الشيت (veterinary_units …)
   const gid = String(groupId == null ? '' : groupId);
   const cnt = String(studentCount == null ? 0 : studentCount);
   const title = roundTitle || roundLabel(roundKey);
@@ -133,9 +134,9 @@ window.openRoundDetailModal = function (roundKey, roundTitle, groupId, studentCo
     extra += `<div class="alert-item alert-amber static"><span class="alert-icon">⚠️</span><div>هذا التوقيت يتدرب فيه <strong>جروب ${esc(gid)}</strong> مع جروب <strong>${esc(others)}</strong>. إجمالي الطلاب المتواجدين: <strong class="num">${DB.roundMatrix[mKey].total_students}</strong> طالب/ة.</div></div>`;
   }
 
-  const d = getRoundDates(DB.roundSchedule.find((r) => String(r.group_id) === gid && (r.round_key === roundKey)) ? (DB.roundSchedule.find((r) => String(r.group_id) === gid && r.round_key === roundKey).round_order) : '');
   const schedRow = DB.roundSchedule.find((r) => String(r.group_id) === gid && r.round_key === roundKey) || {};
-  const start = formatDate(schedRow.start_date) || d.start, end = formatDate(schedRow.end_date) || d.end;
+  const start = formatDate(schedRow.start_date) || getRoundDates(schedRow.round_order || '').start || getRoundDates('').start;
+  const end = formatDate(schedRow.end_date) || getRoundDates(schedRow.round_order || '').end || getRoundDates('').end;
   const info = [
     ['المجال', title],
     ['قوام الجروب', cnt + ' طالب/ة'],

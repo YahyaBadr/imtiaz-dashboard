@@ -24,16 +24,13 @@ function renderSchedule(container) {
     elective:        { icon: '🌟', label: 'تدريب اختياري', cls: 'badge-round-elective' }
   };
 
-  // THE FIX: Hardcoded dimensions directly into the SVG
-  const lotusSvg = `<svg class="title-ornament" width="22" height="12" style="width:22px !important; height:12px !important; max-width:22px !important; max-height:12px !important;" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
-
   container.innerHTML = `
     <div class="card card-sm" style="margin-bottom: var(--gap); background:#FFFFFF; border-right:4px solid var(--c-gold)">
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px">
         <div style="display:flex; align-items:center; gap:10px">
           <span style="font-size:1.4rem">📅</span>
           <div>
-            <div style="font-size:1.15rem; font-weight:700; color:var(--c-plum); display:flex; align-items:center; gap:8px">${lotusSvg}<span>مصفوفة التدوير الزمني للإمتياز</span></div>
+            <div style="font-size:1.15rem; font-weight:700; color:var(--c-plum); display:flex; align-items:center; gap:8px"><span>مصفوفة التدوير الزمني للإمتياز</span></div>
             <div style="font-size:0.84rem; color:var(--c-text-muted); margin-top:2px">انقر على أي خلية أو جروب لعرض تفاصيل التوزيع والكشوف المعتمدة</div>
           </div>
         </div>

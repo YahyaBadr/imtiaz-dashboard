@@ -1,0 +1,133 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Imtiaz Dashboard — Pharaonic Print Stylesheet
+   High Contrast · Clean A4 · Logos on White Header
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media print {
+  .site-nav,
+  .header-actions,
+  .header-btn,
+  .verify-badge,
+  .modal-overlay,
+  .unit-toggle-btn,
+  .btn,
+  .table-search,
+  .hero-tag {
+    display: none !important;
+  }
+
+  @page {
+    margin: 15mm 12mm;
+    size: A4 portrait;
+  }
+
+  body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    font-size: 10.5pt;
+    font-family: 'Cairo', Arial, sans-serif !important;
+  }
+
+  .site-header {
+    background: #FFFFFF !important;
+    color: #2B1A2B !important;
+    border-bottom: 2px solid #2B1A2B !important;
+    padding: 8px 0 12px !important;
+    box-shadow: none !important;
+  }
+
+  .logo-wrapper {
+    width: 60px !important;
+    height: 60px !important;
+    border: 1px solid #CCC !important;
+    box-shadow: none !important;
+  }
+
+  .header-logo {
+    max-width: 58px !important;
+    max-height: 58px !important;
+  }
+
+  .header-title-box h1 {
+    color: #2B1A2B !important;
+    font-size: 1.3rem !important;
+  }
+
+  .header-subtitle {
+    color: #555555 !important;
+  }
+
+  .header-meta-badge {
+    background: #F0F0F0 !important;
+    color: #333 !important;
+    border: 1px solid #CCC !important;
+  }
+
+  /* Hero band for print */
+  .hero-band {
+    background: #FFFFFF !important;
+    color: #2B1A2B !important;
+    border: 2px solid #2B1A2B !important;
+    box-shadow: none !important;
+    padding: 14px 18px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .hero-title { color: #2B1A2B !important; }
+
+  .hero-stat-card {
+    background: #F9F9F9 !important;
+    border: 1px solid #CCC !important;
+    color: #2B1A2B !important;
+    box-shadow: none !important;
+  }
+
+  .hero-stat-number {
+    color: #2B1A2B !important;
+    font-size: 2rem !important;
+  }
+
+  .hero-stat-label {
+    color: #444444 !important;
+  }
+
+  /* Cards & Tables */
+  .card,
+  .round-card,
+  .status-card,
+  .unit-card,
+  .table-wrap,
+  .copyable-list {
+    box-shadow: none !important;
+    border: 1px solid #CCC !important;
+    break-inside: avoid;
+    background: #FFFFFF !important;
+  }
+
+  .unit-card-body {
+    display: block !important;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  body::after {
+    content: "لوحة متابعة الإمتياز البيطري — جامعة القاهرة — للاطلاع الداخلي فقط";
+    display: block;
+    text-align: center;
+    font-size: 8.5pt;
+    color: #666666;
+    margin-top: 20px;
+    border-top: 1px solid #CCC;
+    padding-top: 6px;
+  }
+}

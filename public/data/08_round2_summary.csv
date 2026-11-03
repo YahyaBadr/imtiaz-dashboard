@@ -1,0 +1,6 @@
+﻿round_key,round_name_ar,groups,expected_students,registered,not_registered
+units,وحدات بيطرية,1+6,133,123,10
+college,أقسام الكلية,2,61,61,0
+equine_lab_fish,خيل ومعامل وسمك,5,71,70,1
+slaughter,مجازر وسلامة غذاء,3+4,147,147,0
+poultry,دواجن,7+8,154,154,0

@@ -5,7 +5,7 @@
    Bump CACHE_VERSION whenever you redeploy so clients get the new files.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const CACHE_VERSION = 'imtiaz-v6';
+const CACHE_VERSION = 'imtiaz-v7';
 const APP_SHELL = [
   './',
   './index.html',
@@ -14,11 +14,17 @@ const APP_SHELL = [
   './print.css',
   './config.js',
   './app.js',
+  './export.js',
+  './export-assets.js',
   './manifest.json',
   './pages/overview.js',
   './pages/schedule.js',
   './pages/units.js',
   './pages/not-registered.js',
+  './vendor/xlsx.full.min.js',
+  './vendor/pdfmake.min.js',
+  './vendor/vfs_fonts.js',
+  './vendor/docx.umd.js',
   './assets/university_logo.png',
   './assets/college_logo.png'
 ];

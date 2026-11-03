@@ -1,18 +1,21 @@
 'use strict';
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   export.js — تصدير حقيقي لملفات Excel / PDF / Word / CSV (توليد في المتصفح)
-   مصدر البيانات: window.DB (نفس مصدر اللوحة) — لا قراءة من DOM.
-   المكتبات تُحمَّل عند أول نقرة فقط (lazy-load).
+   export.js — توليد ملفات حقيقية: Excel / PDF / Word / CSV (client-side)
+   مصدر البيانات: window.ExportCore (من window.DB مباشرة — بلا DOM scraping).
+   المكتبات vendored في ./vendor وتُحمَّل كسولاً عند أول نقرة فقط.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 (function () {
   const libs = { xlsx: null, pdfmake: null, docx: null };
+  let busy = false;
 
   function loadScript(src) {
     return new Promise((res, rej) => {
       const s = document.createElement('script');
-      s.src = src; s.onload = res; s.onerror = () => rej(new Error('تعذّر تحميل ' + src));
+      s.src = src; s.async = true;
+      s.onload = () => res();
+      s.onerror = () => rej(new Error('تعذّر تحميل المكتبة: ' + src));
       document.head.appendChild(s);
     });
   }
@@ -26,245 +29,216 @@
     if (fmt === 'docx' && !libs.docx) { await loadScript('./vendor/docx.umd.js'); libs.docx = window.docx; }
   }
 
-  // اسم الملف: imtiaz-YYYY-MM-DD-HHMM.ext
-  function fileStamp(ext) {
-    const d = new Date();
-    const p = (n) => String(n).padStart(2, '0');
-    return `imtiaz-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.${ext}`;
+  function downloadBlob(blob, fname) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
   }
 
-  const N = (v) => parseInt(v, 10) || 0;
-  const genderAr = (g) => (g === 'F' ? 'أنثى' : g === 'M' ? 'ذكر' : '—');
-  function statusBadgeText(st) {
-    return ({ current: 'جارٍ الآن', upcoming: 'قادم', finished: 'انتهى' })[st] || '—';
-  }
-
-  /* ─────────── بناء بيانات التصدير من window.DB — نفس أرقام اللوحة تماماً ─────────── */
-  function buildExportData() {
-    const DB = window.DB;
-    if (!DB || !Array.isArray(DB.students) || !DB.students.length) throw new Error('البيانات غير جاهزة بعد — انتظر اكتمال تحميل اللوحة');
-
-    const totalStudents = (DB.groups || []).reduce((a, g) => a + N(g.total_students), 0) || DB.students.length;
-    const males = DB.students.filter((s) => s.gender === 'M').length;
-    const females = DB.students.filter((s) => s.gender === 'F').length;
-    const r2Reg = (DB.round2Summary || []).reduce((a, r) => a + N(r.registered), 0);
-    const r2Missing = (DB.round2Summary || []).reduce((a, r) => a + N(r.not_registered), 0);
-
-    const summary = [
-      ['إجمالي طلاب الدفعة', totalStudents],
-      ['بنين', males],
-      ['بنات', females],
-      ['عدد الجروبات', (DB.groups || []).length],
-      ['مسجلون بمواقع التدريب (دورة 2)', r2Reg],
-      ['غير مسجلين (دورة 2)', r2Missing]
-    ];
-
-    const training = (DB.round2Summary || []).map((r) => {
-      const reg = N(r.registered), exp = N(r.expected_students), miss = N(r.not_registered);
-      return [r.round_name_ar || roundLabel(r.round_key), reg, exp, miss, exp > 0 ? Math.round((reg / exp) * 100) : 0];
-    });
-
-    const groups = (DB.groups || []).map((g) => {
-      const gid = String(g.group_id);
-      const sched = (DB.roundSchedule || []).filter((r) => String(r.group_id) === gid).sort((a, b) => N(a.round_order) - N(b.round_order));
-      const cur = sched.find((r) => computeStatus(r.start_date, r.end_date) === 'current')
-        || sched.find((r) => computeStatus(r.start_date, r.end_date) === 'upcoming') || sched[sched.length - 1];
-      return [gid, N(g.total_students),
-        cur ? (cur.round_name_ar || roundLabel(cur.round_key)) : '—',
-        cur ? statusBadgeText(computeStatus(cur.start_date, cur.end_date)) : '—'];
-    });
-
-    const matrix = (DB.roundSchedule || []).map((r) => [
-      String(r.group_id), r.round_name_ar || roundLabel(r.round_key),
-      formatDate(r.start_date) || '—', formatDate(r.end_date) || '—',
-      statusBadgeText(computeStatus(r.start_date, r.end_date))
-    ]).sort((a, b) => (N(a[0]) - N(b[0])) || String(a[1]).localeCompare(String(b[1]), 'ar'));
-
-    const unreg = (DB.unregistered || []).map((u) => [
-      u.full_name || 'غير محدد', u.code_short || '—', String(u.group_id || '—'),
-      roundLabel(u.round_key), genderAr(normGender(u.gender))
-    ]);
-
-    const students = DB.students.map((s) => [
-      s.full_name || 'غير محدد', s.student_code || '—', String(s.group_id || '—'),
-      genderAr(s.gender), formatPhone(s.phone) || '—'
-    ]);
-
-    return { summary, training, groups, matrix, unreg, students };
-  }
-
-  /* ─────────── EXCEL (.xlsx): SheetJS — أوراق متعددة · RTL · رؤوس مثبّتة ─────────── */
-  async function exportXLSX() {
+  /* ─────────── EXCEL (.xlsx): SheetJS — أوراق متعددة · RTL · تجميد · أرقام حقيقية ─────────── */
+  async function exportXLSX(scope) {
     await loadLibs('xlsx');
     const XLSX = libs.xlsx;
-    const d = buildExportData();
+    const sets = window.ExportCore.datasets(scope);
+
     const wb = XLSX.utils.book_new();
+    const sheetProps = [];
 
-    const addSheet = (name, header, rows) => {
-      const ws = XLSX.utils.aoa_to_sheet([header].concat(rows));
-      ws['!cols'] = header.map(() => ({ wch: 20 }));
+    sets.forEach((ds) => {
+      const aoa = [ds.header].concat(ds.rows);
+      const ws = XLSX.utils.aoa_to_sheet(aoa); // الأرقام تبقى خلايا رقمية (t:'n') تلقائياً
+
+      // رؤوس عريضة + تظليل + محاذاة يمين لكل الخلايا
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let c = range.s.c; c <= range.e.c; ++c) {
+        const addr = XLSX.utils.encode_cell({ r: 0, c });
+        if (ws[addr]) ws[addr].s = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '2B1A2B' } }, alignment: { horizontal: 'right', vertical: 'center' } };
+      }
+      for (let r = 1; r <= range.e.r; ++r) {
+        for (let c = range.s.c; c <= range.e.c; ++c) {
+          const addr = XLSX.utils.encode_cell({ r, c });
+          if (ws[addr]) ws[addr].s = { alignment: { horizontal: 'right' } };
+        }
+      }
+
+      // عروض أعمدة معقولة (حسب أطول قيمة؛ العربي ≈ حرفان للوحدة)
+      ws['!cols'] = ds.header.map((h, ci) => {
+        let w = String(h).length * 2;
+        ds.rows.slice(0, 300).forEach((row) => { const l = String(row[ci] == null ? '' : row[ci]).length * 1.9; if (l > w) w = l; });
+        return { wch: Math.min(Math.max(Math.round(w) + 2, 10), 44) };
+      });
+
       ws['!freeze'] = { xSplit: 0, ySplit: 1 };
-      XLSX.utils.book_append_sheet(wb, ws, name);
-    };
-    addSheet('الملخص', ['البيان', 'القيمة'], d.summary);
-    addSheet('توزيع التدريب R2', ['المجال', 'مسجلون', 'متوقعون', 'غير مسجلين', 'نسبة %'], d.training);
-    addSheet('الجروبات', ['الجروب', 'القوام', 'الموقع الحالي', 'الحالة'], d.groups);
-    addSheet('مصفوفة التدوير', ['الجروب', 'الدورة', 'من تاريخ', 'إلى تاريخ', 'الحالة'], d.matrix);
-    addSheet('غير المسجلين', ['الاسم', 'الكود', 'الجروب', 'الدورة', 'النوع'], d.unreg);
-    addSheet('دليل الطلاب', ['الاسم', 'الرقم المرجعي', 'الجروب', 'النوع', 'الهاتف'], d.students);
 
-    // وسوم الأوراق RTL (يقرأها Excel في عرض الأوراق)
-    wb.Workbook = { Sheets: wb.SheetNames.map(() => ({ Hidden: 0, RTL: true })) };
+      XLSX.utils.book_append_sheet(wb, ws, ds.name.slice(0, 31));
+      sheetProps.push({ Hidden: 0, RTL: true, tabColor: { rgb: ds.tone || '6B4C7A' } });
+    });
 
-    const fname = fileStamp('xlsx');
-    XLSX.writeFile(wb, fname);
+    wb.Workbook = { Sheets: sheetProps };
+
+    const fname = window.ExportCore.fileStamp(scope, 'xlsx');
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    downloadBlob(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), fname);
     return fname;
   }
 
   /* ─────────── CSV (.csv): UTF-8 BOM — ملف واحد بأقسام واضحة ─────────── */
-  async function exportCSV() {
-    const d = buildExportData();
+  async function exportCSV(scope) {
+    const sets = window.ExportCore.datasets(scope);
     const esc = (v) => {
       const s = String(v == null ? '' : v);
       return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
     };
-    const toCSV = (rows) => rows.map((r) => r.map(esc).join(',')).join('\r\n');
-
-    let out = '\uFEFF'; // BOM — يفتح العربية بشكل صحيح في Excel
-    out += 'الملخص\r\n' + toCSV([['البيان', 'القيمة'], ...d.summary]) + '\r\n\r\n';
-    out += 'توزيع التدريب بالدورة الثانية\r\n' + toCSV([['المجال', 'مسجلون', 'متوقعون', 'غير مسجلين', 'نسبة %'], ...d.training]) + '\r\n\r\n';
-    out += 'الجروبات\r\n' + toCSV([['الجروب', 'القوام', 'الموقع الحالي', 'الحالة'], ...d.groups]) + '\r\n\r\n';
-    out += 'مصفوفة التدوير\r\n' + toCSV([['الجروب', 'الدورة', 'من تاريخ', 'إلى تاريخ', 'الحالة'], ...d.matrix]) + '\r\n\r\n';
-    out += 'غير المسجلين\r\n' + toCSV([['الاسم', 'الكود', 'الجروب', 'الدورة', 'النوع'], ...d.unreg]) + '\r\n\r\n';
-    out += 'دليل الطلاب\r\n' + toCSV([['الاسم', 'الرقم المرجعي', 'الجروب', 'النوع', 'الهاتف'], ...d.students]);
-
-    const blob = new Blob([out], { type: 'text/csv;charset=utf-8;' });
-    const fname = fileStamp('csv');
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = fname;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+    let out = '\uFEFF';
+    sets.forEach((ds) => {
+      out += ds.name + '\r\n';
+      out += ds.header.map(esc).join(',') + '\r\n';
+      ds.rows.forEach((r) => { out += r.map(esc).join(',') + '\r\n'; });
+      out += '\r\n';
+    });
+    const fname = window.ExportCore.fileStamp(scope, 'csv');
+    downloadBlob(new Blob([out], { type: 'text/csv;charset=utf-8;' }), fname);
     return fname;
   }
 
-  /* ─────────── PDF (.pdf): pdfmake + خط Cairo المضمّن + اتجاه RTL ─────────── */
-  async function exportPDF() {
+  /* ─────────── PDF (.pdf): pdfmake — خط Cairo مضمّن + RTL + ترويسة branded ─────────── */
+  async function exportPDF(scope) {
     await loadLibs('pdf');
     const pdfMake = libs.pdfmake;
     const assets = window.__IMTIAZ_EXPORT_ASSETS;
     if (!assets || !assets.Cairo400) throw new Error('أصول التصدير (export-assets.js) غير محمّلة');
 
-    // Cairo base64 → vfs (base64 مقبول مباشرة في vfs من pdfmake ≥0.2)
     pdfMake.vfs = Object.assign({}, pdfMake.vfs || {});
     pdfMake.vfs['Cairo-Regular.ttf'] = assets.Cairo400;
     pdfMake.vfs['Cairo-Bold.ttf'] = assets.Cairo700 || assets.Cairo400;
     pdfMake.fonts = { Cairo: { normal: 'Cairo-Regular.ttf', bold: 'Cairo-Bold.ttf', italics: 'Cairo-Regular.ttf', bolditalics: 'Cairo-Regular.ttf' } };
 
-    const d = buildExportData();
-    const T = (header, rows, widths) => ({
-      table: { headerRows: 1, widths: widths || header.map(() => '*'), body: [header.map((h) => ({ text: h, style: 'th' }))].concat(rows.map((r) => r.map((c) => String(c)))) },
-      layout: { fillColor: (i) => (i === 0 ? '#2B1A2B' : (i % 2 ? '#FAF2E2' : '#FFFFFF')), hLineColor: '#E6DEC8', vLineColor: '#E6DEC8', hLineWidth: () => 0.5, vLineWidth: () => 0.5 },
-      fontSize: 8.5
+    const sets = window.ExportCore.datasets(scope);
+    const logo = assets.collegeLogo || assets.universityLogo || null;
+
+    const tableOf = (ds) => ({
+      table: {
+        headerRows: 1, widths: ds.header.map(() => '*'),
+        body: [ds.header.map((h) => ({ text: h, style: 'th', alignment: 'right' }))]
+          .concat(ds.rows.map((r) => r.map((c) => ({ text: String(c == null ? '' : c), alignment: 'right' }))))
+      },
+      layout: {
+        fillColor: (i) => (i === 0 ? '#2B1A2B' : (i % 2 ? '#FAF2E2' : '#FFFFFF')),
+        hLineColor: '#E6DEC8', vLineColor: '#E6DEC8', hLineWidth: () => 0.5, vLineWidth: () => 0.5
+      },
+      fontSize: 8
     });
+
+    const blocks = [];
+    sets.forEach((ds) => {
+      blocks.push({ text: ds.name, style: 'h', margin: [0, 12, 0, 4] });
+      blocks.push(tableOf(ds));
+    });
+
+    const head = [
+      { text: 'كلية الطب البيطري — جامعة القاهرة', style: 'org', alignment: 'right' },
+      { text: 'لوحة متابعة الإمتياز البيطري', style: 'title', alignment: 'right' },
+      { text: 'مكتب السيد الأستاذ الدكتور وكيل الكلية · العام الجامعي ' + ((window.APP_CONFIG && APP_CONFIG.ACADEMIC_YEAR) || '—') + ' · تاريخ التوليد: ' + new Date().toLocaleDateString('ar-EG'), style: 'sub', alignment: 'right' }
+    ];
 
     const dd = {
       pageSize: 'A4',
       pageOrientation: 'landscape',
-      pageMargins: [24, 34, 24, 40],
-      info: { title: 'لوحة متابعة الإمتياز البيطري', subject: 'تقرير رسمي' },
+      pageMargins: [24, 46, 24, 44],
+      info: { title: 'لوحة متابعة الإمتياز البيطري', subject: scope === 'full' ? 'الملف الشامل' : 'تصدير الصفحة الحالية' },
       content: [
-        { text: 'كلية الطب البيطري — جامعة القاهرة', style: 'org', alignment: 'right' },
-        { text: 'لوحة متابعة الإمتياز البيطري', style: 'title', alignment: 'right' },
-        { text: 'مكتب وكيل الكلية · العام الجاميدي ' + ((window.APP_CONFIG && APP_CONFIG.ACADEMIC_YEAR) || '—') + ' · تاريخ التقرير: ' + new Date().toLocaleDateString('ar-EG'), style: 'sub', alignment: 'right' },
-        { text: 'الملخص', style: 'h', margin: [0, 10, 0, 4] },
-        { columns: [T(['البيان', 'القيمة'], d.summary, [160, 90]), { width: 10 }, T(['المجال', 'مسجلون', 'متوقعون', 'غير مسجلين', '%'], d.training, [110, 55, 55, 65, 45])] },
-        { text: 'الجروبات ومواقعها الحالية', style: 'h', margin: [0, 12, 0, 4] },
-        T(['الجروب', 'القوام', 'الموقع الحالي', 'الحالة'], d.groups, [70, 70, 260, 90]),
-        { text: 'الطلاب غير المسجلين (دورة 2)', style: 'h', margin: [0, 12, 0, 4] },
-        d.unreg.length ? T(['الاسم', 'الكود', 'الجروب', 'الدورة', 'النوع'], d.unreg, [220, 80, 60, 140, 60]) : { text: 'لا يوجد غير مسجلين', style: 'ok' }
+        logo
+          ? { columns: [{ image: 'data:image/png;base64,' + logo, width: 52, margin: [0, 0, 10, 0] }, head] }
+          : head,
+        { canvas: [{ type: 'line', x1: 0, y1: 6, x2: 780, y2: 6, lineWidth: 1.5, lineColor: '#C9A227' }], margin: [0, 6, 0, 2] },
+        blocks
       ],
+      footer: (page, total) => ({ text: 'صفحة ' + page + ' من ' + total + ' · مكتب السيد الأستاذ الدكتور وكيل الكلية', style: 'foot', alignment: 'center', margin: [0, 6, 0, 0] }),
       defaultStyle: { font: 'Cairo', fontSize: 9 },
       styles: {
         org: { fontSize: 10, color: '#685764' },
-        title: { fontSize: 16, bold: true, color: '#2B1A2B' },
-        sub: { fontSize: 8.5, color: '#9C8C99', margin: [0, 2, 0, 6] },
+        title: { fontSize: 17, bold: true, color: '#2B1A2B' },
+        sub: { fontSize: 8.5, color: '#9C8C99', margin: [0, 2, 0, 0] },
         h: { fontSize: 12, bold: true, color: '#2B1A2B' },
-        th: { bold: true, color: '#FFFFFF', fontSize: 8.5 },
-        ok: { fontSize: 10, color: '#2A9D72', bold: true }
+        th: { bold: true, color: '#FFFFFF', fontSize: 8 },
+        foot: { fontSize: 7.5, color: '#9C8C99' }
       }
     };
 
-    const fname = fileStamp('pdf');
+    const fname = window.ExportCore.fileStamp(scope, 'pdf');
     await new Promise((res, rej) => {
       try { pdfMake.createPdf(dd).download(fname, res, rej); } catch (e) { rej(e); }
     });
     return fname;
   }
 
-  /* ─────────── WORD (.docx): docx.js — RTL paragraphs + جداول bidirectional ─────────── */
-  async function exportDOCX() {
+  /* ─────────── WORD (.docx): docx.js — فقرات وجداول RTL bidirectional ─────────── */
+  async function exportDOCX(scope) {
     await loadLibs('docx');
     const m = libs.docx;
-    const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, ShadingType, HeadingLevel } = m;
-    const d = buildExportData();
+    const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, ShadingType, HeadingLevel, BorderStyle } = m;
+    const sets = window.ExportCore.datasets(scope);
 
-    const para = (text, opts) => new Paragraph(Object.assign({
-      bidirectional: true, alignment: AlignmentType.RIGHT,
-      children: [new TextRun(Object.assign({ text: String(text), rightToLeft: true, size: 20, font: 'Cairo' }, (opts && opts.run) || {}))]
-    }, opts && opts.para || {}));
+    const para = (text, runOpts, paraOpts) => new Paragraph(Object.assign({
+      bidirectional: true, alignment: AlignmentType.RIGHT
+    }, paraOpts || {}, {
+      children: [new TextRun(Object.assign({ text: String(text), rightToLeft: true, size: 20, font: 'Cairo' }, runOpts || {}))]
+    }));
 
-    const row = (cells, isHeader) => new TableRow({
-      children: cells.map((c) => new TableCell({
-        width: { size: Math.floor(100 / cells.length), type: WidthType.PERCENTAGE },
-        shading: isHeader ? { type: ShadingType.CLEAR, fill: '2B1A2B' } : undefined,
-        children: [new Paragraph({
-          bidirectional: true, alignment: AlignmentType.RIGHT,
-          children: [new TextRun({ text: String(c), rightToLeft: true, size: 18, bold: !!isHeader, color: isHeader ? 'FFFFFF' : undefined, font: 'Cairo' })]
-        })]
-      }))
+    const cell = (txt, isHeader) => new TableCell({
+      shading: isHeader ? { type: ShadingType.CLEAR, fill: '2B1A2B' } : undefined,
+      borders: { top: { style: BorderStyle.SINGLE, size: 2, color: 'E6DEC8' }, bottom: { style: BorderStyle.SINGLE, size: 2, color: 'E6DEC8' }, left: { style: BorderStyle.SINGLE, size: 2, color: 'E6DEC8' }, right: { style: BorderStyle.SINGLE, size: 2, color: 'E6DEC8' } },
+      children: [new Paragraph({
+        bidirectional: true, alignment: AlignmentType.RIGHT,
+        children: [new TextRun({ text: String(txt == null ? '' : txt), rightToLeft: true, size: 17, bold: !!isHeader, color: isHeader ? 'FFFFFF' : undefined, font: 'Cairo' })]
+      })]
     });
 
     const tbl = (header, rows) => new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
-      rows: [row(header, true)].concat(rows.map((r) => row(r, false)))
+      rows: [new TableRow({ tableHeader: true, children: header.map((h) => cell(h, true)) })]
+        .concat(rows.map((r) => new TableRow({ children: r.map((c) => cell(c, false)) })))
     });
 
-    const H = (t) => new Paragraph({ heading: HeadingLevel.HEADING_2, bidirectional: true, alignment: AlignmentType.RIGHT, children: [new TextRun({ text: t, rightToLeft: true, font: 'Cairo' })] });
+    const children = [
+      para('كلية الطب البيطري — جامعة القاهرة · مكتب السيد الأستاذ الدكتور وكيل الكلية', { size: 18, color: '685764' }),
+      para('لوحة متابعة الإمتياز البيطري', { bold: true, size: 32, color: '2B1A2B' }, { spacing: { after: 80 } }),
+      para('نطاق التقرير: ' + (scope === 'full' ? 'الملف الشامل (كل البيانات)' : 'الصفحة الحالية') + ' · تاريخ التوليد: ' + new Date().toLocaleDateString('ar-EG') + ' · العام الجامعي ' + ((window.APP_CONFIG && APP_CONFIG.ACADEMIC_YEAR) || '—'), { size: 16, color: '9C8C99' }, { spacing: { after: 200 } })
+    ];
+    sets.forEach((ds) => {
+      children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, bidirectional: true, alignment: AlignmentType.RIGHT, spacing: { before: 200, after: 80 }, children: [new TextRun({ text: ds.name, rightToLeft: true, font: 'Cairo', color: '2B1A2B' })] }));
+      children.push(tbl(ds.header, ds.rows));
+    });
+    children.push(para('— نهاية التقرير · مكتب السيد الأستاذ الدكتور وكيل الكلية —', { size: 16, color: '9C8C99' }, { spacing: { before: 240 } }));
 
     const doc = new Document({
       styles: { default: { document: { run: { font: 'Cairo', size: 20 }, paragraph: { bidirectional: true } } } },
-      sections: [{
-        properties: { page: { size: { orientation: m.PageOrientation.LANDSCAPE } } },
-        children: [
-          para('كلية الطب البيطري — جامعة القاهرة · مكتب وكيل الكلية', { run: { size: 18, color: '685764' } }),
-          para('لوحة متابعة الإمتياز البيطري', { run: { bold: true, size: 32, color: '2B1A2B' }, para: { spacing: { after: 120 } } }),
-          para('تاريخ التقرير: ' + new Date().toLocaleDateString('ar-EG') + ' · العام الجامعي ' + ((window.APP_CONFIG && APP_CONFIG.ACADEMIC_YEAR) || '—'), { run: { size: 16, color: '9C8C99' } }),
-          H('الملخص'), tbl(['البيان', 'القيمة'], d.summary),
-          H('توزيع التدريب بالدورة الثانية'), tbl(['المجال', 'مسجلون', 'متوقعون', 'غير مسجلين', 'نسبة %'], d.training),
-          H('الجروبات ومواقعها الحالية'), tbl(['الجروب', 'القوام', 'الموقع الحالي', 'الحالة'], d.groups),
-          H('الطلاب غير المسجلين (دورة 2)'), d.unreg.length ? tbl(['الاسم', 'الكود', 'الجروب', 'الدورة', 'النوع'], d.unreg) : para('لا يوجد غير مسجلين')
-        ]
-      }]
+      sections: [{ properties: { page: { size: { orientation: m.PageOrientation.LANDSCAPE } } }, children }]
     });
 
+    const fname = window.ExportCore.fileStamp(scope, 'docx');
     const blob = await Packer.toBlob(doc);
-    const fname = fileStamp('docx');
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = fname;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+    downloadBlob(blob, fname);
     return fname;
   }
 
-  /* ─────────── الواجهة: القائمة المنسدلة + مؤشر الدوران + toast ─────────── */
+  /* ─────────── الواجهة: قائمة النطاق × الصيغة + حالة الزر ─────────── */
   function menuEl() { return document.getElementById('export-menu'); }
   function btnEl() { return document.getElementById('export-btn'); }
+
+  // النطاق المحدد في القائمة (افتراضي: الصفحة الحالية)
+  let chosenScope = 'page';
+  function setScope(el) {
+    chosenScope = el.dataset.scope === 'full' ? 'full' : 'page';
+    const menu = menuEl(); if (!menu) return;
+    menu.querySelectorAll('.export-scope').forEach((b) => {
+      const on = b === el;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-checked', String(on));
+    });
+  }
 
   function toggleMenu(force) {
     const menu = menuEl(), btn = btnEl();
@@ -272,56 +246,81 @@
     const show = force !== undefined ? force : menu.classList.contains('hidden');
     menu.classList.toggle('hidden', !show);
     btn.setAttribute('aria-expanded', String(show));
-    // تدوير سهم القائمة عند الفتح/الإغلاق
     const caret = btn.querySelector('.export-caret');
     if (caret) caret.classList.toggle('open', show);
+    if (show) {
+      const first = menu.querySelector('.export-item:not([disabled])');
+      if (first) try { first.focus(); } catch (e) {}
+    }
   }
 
-  async function handleExport(fmt) {
-    const item = document.querySelector('#export-menu [data-format="' + fmt + '"]');
-    if (!item) return;
-    if (item.disabled) return;
-    item.disabled = true;
-    const txt = item.querySelector('.export-txt');
+  function setBusy(on) {
+    busy = on;
+    const btn = btnEl();
+    if (btn) {
+      btn.disabled = on;
+      btn.classList.toggle('spinning', on);
+      btn.setAttribute('aria-busy', String(on));
+    }
+    const menu = menuEl();
+    if (menu) menu.querySelectorAll('.export-item').forEach((it) => { it.disabled = on; });
+  }
+
+  async function handleExport(el) {
+    if (busy) return;
+    const fmt = el.dataset.format, scope = chosenScope || 'page';
+    if (!fmt) return;
+    setBusy(true);
+    const txt = el.querySelector('.export-txt');
     const orig = txt ? txt.innerHTML : '';
-    if (txt) txt.innerHTML = '<b>جارٍ التوليد…</b><small>قد يستغرق ثوانٍ على الملفات الكبيرة</small>';
+    if (txt) txt.innerHTML = '<b>جارٍ التوليد…</b><small>لا تغلق الصفحة</small>';
     toggleMenu(false);
     try {
       let fname;
-      if (fmt === 'xlsx') fname = await exportXLSX();
-      else if (fmt === 'csv') fname = await exportCSV();
-      else if (fmt === 'pdf') fname = await exportPDF();
-      else if (fmt === 'docx') fname = await exportDOCX();
-      else throw new Error('صيغة غير معروفة');
-      toast('تم تنزيل الملف:' + fname);
+      if (fmt === 'xlsx') fname = await exportXLSX(scope);
+      else if (fmt === 'csv') fname = await exportCSV(scope);
+      else if (fmt === 'pdf') fname = await exportPDF(scope);
+      else if (fmt === 'docx') fname = await exportDOCX(scope);
+      else throw new Error('صيغة غير معروفة: ' + fmt);
+      toast('تم تنزيل الملف: ' + fname);
     } catch (err) {
-      console.error(err);
-      toast('فشل التصدير: ' + (err && err.message ? err.message : 'خطأ غير متوقع'), 4200);
+      toast('فشل التصدير: ' + (err && err.message ? err.message : 'خطأ غير متوقع'), 5200);
     } finally {
-      item.disabled = false;
+      setBusy(false);
       if (txt) txt.innerHTML = orig;
     }
   }
 
-  // المعالج الموحّد في app.js يتكفل بـ data-action — نسجّل إجراءين فقط
   if (typeof registerAction === 'function') {
     registerAction('export-toggle', () => toggleMenu());
-    registerAction('export-file', (el) => handleExport(el.dataset.format));
+    registerAction('export-file', (el) => handleExport(el));
+    registerAction('export-scope', (el) => setScope(el));
   }
 
-  // إغلاق القائمة بالنقر خارجها أو ESC
   document.addEventListener('click', (e) => {
     const menu = menuEl();
     if (!menu || menu.classList.contains('hidden')) return;
     if (e.target.closest('#export-menu') || e.target.closest('#export-btn')) return;
     toggleMenu(false);
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleMenu(false); });
 
-  // ── الوضع الداكن/الفاتح (زر الرأس موجود مسبقاً: #theme-toggle[data-action=toggle-theme]) ──
+  // تنقل الكيبورد داخل القائمة (عناصر القائمة كلها أزرار native: Tab + Enter/Space + أسهم)
+  document.addEventListener('keydown', (e) => {
+    const menu = menuEl();
+    if (!menu || menu.classList.contains('hidden')) return;
+    if (e.key === 'Escape') { toggleMenu(false); const b = btnEl(); if (b) b.focus(); return; }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const items = Array.prototype.slice.call(menu.querySelectorAll('.export-item, .export-scope'));
+    const i = items.indexOf(document.activeElement);
+    e.preventDefault();
+    const next = e.key === 'ArrowDown' ? (i + 1) % items.length : (i <= 0 ? items.length - 1 : i - 1);
+    items[next].focus();
+  });
+
+  /* ── الوضع الداكن/الفاتح (زر الرأس: #theme-toggle[data-action=toggle-theme]) ── */
   const THEME_KEY = 'imtiaz_theme';
 
-  function applyTheme(dark, announce) {
+  function applyTheme(dark) {
     document.documentElement.classList.toggle('dark', dark);
     document.querySelectorAll('.t-ico-moon').forEach((el) => el.classList.toggle('hidden', dark));
     document.querySelectorAll('.t-ico-sun').forEach((el) => el.classList.toggle('hidden', !dark));
@@ -330,28 +329,25 @@
     const meta = document.getElementById('meta-theme-color');
     if (meta) meta.setAttribute('content', dark ? '#14101A' : '#2B1A2B');
     try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (err) {}
-    if (announce) { /* صامت: لا ليبل عائم فوق المحتوى عند تبديل الثيم */ }
   }
 
   function initTheme() {
     let saved = null;
     try { saved = localStorage.getItem(THEME_KEY); } catch (err) {}
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const dark = saved ? saved === 'dark' : prefersDark;
-    applyTheme(dark, false);
-    // متابعة تغيّر النظام تلقائياً طالما المستخدم لم يحدّد يدوياً
+    applyTheme(saved ? saved === 'dark' : prefersDark);
     if (window.matchMedia) {
       try {
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (ev) => {
           let cur = null; try { cur = localStorage.getItem(THEME_KEY); } catch (e2) {}
-          if (!cur) applyTheme(ev.matches, false);
+          if (!cur) applyTheme(ev.matches);
         });
-      } catch (err) { /* متقدمات لا تدعم addEventListener على matchMedia */ }
+      } catch (err) { /* متصفحات قديمة */ }
     }
   }
   initTheme();
 
   if (typeof registerAction === 'function') {
-    registerAction('toggle-theme', () => applyTheme(!document.documentElement.classList.contains('dark'), true));
+    registerAction('toggle-theme', () => applyTheme(!document.documentElement.classList.contains('dark')));
   }
 })();

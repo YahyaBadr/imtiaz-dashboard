@@ -22,21 +22,29 @@ window.APP_CONFIG = {
   ACADEMIC_YEAR: '2026 / 2027',
   VICE_DEAN_EMAIL: 'vicedean@cu.edu.eg',
 
-  /* ── 4) Access Gate — بوابة الدخول (تحمي اللوحة برمز/كلمة مرور) ──
-     PASSPHRASE : الرمز الذي يُطلب في شاشة الدخول. اتركه "" ليطلب من كل جهاز
-                  أن يختار رمزه عند أول فتح (يُحفظ على الجهاز فقط).
-     NOTE: أي رمز تضعه هنا يبقى ظاهراً لكل من يفتح الملف العام، لذلك فهو يمنع
-     الفضوليين ولا يغني عن صلاحيات Google Sheets. لحماية حقيقية استخدم وضع
-     TOKEN (انشر Apps Script بـ Token مطلوب في الطلبات) أو Cloudflare Access.
-     وضع Cloudflare Access: Users → Policies → Add policy → hostname
-     imtiaz-dashboard.pages.dev + Email-OTP / Google Workspace. */
+  /* ── 4) Access Gate — بوابة الدخول (اسم مستخدم + كلمة مرور من جدول Google) ──
+     MODE: 'sheet'  → التحقق يتم من تبويب Accounts في نفس جدول Google (موصى به)
+                         الصفوف: Username | Password   (عمودان فقط كما فعلت)
+           'local'  → بدون قائمة؛ كل جهاز يختار رمزاً محلياً عند أول فتح
+     USERS_SHEET_NAME: اسم التبويب كما هو في Google Sheets (افتراضي Accounts).
+                       لو كان الاسم عربياً اكتبه كما هو هنا.
+     PASSPHRASE: اختياري — رمز طوارئ عام إن أردت باباً احتياطياً. اتركه "" لتلغيه.
+     NOTE: كلمات المرور تُقرأ في المتصفح للتحقق فقط ولا تُرفع لأي مكان آخر؛ الجلسة
+     تُحفظ كرمز موقّع محلياً. للحماية القصوى أضف أيضاً Cloudflare Access على
+     imtiaz-dashboard.pages.dev (Zero Trust → Access → Applications → Email-OTP). */
   GATE: {
     ENABLED: true,              // false = بدون بوابة دخول
-    PASSPHRASE: '',             // ← ضع رمز اللوحة هنا (مثال: "vet#2026")
-    REMEMBER_HOURS: 12,         // مدة البقاء داخل اللوحة بعد الدخول (على هذا الجهاز)
+    MODE: 'sheet',              // 'sheet' | 'local'
+    USERS_SHEET_NAME: 'Accounts',           // اسم التبويب كما هو في Google Sheets
+    USERS_SHEET_NAME_ALT: '',               // بديل إن كان الاسم مختلفاً (مثال: 'الحسابات')
+    PASSPHRASE: '',                         // رمز طوارئ عام (اختياري — يُفضّل تركه فارغاً)
+    SESSION_HOURS: 8,           // مدة البقاء داخل اللوحة بعد الدخول
+    REMEMBER_HOURS: 8,          // (قديم — لنفس الغرض)
     AUTO_LOCK_MINUTES: 0,       // قفل تلقائي بعد الخمول (0 = لا قفل تلقائي)
     MAX_ATTEMPTS: 5,            // محاولات قبل إيقاف مؤقت قصير
-    LOCKOUT_SECONDS: 30
+    LOCKOUT_SECONDS: 30,
+    USERS_TTL_MINUTES: 60,      // إعادة قراءة قائمة المستخدمين بعد هذه المدة
+    API_TOKEN: ''               // لو ضبطت SECRET_TOKEN في Apps Script، ضع نفس القيمة هنا
   },
 
   /* ── 5) Feature flags ── */

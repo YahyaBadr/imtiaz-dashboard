@@ -1058,3 +1058,15 @@ html.dark .gantt-row:nth-child(even) .gantt-cell { background: rgba(255, 255, 25
   .nav-indicator { transition: none; }
 }
 @media print { .nav-indicator { display: none !important; } }
+
+/* ═══════ إضافات إغلاق الأعطال (دفعة نهائية) ═══════ */
+/* عطل 3: أزرار الترويسة كانت تُرسم "فارغة" لأن SVG داخل .btn-ico بلا قاعدة حجم —
+   viewBox وحده لا يعطي بُعداً عند غياب width/height → الأيقونة تنكمش لصفر تقريباً. */
+.header-btn .btn-ico { display: inline-flex; align-items: center; justify-content: center; }
+.header-btn .btn-ico svg { width: 18px; height: 18px; flex-shrink: 0; }
+.header-btn-icon { padding: 7px 9px; }
+.seg-group { display: inline-flex; align-items: center; gap: 8px; }
+@media (max-width: 480px) { .header-btn-icon { padding: 6px 8px; } .seg-group { gap: 6px; } }
+
+/* عطل 4: دعم data-theme="dark" بجانب html.dark حتى يتطابق أي مُبدِّل ثيم مع الـ tokens */
+html[data-theme="dark"] { color-scheme: dark; }

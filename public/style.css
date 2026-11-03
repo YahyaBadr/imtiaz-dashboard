@@ -1034,8 +1034,10 @@ html.dark .nav-btn.active .nav-ico { color: var(--c-gold); }
   font-size: .68rem; font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "tnum" 1;
 }
+/* الإصلاح (عطل 3): كان top:0 يرسم المؤشر فوق الشريط ويظهر "كشافيه منزلقه"؛
+   الآن bottom:-2px أي ملتصق تحت التبويب النشط فقط، وtop:auto يلغي أي تركة. */
 .nav-indicator {
-  position: absolute; top: 0; right: 0; width: 0; height: 3px;
+  position: absolute; top: auto; bottom: -2px; right: 0; width: 0; height: 3px;
   border-radius: 999px; background: var(--e-grad-gold, linear-gradient(135deg, #F2CE84, #E3A73C 45%, #C88D25));
   transform: translateX(0); opacity: 0;
   transition: transform .2s cubic-bezier(.2, .7, .2, 1), width .2s cubic-bezier(.2, .7, .2, 1), opacity .2s ease;
@@ -1088,9 +1090,12 @@ html.dark .gantt-row:nth-child(even) .gantt-cell { background: rgba(255, 255, 25
    viewBox وحده لا يعطي بُعداً عند غياب width/height → الأيقونة تنكمش لصفر تقريباً. */
 .header-btn .btn-ico { display: inline-flex; align-items: center; justify-content: center; }
 .header-btn .btn-ico svg { width: 18px; height: 18px; flex-shrink: 0; }
-.header-btn-icon { padding: 7px 9px; }
+/* البند 2 (ديسكتوب): هدف لمس ≥44px ومقاس بصري موحد لكل الأزرار — أيقونة فقط */
+.header-btn-icon { min-height: 44px; min-width: 44px; padding: 0 10px; justify-content: center; }
 .seg-group { display: inline-flex; align-items: center; gap: 8px; }
-@media (max-width: 480px) { .header-btn-icon { padding: 6px 8px; } .seg-group { gap: 6px; } }
+/* منع أي SVG خارجي بلا أبعاد من التمدد/الانكماش داخل الأزرار والتبويبات */
+.header-btn svg, .nav-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+@media (max-width: 480px) { .header-btn-icon { padding: 0 8px; } .seg-group { gap: 6px; } }
 
 /* عطل 4: دعم data-theme="dark" بجانب html.dark حتى يتطابق أي مُبدِّل ثيم مع الـ tokens */
 html[data-theme="dark"] { color-scheme: dark; }
@@ -1098,7 +1103,9 @@ html[data-theme="dark"] { color-scheme: dark; }
 /* ═══════ دورة الموبايل (≤480px) — بنود 2–5 ═══════ */
 @media (max-width: 480px) {
   /* البند 2: شريط الأدوات — صف واحد نظيف، أزرار موحّدة ≥44px، صفر التفاف نص، صفر قصّ عند الحواف */
-  .header-actions { flex-wrap: nowrap; justify-content: flex-start; overflow: visible; gap: 8px; margin: 0 calc(var(--gap) * -1); padding: 0 var(--gap); }
+  .header-actions { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scroll-snap-type: x proximity; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; gap: 8px; margin: 0 calc(var(--gap) * -1); padding: 4px var(--gap); mask-image: linear-gradient(to left, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%); }
+  .header-actions::-webkit-scrollbar { display: none; }
+  .header-actions > * { scroll-snap-align: start; }
   .header-btn, .header-btn-icon {
     height: 44px; min-width: 44px; padding: 0 10px; border-radius: 12px;
     font-size: 0.8rem; white-space: nowrap; flex-shrink: 0;

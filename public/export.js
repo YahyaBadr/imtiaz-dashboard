@@ -41,6 +41,13 @@
   async function exportXLSX(scope) {
     await loadLibs('xlsx');
     const XLSX = libs.xlsx;
+    // البند 7 (سبب جذري مكتشف بالفحص): نسخة CE المجانية من SheetJS تتجاهل كائن .s
+    // (cellStyles غير مدعوم) ولا tabColor → الرؤوس تخرج بلا ألوان. الحل: استيراد
+    // نسختين vendored — xlsx-js-style (تدعم cellStyles+tabColor) أولًا، وxlsx.full.min.js احتياطيًا.
+    if (!window.XLSX_style && !window.__XLSX_STYLE_FAILED) {
+      try { await loadScript('./vendor/xlsx-js-style.min.js'); } catch (e) { window.__XLSX_STYLE_FAILED = true; }
+    }
+    if (window.XLSX_style) XLSX = window.XLSX_style;
     const sets = window.ExportCore.datasets(scope);
 
     const wb = XLSX.utils.book_new();
@@ -50,16 +57,24 @@
       const aoa = [ds.header].concat(ds.rows);
       const ws = XLSX.utils.aoa_to_sheet(aoa); // الأرقام تبقى خلايا رقمية (t:'n') تلقائياً
 
-      // رؤوس عريضة + تظليل + محاذاة يمين لكل الخلايا
+      // البند 7: رأس branded (خلفية هوية بنفسجية + نص أبيض عريض) + حدود خفيفة + صفوف متناوبة
       const range = XLSX.utils.decode_range(ws['!ref']);
+      const thin = { style: 'thin', color: { rgb: 'D8CFC3' } };
+      const borderAll = { top: thin, bottom: thin, left: thin, right: thin };
       for (let c = range.s.c; c <= range.e.c; ++c) {
         const addr = XLSX.utils.encode_cell({ r: 0, c });
-        if (ws[addr]) ws[addr].s = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '2B1A2B' } }, alignment: { horizontal: 'right', vertical: 'center' } };
+        if (ws[addr]) ws[addr].s = {
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+          fill: { fgColor: { rgb: '2B1A2B' } },
+          alignment: { horizontal: 'right', vertical: 'center' },
+          border: borderAll,
+        };
       }
       for (let r = 1; r <= range.e.r; ++r) {
+        const band = (r % 2 === 0) ? { pattern: 'none' } : { pattern: 'solid', fgColor: { rgb: 'F7F2E8' } };
         for (let c = range.s.c; c <= range.e.c; ++c) {
           const addr = XLSX.utils.encode_cell({ r, c });
-          if (ws[addr]) ws[addr].s = { alignment: { horizontal: 'right' } };
+          if (ws[addr]) ws[addr].s = { alignment: { horizontal: 'right', vertical: 'center' }, border: borderAll, fill: band };
         }
       }
 
@@ -132,7 +147,8 @@
     });
 
     const blocks = [];
-    sets.forEach((ds) => {
+    sets.forEach((ds, si) => {
+      if (si > 0) blocks.push({ text: '', pageBreak: 'before' }); // البند 7: كل مجموعة بيانات في صفحة مستقلة — جداول أنيق بلا تقطيع فوضوي
       blocks.push({ text: ds.name, style: 'h', margin: [0, 12, 0, 4] });
       blocks.push(tableOf(ds));
     });
@@ -187,8 +203,10 @@
       children: [new TextRun(Object.assign({ text: String(text), rightToLeft: true, size: 20, font: 'Cairo' }, runOpts || {}))]
     }));
 
-    const cell = (txt, isHeader) => new TableCell({
-      shading: isHeader ? { type: ShadingType.CLEAR, fill: '2B1A2B' } : undefined,
+    const cell = (txt, isHeader, band) => new TableCell({
+      // البند 7: رأس بلون الهوية + صفوف متناوبة اللون (بيج فاتح على الصفوف الفردية)
+      shading: isHeader ? { type: ShadingType.CLEAR, fill: '2B1A2B' } : (band ? { type: ShadingType.CLEAR, fill: 'FAF2E2' } : undefined),
+      margins: { top: 40, bottom: 40 },
       borders: { top: { style: BorderStyle.SINGLE, size: 2, color: 'E6DEC8' }, bottom: { style: BorderStyle.SINGLE, size: 2, color: 'E6DEC8' }, left: { style: BorderStyle.SINGLE, size: 2, color: 'E6DEC8' }, right: { style: BorderStyle.SINGLE, size: 2, color: 'E6DEC8' } },
       children: [new Paragraph({
         bidirectional: true, alignment: AlignmentType.RIGHT,
@@ -199,7 +217,7 @@
     const tbl = (header, rows) => new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [new TableRow({ tableHeader: true, children: header.map((h) => cell(h, true)) })]
-        .concat(rows.map((r) => new TableRow({ children: r.map((c) => cell(c, false)) })))
+        .concat(rows.map((r, ri) => new TableRow({ children: r.map((c) => cell(c, false, ri % 2 === 1)) })))
     });
 
     const children = [

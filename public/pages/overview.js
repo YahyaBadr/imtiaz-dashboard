@@ -21,7 +21,8 @@ function renderOverview(container) {
   const prefAverages = computeFieldPreferences();
   const alerts = buildOverviewAlerts();
 
-  const lotusSvg = `<svg class="title-ornament" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
+  // THE FIX: Hardcoded dimensions directly into the SVG
+  const lotusSvg = `<svg class="title-ornament" width="22" height="12" style="width:22px !important; height:12px !important; max-width:22px !important; max-height:12px !important;" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
 
   container.innerHTML = `
     <div class="hero-band">

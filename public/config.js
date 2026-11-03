@@ -26,3 +26,12 @@ window.APP_CONFIG = {
   // Edit Mode capability (built in stage 2)
   ENABLE_EDIT_MODE: false
 };
+window.APP_CONFIG = {
+  // ... other settings ...
+  SHOW_NID_BY_DEFAULT: false,
+  PRESENTATION_MODE: false,
+  ENABLE_EDIT_MODE: false,
+  
+  // Add your API URL here:
+  API_URL: "https://script.google.com/macros/s/AKfycbySvILv0ZwJStPAGHABLCoV09ebK1iMSqZsIc8ZeiQ9qqL69_ONFuBplEZY3oOqxSlf2Q/exec"
+};

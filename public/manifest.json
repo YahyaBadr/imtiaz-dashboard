@@ -1,0 +1,33 @@
+{
+  "name": "لوحة متابعة الإمتياز البيطري",
+  "short_name": "الإمتياز البيطري",
+  "description": "لوحة متابعة الإمتياز البيطري — كلية الطب البيطري، جامعة القاهرة",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#2B1A2B",
+  "theme_color": "#2B1A2B",
+  "icons": [
+    {
+      "src": "assets/college_logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/college_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/college_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

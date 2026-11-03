@@ -9,8 +9,8 @@
 
   <!-- PWA / Install -->
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" sizes="48x48" href="assets/icons/favicon-48.png">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="assets/college_logo.png">
+  <link rel="apple-touch-icon" href="assets/college_logo.png">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="الإمتياز البيطري">
@@ -20,10 +20,10 @@
 
   <link rel="preload" href="assets/fonts/cairo-400-arabic-0.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/cairo-700-arabic-6.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="cairo.css?v=100">
-  <link rel="stylesheet" href="style.css?v=100">
-  <link rel="stylesheet" href="print.css?v=100" media="print">
-  <script src="config.js?v=100"></script>
+  <link rel="stylesheet" href="cairo.css?v=300">
+  <link rel="stylesheet" href="style.css?v=300">
+  <link rel="stylesheet" href="print.css?v=300" media="print">
+  <script src="config.js?v=300"></script>
 </head>
 <body>
 
@@ -44,10 +44,13 @@
           <button type="button" class="header-btn header-btn-install hidden" id="install-btn" data-action="install">
             <span class="btn-ico" aria-hidden="true">📲</span><span class="btn-txt">تثبيت التطبيق</span>
           </button>
+          <button type="button" class="header-btn header-btn-icon hidden" id="install-close" data-action="dismiss-install" title="إخفاء زر التثبيت" aria-label="إخفاء زر التثبيت">
+            <span class="btn-ico" aria-hidden="true">✕</span>
+          </button>
           <button type="button" class="header-btn" id="refresh-btn" data-action="refresh" title="تحديث البيانات">
             <span class="btn-ico" aria-hidden="true">🔄</span><span class="btn-txt">تحديث</span>
           </button>
-          <button type="button" class="header-btn" data-action="search-open" title="بحث">
+          <button type="button" class="header-btn" id="search-btn" data-action="search-open" title="بحث">
             <span class="btn-ico" aria-hidden="true">🔍</span><span class="btn-txt">بحث</span>
           </button>
           <button type="button" class="header-btn desk-only" id="presentation-btn" data-action="toggle-presentation" title="وضع العرض على الشاشة">
@@ -86,11 +89,11 @@
   <div id="verify-badge" class="verify-badge hidden"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=100"></script>
-  <script src="pages/overview.js?v=100"></script>
-  <script src="pages/schedule.js?v=100"></script>
-  <script src="pages/units.js?v=100"></script>
-  <script src="pages/not-registered.js?v=100"></script>
+  <script src="app.js?v=300"></script>
+  <script src="pages/overview.js?v=300"></script>
+  <script src="pages/schedule.js?v=300"></script>
+  <script src="pages/units.js?v=300"></script>
+  <script src="pages/not-registered.js?v=300"></script>
   <script>window.AppBoot && window.AppBoot();</script>
 </body>
 </html>

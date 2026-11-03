@@ -7,15 +7,22 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 (function () {
-  const libs = { xlsx: null, pdfmake: null, docx: null };
+  let libs = { xlsx: null, pdfmake: null, docx: null };
   let busy = false;
 
   function loadScript(src) {
+    // مهلة أمان مثبتة السبب الجذري: بدونها قد يتعلّق الوعد للأبد (spinner خالد بلا toast فشل)
     return new Promise((res, rej) => {
       const s = document.createElement('script');
+      let done = false;
+      const timer = setTimeout(() => {
+        if (done) return; done = true;
+        s.onload = s.onerror = null; s.remove();
+        rej(new Error('انتهت مهلة تحميل المكتبة: ' + src));
+      }, 20000);
       s.src = src; s.async = true;
-      s.onload = () => res();
-      s.onerror = () => rej(new Error('تعذّر تحميل المكتبة: ' + src));
+      s.onload = () => { if (done) return; done = true; clearTimeout(timer); res(); };
+      s.onerror = () => { if (done) return; done = true; clearTimeout(timer); rej(new Error('تعذّر تحميل المكتبة: ' + src)); };
       document.head.appendChild(s);
     });
   }

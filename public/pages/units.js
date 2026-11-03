@@ -40,7 +40,7 @@ container.innerHTML = `
     <div class="card card-sm" style="margin-bottom: var(--gap); background:#FFFFFF; border-right:4px solid var(--c-gold)">
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:1.4rem">🏥</span>
+          <span style="font-size:1.4rem">${ico('hospital')}</span>
           <div>
             <div style="font-size:1.15rem; font-weight:700; color:var(--c-plum); display:flex; align-items:center; gap:8px">
               ${lotusSvg}
@@ -50,7 +50,7 @@ container.innerHTML = `
           </div>
         </div>
         <div style="font-size:0.86rem; color:var(--c-text-muted); background:var(--c-page-bg); padding:6px 14px; border-radius:var(--radius-badge); border:1px solid var(--c-border);">
-          💡 <strong>تفصيل التسجيل:</strong> <span class="num">${totalUnitRegistrations}</span> تسجيل = <span class="num">${uniqueStudentsCount}</span> طالب + <span class="num">${multiUnitCount}</span> طلاب في وحدتين + <span class="num">${noGroupCount}</span> غير موجودين في ملفات الجروبات
+          <strong>تفصيل التسجيل:</strong> <span class="num">${totalUnitRegistrations}</span> تسجيل = <span class="num">${uniqueStudentsCount}</span> طالب + <span class="num">${multiUnitCount}</span> طلاب في وحدتين + <span class="num">${noGroupCount}</span> غير موجودين في ملفات الجروبات
         </div>
       </div>
     </div>
@@ -82,13 +82,13 @@ function buildUnitCard(u, byUnit) {
     <div class="unit-card">
       <div class="unit-card-header" role="button" tabindex="0" data-action="toggle-unit">
         <div class="unit-card-top">
-          <div><div class="unit-name">${esc(unitName)}</div><div class="unit-gov">📍 المحافظة: ${esc(gov)}</div></div>
+          <div><div class="unit-name">${esc(unitName)}</div><div class="unit-gov">${ico('map-pin')} المحافظة: ${esc(gov)}</div></div>
           <button class="unit-toggle-btn" tabindex="-1" aria-hidden="true">▾</button>
         </div>
         <div class="unit-stats">
-          <span class="unit-count-box">👤 المقيدون: <strong class="num">${reg}</strong> ${hasCapacity ? `/ طاقة استيعابية: <span class="num">${cap}</span>` : ''}</span>
-          ${females > 0 ? `<span class="unit-count-box gender-f">♀ <strong class="num">${females}</strong></span>` : ''}
-          ${males   > 0 ? `<span class="unit-count-box gender-m">♂ <strong class="num">${males}</strong></span>` : ''}
+          <span class="unit-count-box">${ico('user')} المقيدون: <strong class="num">${reg}</strong> ${hasCapacity ? `/ طاقة استيعابية: <span class="num">${cap}</span>` : ''}</span>
+          ${females > 0 ? `<span class="unit-count-box gender-f">${ico('female')} <strong class="num">${females}</strong></span>` : ''}
+          ${males   > 0 ? `<span class="unit-count-box gender-m">${ico('male')} <strong class="num">${males}</strong></span>` : ''}
         </div>
         ${barHTML}
       </div>
@@ -97,15 +97,15 @@ function buildUnitCard(u, byUnit) {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px">
           <span style="font-size:0.84rem; color:var(--c-text-muted)">كشف الطلاب (<strong class="num">${students.length}</strong> طالب/ة — انقر لفتح الملف):</span>
           <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap">
-            ${btn('🖨️ طباعة كشف الوحدة', 'print-unit', { unit: unitName }, 'btn-surface btn-sm')}
-            ${btn('📋 نسخ الأسماء والهواتف', 'copy-unit', { unit: unitName }, 'btn-surface btn-sm')}
+            ${btn('طباعة كشف الوحدة', 'print-unit', { unit: unitName }, 'btn-surface btn-sm')}
+            ${btn('نسخ الأسماء والهواتف', 'copy-unit', { unit: unitName }, 'btn-surface btn-sm')}
           </div>
         </div>
         <ul class="unit-student-list" id="${listId}">
           ${students.map(s => {
-            const gIcon = s.gender === 'M' ? '<span class="gender-m" title="ذكر">♂</span>' : s.gender === 'F' ? '<span class="gender-f" title="أنثى">♀</span>' : '';
+            const gIcon = s.gender === 'M' ? "<span class=\"gender-m\" title=\"ذكر\">${ico('male')}</span>" : s.gender === 'F' ? "<span class=\"gender-f\" title=\"أنثى\">${ico('female')}</span>" : '';
             const grpLabel = s.group_id ? `<span class="cartouche-badge" style="font-size:0.74rem">جروب ${s.group_id}</span>` : `<span style="color:var(--c-rose)">بدون جروب</span>`;
-            const issueNote = s.issue ? `<span title="${s.issue}" style="cursor:help; font-size:0.8rem">⚠️</span>` : '';
+            const issueNote = s.issue ? `<span title="${s.issue}" style="cursor:help; font-size:0.8rem">${ico('warning')}</span>` : '';
             const sKey = `${s.group_id}_${s.code_short}`.replace(/\s+/g, '');
             return `<li>${gIcon}<span class="clickable-student-name"${act('student', { sid: sKey })} title="اضغط لفتح الملف الكامل للطالب">${esc(s.full_name || 'غير محدد')}</span><span class="student-code">${s.code_short || '—'}</span>${grpLabel}${issueNote}</li>`;
           }).join('')}
@@ -132,7 +132,7 @@ window.printUnitSheet = function(unitName) {
 window.copyUnitListWithPhones = function(unitName, listId) {
   const students = DB.assignments.filter(a => a.round_key === 'units' && (a.unit_name || '').trim() === unitName.trim());
   const lines = students.map(s => { const full = DB.studentLookup[`${s.group_id}_${s.code_short}`.replace(/\s+/g, '')] || {}; return `${s.full_name}\t${s.code_short}\tجروب ${s.group_id}\t${full.phone || ''}`; });
-  navigator.clipboard.writeText(`كشف وحدة: ${unitName} (${lines.length} طالب)\n` + lines.join('\n')).then(() => alert(`تم النسخ ✓`)).catch(() => { openModal(`قائمة طلاب ${unitName}`, `<pre style="white-space:pre-wrap; direction:rtl">${lines.join('\n')}</pre>`); });
+  navigator.clipboard.writeText(`كشف وحدة: ${unitName} (${lines.length} طالب)\n` + lines.join('\n')).then(() => alert(`تم النسخ ${ico("check")}`)).catch(() => { openModal(`قائمة طلاب ${unitName}`, `<pre style="white-space:pre-wrap; direction:rtl">${lines.join('\n')}</pre>`); });
 };
 
 /* ═══ أزرار صفحة الوحدات — كل الضغطات عبر المعالج الموحّد (data-action) ═══ */

@@ -184,7 +184,7 @@
         { text: 'الجروبات ومواقعها الحالية', style: 'h', margin: [0, 12, 0, 4] },
         T(['الجروب', 'القوام', 'الموقع الحالي', 'الحالة'], d.groups, [70, 70, 260, 90]),
         { text: 'الطلاب غير المسجلين (دورة 2)', style: 'h', margin: [0, 12, 0, 4] },
-        d.unreg.length ? T(['الاسم', 'الكود', 'الجروب', 'الدورة', 'النوع'], d.unreg, [220, 80, 60, 140, 60]) : { text: 'لا يوجد غير مسجلين ✓', style: 'ok' }
+        d.unreg.length ? T(['الاسم', 'الكود', 'الجروب', 'الدورة', 'النوع'], d.unreg, [220, 80, 60, 140, 60]) : { text: 'لا يوجد غير مسجلين', style: 'ok' }
       ],
       defaultStyle: { font: 'Cairo', fontSize: 9 },
       styles: {
@@ -245,7 +245,7 @@
           H('الملخص'), tbl(['البيان', 'القيمة'], d.summary),
           H('توزيع التدريب بالدورة الثانية'), tbl(['المجال', 'مسجلون', 'متوقعون', 'غير مسجلين', 'نسبة %'], d.training),
           H('الجروبات ومواقعها الحالية'), tbl(['الجروب', 'القوام', 'الموقع الحالي', 'الحالة'], d.groups),
-          H('الطلاب غير المسجلين (دورة 2)'), d.unreg.length ? tbl(['الاسم', 'الكود', 'الجروب', 'الدورة', 'النوع'], d.unreg) : para('لا يوجد غير مسجلين ✓')
+          H('الطلاب غير المسجلين (دورة 2)'), d.unreg.length ? tbl(['الاسم', 'الكود', 'الجروب', 'الدورة', 'النوع'], d.unreg) : para('لا يوجد غير مسجلين')
         ]
       }]
     });
@@ -293,7 +293,7 @@
       else if (fmt === 'pdf') fname = await exportPDF();
       else if (fmt === 'docx') fname = await exportDOCX();
       else throw new Error('صيغة غير معروفة');
-      toast('✓ تم تنزيل الملف: ' + fname);
+      toast('تم تنزيل الملف:' + fname);
     } catch (err) {
       console.error(err);
       toast('فشل التصدير: ' + (err && err.message ? err.message : 'خطأ غير متوقع'), 4200);
@@ -330,7 +330,7 @@
     const meta = document.getElementById('meta-theme-color');
     if (meta) meta.setAttribute('content', dark ? '#14101A' : '#2B1A2B');
     try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (err) {}
-    if (announce) toast(dark ? 'الوضع الداكن ✓' : 'الوضع الفاتح ✓');
+    if (announce) toast(dark ? 'الوضع الداكن' : 'الوضع الفاتح');
   }
 
   function initTheme() {

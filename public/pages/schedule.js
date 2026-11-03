@@ -84,11 +84,11 @@ function renderSchedule(container) {
     </div>
 
     <div class="table-wrap">
-      <div class="table-scroll gantt-scroll">
+      <div class="table-scroll gantt-scroll has-fade" id="gantt-scroll">
         <table class="gantt-matrix-table" id="gantt-table">
           <thead>
             <tr>
-              <th class="gantt-sticky-col">الجروب والقوام</th>
+              <th class="gantt-sticky-col gantt-sticky-head">الجروب والقوام</th>
               ${roundCols.map((c) => `
                 <th>
                   <div class="gantt-head-title">${esc(c.title)}</div>
@@ -100,7 +100,7 @@ function renderSchedule(container) {
             ${DB.groups.map((g) => {
               const gid = String(g.group_id), count = groupCounts[gid] || 0, gs = schedMap[gid] || {};
               return `
-                <tr>
+                <tr class="gantt-row">
                   <td class="gantt-sticky-col">
                     <div class="gantt-group-cell"${act('group-roster', { gid })}>
                       <div class="gantt-group-top"><span class="cartouche-badge">جروب ${esc(gid)}</span><span class="go" aria-hidden="true">${iconSvg('external')}</span></div>
@@ -111,7 +111,7 @@ function renderSchedule(container) {
                     if (c.order === '0') {
                       const meta = ROUND_META.elective, st = computeStatus(c.start, c.end);
                       return `<td class="gantt-cell"${act('round-detail', { round: 'elective', title: 'تدريب اختياري', gid, count })}>
-                        ${rotCard({ rKey: 'elective', meta, title: 'تدريب اختياري', status: st, chips: [[`${count} طالب`, true]] })}
+                        ${rotCard({ rKey: 'elective', meta, title: 'تدريب اختياري', status: st, chips: [[`${count} طالب`, true]], foot: 'status' })}
                       </td>`;
                     }
                     const row = gs[c.order];
@@ -120,13 +120,18 @@ function renderSchedule(container) {
                     const rStatus = computeStatus(row.start_date, row.end_date);
                     const matrixKey = c.order + '_' + rKey, mData = DB.roundMatrix[matrixKey];
                     // كل قطعة معلومة كاملة تُمرَّر كشريحة مستقلة nowrap — الالتفاف يحدث بين الشرائح فقط
-                    const chips = [[`${count} طالب`, true]];
+                    const chips = [[`قوام الجروب ${count}`, true]];
+                    let capDot = '';
                     if (mData && mData.groups.length > 1) {
                       const others = mData.groups.filter((x) => String(x.group_id) !== gid).map((x) => x.group_id).join('+');
-                      chips.push([`مع جروب ${esc(others)}`, false], [`الإجمالي ${mData.total_students}`, true]);
+                      chips.push([`مشارك مع جروب ${esc(others)}`, false], [`الإجمالي ${mData.total_students}`, true]);
+                    }
+                    if (rKey === 'units') {
+                      const unregHere = (DB.unregistered || []).some((u) => normRoundKey(u.round_key) === 'units' && String(u.group_id) === gid);
+                      capDot = unregHere ? 'amber' : 'green';
                     }
                     return `<td class="gantt-cell"${act('round-detail', { round: rKey, title: row.round_name_ar || roundLabel(rKey), gid, count, matrix: matrixKey })}>
-                      ${rotCard({ rKey, meta, title: row.round_name_ar || roundLabel(rKey), status: rStatus, chips })}
+                      ${rotCard({ rKey, meta, title: row.round_name_ar || roundLabel(rKey), status: rStatus, chips, foot: (c.order === '1' ? 'total' : 'status'), total: count, dot: capDot })}
                     </td>`;
                   }).join('')}
                 </tr>`;

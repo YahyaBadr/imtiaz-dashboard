@@ -1141,8 +1141,19 @@ const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.
 function setInstallVisible(v) {
   const b = document.getElementById('install-btn'), x = document.getElementById('install-close');
   if (b) b.classList.toggle('hidden', !v);
-  if (x) x.classList.toggle('hidden', !v);            // زر ${ico('x')} يظهر فقط عندما يظهر زر التثبيت
+  if (x) x.classList.toggle('hidden', !v);            // زر الإخفاء يظهر فقط عندما يظهر زر التثبيت
 }
+/* البند 2: على الموبايل لا مساحة لنص "تثبيت التطبيق" — نبدله بaria-label فقط */
+function localizeInstallBtnForMobile() {
+  const b = document.getElementById('install-btn'); if (!b) return;
+  if (window.matchMedia && window.matchMedia('(max-width: 480px)').matches) {
+    b.setAttribute('aria-label', 'تثبيت التطبيق');
+  } else {
+    b.removeAttribute('aria-label');                    // النص المرئي موجود داخل الزر
+  }
+}
+window.addEventListener('resize', localizeInstallBtnForMobile, { passive: true });
+localizeInstallBtnForMobile();
 function canShowInstall() { return !isStandalone() && !installDismissed; }
 
 window.dismissInstall = function () {

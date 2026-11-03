@@ -563,14 +563,16 @@ body {
 .header-logo { transition: transform .35s cubic-bezier(.2,.7,.2,1), filter .35s; }
 .logo-wrapper:hover .header-logo { transform: translateY(-2px) scale(1.05); filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
 
-/* ── شريط التنقل: زجاجي لاصق ── */
+/* ── شريط التنقل: لاصق — خلفية داكنة دائماً (بنفسجي في الفاتح، فحمي في الداكن) ──
+   سبب الإصلاح (عطل 1+4أ): الطبقة "الفاخرة" كانت ترسم الشريط كريمياً شبه شفاف فوق
+   نص بلون فاتح → التبويبات غير النشطة تختفي في الفاتح، وتظهر بيج داخل الثيم الداكن. */
 .site-nav {
   position: sticky; top: 0; z-index: 60;
-  backdrop-filter: saturate(1.35) blur(12px); -webkit-backdrop-filter: saturate(1.35) blur(12px);
-  background: rgba(247, 242, 232, 0.82);
+  background: var(--c-plum);
   border-bottom: 1px solid var(--c-border-gold);
   box-shadow: var(--e-shadow-sm);
 }
+html.dark .site-nav { background: #1E121E; }
 .nav-btn { position: relative; transition: transform .18s ease, color .18s ease, background .18s ease; }
 .nav-btn::after {
   content: ""; position: absolute; bottom: 4px; right: 50%; transform: translateX(50%) scaleX(0);
@@ -800,14 +802,23 @@ html.dark {
   color-scheme: dark;
 }
 html.dark .card, html.dark .export-menu { background: var(--c-card-bg); border-color: var(--c-border); }
-html.dark .header-btn { color: var(--c-text-main); }
+html.dark .header-btn { color: #FFFFFF; }
 html.dark .site-header { background: linear-gradient(180deg, #1E121E, #17111B); }
 html.dark img.header-logo { filter: brightness(1.15); }
+/* عناوين الأقسام في الوضع الداكن — كانت ترسم بلاّوم غامقاً فوق خلفية شبه سوداء (عطل 4ب/4ج) */
+html.dark .section-title { color: var(--c-text-main); }
+html.dark .gantt-head-title, html.dark .gantt-group-top { color: var(--c-text-main); }
 
 /* ═══ طبقة الأسطح الداكنة — خريطة كاملة (أرضيات/أسطر/حدود/نصوص ثابتة الفاتح) ═══ */
 /* أسطح بيضاء/كريميه → سطح داكن */
+html.dark .round-card,
+html.dark .status-card,
+html.dark .unit-card,
+html.dark .table-wrap,
+html.dark .field-pref-card,
 html.dark .rot-card,
 html.dark .gantt-cell-inner,
+html.dark .gantt-sticky-col,
 html.dark .table-header,
 html.dark .modal-body,
 html.dark .profile-body,
@@ -819,9 +830,21 @@ html.dark .kv,
 html.dark .journey-content,
 html.dark .contact-box,
 html.dark .personal-info-card,
+html.dark .pref-item,
+html.dark .copyable-name,
 html.dark .table-cards tbody tr { background: var(--c-surface); }
+/* أرضيات القطاعات الفاتحة داخل بطاقات المصفوفة → نظائرها الداكنة (عطل 4: كروت فاتحة داخل ثيم داكن) */
+html.dark .rot-card.units, html.dark .gantt-cell-inner.units           { background: #14303B; border-color: #2A5A6E; }
+html.dark .rot-card.college, html.dark .gantt-cell-inner.college       { background: #35211B; border-color: #5C3A2E; }
+html.dark .rot-card.poultry, html.dark .gantt-cell-inner.poultry       { background: #12332A; border-color: #1F5C46; }
+html.dark .rot-card.slaughter, html.dark .gantt-cell-inner.slaughter   { background: #33260D; border-color: #6B4E14; }
+html.dark .rot-card.equine_lab_fish, html.dark .gantt-cell-inner.equine_lab_fish { background: #14202F; border-color: #2C4468; }
+html.dark .rot-card.elective, html.dark .gantt-cell-inner.elective     { background: #222A1F; border-color: #40503A; }
+html.dark .g-chip, html.dark .rot-foot .g-chip, html.dark .gantt-count-badge { background: rgba(255, 255, 255, 0.07); border-color: var(--c-border); color: var(--c-text-muted); }
+html.dark .g-chip.num, html.dark .gantt-count-badge { color: var(--c-text-main); }
 
 /* نصوص داكنة فوق الأسطح الجديدة → نص أساسي فاتح */
+html.dark .section-title,
 html.dark .rot-title,
 html.dark .round-card-name,
 html.dark .status-group-name,
@@ -875,10 +898,12 @@ html.dark .data-table tbody tr:hover { background: var(--c-gold-light); }
 html.dark .slist-row:hover { background: var(--c-gold-light); }
 html.dark .search-result-row:hover, html.dark .search-result-row.selected { background: var(--c-gold-light); }
 
-/* شريط التنبيهات في الوضع الداكن */
-html.dark .alert-item.alert-rose { color: #F2A0A0; }
-html.dark .alert-item.alert-amber { color: #F5C26A; }
-html.dark .alert-item.alert-plum { border-color: var(--c-border-gold); }
+/* شريط التنبيهات في الوضع الداكن — عطل 4د: كانت الأرضية البيضاء/الزيتونية الثابتة
+   تُبقي النص الغامق غير مقروء؛ تُعاد هنا أرضيات ونصوص نظائر داكنة بتباين ≥ 4.5:1 */
+html.dark .alert-item.alert-rose  { background: #3A1414; border-color: #6E2020; color: #F2A0A0; }
+html.dark .alert-item.alert-amber { background: #33260D; border-color: #6B4E14; color: #F5C26A; }
+html.dark .alert-item.alert-plum  { background: var(--c-surface); border-color: var(--c-border-gold); color: var(--c-text-main); }
+html.dark .badge-grey { background: rgba(255,255,255,.07); color: var(--c-text-muted); border-color: var(--c-border); }
 
 /* رحلة الطالب داخل المودال */
 html.dark .journey-bullet { border-color: var(--c-surface); }
@@ -956,15 +981,16 @@ html.dark .ico-chip { filter: brightness(1.35); }
 
 /* ── ب) [تم الحذف] توست عدم الاتصال — الكاش يعمل بصمت عبر Service Worker بلا أي إشعار ── */
 
-/* ── ج) شريط التبويبات — الوضع الفاتح: الخلفية بلاّوم داكن دائماً،
-      والتبويب النشط يتميّز بأرضية بيضاء + نص بلاّوم (AAA) وليس بلون ذهبي باهت. ── */
+/* ── ج) شريط التبويبات — الخلفية داكنة دائماً في الوضعين؛ غير النشط كريمي واضح
+      (تباين ≥ 7:1)، والنشط أرضية كريمية + نص داكن (تباين AAA). ── */
 .site-nav { --nav-h: 52px; }
 .nav-inner { position: relative; gap: 8px; padding-block: 6px; scrollbar-width: thin; }
 .nav-btn {
   height: 40px; display: inline-flex; align-items: center; gap: 8px;
-  color: rgba(247, 242, 232, 0.82);            /* ≈ AA على البنفسجي الداكن */
+  color: #EFE7DF;                              /* ≈ 11:1 على البنفسجي الداكن */
 }
-.nav-btn:hover:not(:disabled) { color: #FFFFFF; background: rgba(255, 255, 255, 0.08); }
+.nav-btn .nav-ico { color: inherit; }
+.nav-btn:hover:not(:disabled) { color: #FFFFFF; background: rgba(255, 255, 255, 0.10); }
 .nav-btn.active {
   color: var(--c-plum);                        /* نص داكن فوق الأرضية الفاتحة = تباين AAA */
   background: #F7F2E8;                          /* فاترة بوضوح عن خلفية الشريط الداكنة */
@@ -1032,3 +1058,15 @@ html.dark .gantt-row:nth-child(even) .gantt-cell { background: rgba(255, 255, 25
   .nav-indicator { transition: none; }
 }
 @media print { .nav-indicator { display: none !important; } }
+
+/* ═══════ إضافات إغلاق الأعطال (دفعة نهائية) ═══════ */
+/* عطل 3: أزرار الترويسة كانت تُرسم "فارغة" لأن SVG داخل .btn-ico بلا قاعدة حجم —
+   viewBox وحده لا يعطي بُعداً عند غياب width/height → الأيقونة تنكمش لصفر تقريباً. */
+.header-btn .btn-ico { display: inline-flex; align-items: center; justify-content: center; }
+.header-btn .btn-ico svg { width: 18px; height: 18px; flex-shrink: 0; }
+.header-btn-icon { padding: 7px 9px; }
+.seg-group { display: inline-flex; align-items: center; gap: 8px; }
+@media (max-width: 480px) { .header-btn-icon { padding: 6px 8px; } .seg-group { gap: 6px; } }
+
+/* عطل 4: دعم data-theme="dark" بجانب html.dark حتى يتطابق أي مُبدِّل ثيم مع الـ tokens */
+html[data-theme="dark"] { color-scheme: dark; }

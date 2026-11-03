@@ -20,7 +20,21 @@
     });
   }
   async function loadLibs(fmt) {
-    if (fmt === 'xlsx' && !libs.xlsx) { await loadScript('./vendor/xlsx.full.min.js'); libs.xlsx = window.XLSX; }
+    // xlsx-js-style أولاً: يدعم أنماط الخلايا cellStyles/.s (نسخة CE المجانية تتجاهلها).
+    // ملاحظة مثبتة باختبار فعلي: هذا الفرع لا يكتب tabColor ولا rightToLeft في XML،
+    // لذا ألوان تبويبات الأوراق وRTL على مستوى المصنف تُضاف يدويًا بعد XLSX.write.
+    // احتياطي: xlsx.full.min.js إن فشل التحميل (يُعلَّم __XLSX_STYLE_FAILED لتجنّب إعادة المحاولة).
+    if (fmt === 'xlsx' && !libs.xlsx) {
+      try {
+        await loadScript('./vendor/xlsx-js-style.min.js');
+        libs.xlsx = window.XLSX;
+      } catch (e) {
+        window.__XLSX_STYLE_FAILED = true;
+        await loadScript('./vendor/xlsx.full.min.js');
+        libs.xlsx = window.XLSX;
+      }
+      if (!window.JSZip) { try { await loadScript('./vendor/jszip.min.js'); } catch (e2) { /* حقن RTL/ألوان التبويبات يصبح اختياريًا */ } }
+    }
     if (fmt === 'pdf' && !libs.pdfmake) {
       await loadScript('./vendor/pdfmake.min.js');
       await loadScript('./vendor/vfs_fonts.js');
@@ -37,17 +51,11 @@
     setTimeout(() => URL.revokeObjectURL(url), 8000);
   }
 
-  /* ─────────── EXCEL (.xlsx): SheetJS — أوراق متعددة · RTL · تجميد · أرقام حقيقية ─────────── */
+  /* ─────────── EXCEL (.xlsx): xlsx-js-style — أوراق متعددة · RTL · تجميد · رؤوس ملونة · أرقام حقيقية ─────────── */
   async function exportXLSX(scope) {
-    await loadLibs('xlsx');
+    await loadLibs('xlsx'); // تحمّل xlsx-js-style أولاً (cellStyles+tabColor) مع احتياطي CE
     const XLSX = libs.xlsx;
-    // البند 7 (سبب جذري مكتشف بالفحص): نسخة CE المجانية من SheetJS تتجاهل كائن .s
-    // (cellStyles غير مدعوم) ولا tabColor → الرؤوس تخرج بلا ألوان. الحل: استيراد
-    // نسختين vendored — xlsx-js-style (تدعم cellStyles+tabColor) أولًا، وxlsx.full.min.js احتياطيًا.
-    if (!window.XLSX_style && !window.__XLSX_STYLE_FAILED) {
-      try { await loadScript('./vendor/xlsx-js-style.min.js'); } catch (e) { window.__XLSX_STYLE_FAILED = true; }
-    }
-    if (window.XLSX_style) XLSX = window.XLSX_style;
+    const styled = !window.__XLSX_STYLE_FAILED; // الأنماط تُطبَّق فقط عند توفر النسخة المدعومة
     const sets = window.ExportCore.datasets(scope);
 
     const wb = XLSX.utils.book_new();
@@ -57,24 +65,26 @@
       const aoa = [ds.header].concat(ds.rows);
       const ws = XLSX.utils.aoa_to_sheet(aoa); // الأرقام تبقى خلايا رقمية (t:'n') تلقائياً
 
-      // البند 7: رأس branded (خلفية هوية بنفسجية + نص أبيض عريض) + حدود خفيفة + صفوف متناوبة
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      const thin = { style: 'thin', color: { rgb: 'D8CFC3' } };
-      const borderAll = { top: thin, bottom: thin, left: thin, right: thin };
-      for (let c = range.s.c; c <= range.e.c; ++c) {
-        const addr = XLSX.utils.encode_cell({ r: 0, c });
-        if (ws[addr]) ws[addr].s = {
-          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
-          fill: { fgColor: { rgb: '2B1A2B' } },
-          alignment: { horizontal: 'right', vertical: 'center' },
-          border: borderAll,
-        };
-      }
-      for (let r = 1; r <= range.e.r; ++r) {
-        const band = (r % 2 === 0) ? { pattern: 'none' } : { pattern: 'solid', fgColor: { rgb: 'F7F2E8' } };
+      // البند 7: رأس branded (خلفية هوية + نص أبيض عريض) + حدود خفيفة + صفوف متناوبة — فقط مع النسخة المدعومة
+      if (styled) {
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        const thin = { style: 'thin', color: { rgb: 'D8CFC3' } };
+        const borderAll = { top: thin, bottom: thin, left: thin, right: thin };
         for (let c = range.s.c; c <= range.e.c; ++c) {
-          const addr = XLSX.utils.encode_cell({ r, c });
-          if (ws[addr]) ws[addr].s = { alignment: { horizontal: 'right', vertical: 'center' }, border: borderAll, fill: band };
+          const addr = XLSX.utils.encode_cell({ r: 0, c });
+          if (ws[addr]) ws[addr].s = {
+            font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+            fill: { fgColor: { rgb: '2B1A2B' } },
+            alignment: { horizontal: 'right', vertical: 'center' },
+            border: borderAll,
+          };
+        }
+        for (let r = 1; r <= range.e.r; ++r) {
+          const band = (r % 2 === 0) ? { pattern: 'none' } : { pattern: 'solid', fgColor: { rgb: 'F7F2E8' } };
+          for (let c = range.s.c; c <= range.e.c; ++c) {
+            const addr = XLSX.utils.encode_cell({ r, c });
+            if (ws[addr]) ws[addr].s = { alignment: { horizontal: 'right', vertical: 'center' }, border: borderAll, fill: band };
+          }
         }
       }
 
@@ -88,15 +98,57 @@
       ws['!freeze'] = { xSplit: 0, ySplit: 1 };
 
       XLSX.utils.book_append_sheet(wb, ws, ds.name.slice(0, 31));
-      sheetProps.push({ Hidden: 0, RTL: true, tabColor: { rgb: ds.tone || '6B4C7A' } });
+      const prop = { Hidden: 0, RTL: true };
+      if (styled) prop.tabColor = { rgb: ds.tone || '6B4C7A' };
+      sheetProps.push(prop);
     });
 
     wb.Workbook = { Sheets: sheetProps };
 
     const fname = window.ExportCore.fileStamp(scope, 'xlsx');
-    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    // cellStyles:true مطلوب في SheetJS لتفعيل كائنات .s الخاصة بالأنماط عند الكتابة
+    let out = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: styled });
+    if (styled) {
+      // ملاحظة مثبتة باختبار فعلي على xlsx-js-style 1.2.0: الكتابة تتجاهل tabColor وRTL،
+      // لذا نحقنها يدويًا في XML داخل الـ zip الناتج (تعديل نصي آمن على ملفين فقط).
+      try { out = await patchXlsxRtlTabs(out, sheetProps); } catch (e) { /* الملف يخرج بلا ألوان تبويبات — لا يفشل التصدير */ }
+    }
     downloadBlob(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), fname);
     return fname;
+  }
+
+  /* حقن rightToLeft + tabColor في XML بعد كتابة SheetJS (فرع xlsx-js-style لا يكتبهما).
+     JSZip 3.x: loadAsync للقراءة وgenerateAsync للكتابة — واجهة الـ constructor المباشرة محذوفة منذ 3.0. */
+  async function patchXlsxRtlTabs(buf, sheetProps) {
+    if (!window.JSZip) return buf;
+    const zip = await window.JSZip.loadAsync(buf);
+    const wbFile = zip.file('xl/workbook.xml');
+    if (!wbFile) return buf;
+    let wbx = await wbFile.async('string');
+    // 1) ألوان التبويبات: <sheet .../> → <sheet ...><tabColor rgb="FF.."/></sheet>
+    let i = -1;
+    wbx = wbx.replace(/<sheet\b[^>]*?(\/?)>/g, (m) => {
+      i++;
+      const p = sheetProps[i];
+      if (!p || !p.tabColor) return m;
+      const color = '<tabColor rgb="FF' + p.tabColor.rgb + '"/>';
+      if (m.endsWith('/>')) return m.slice(0, -2) + '>' + color + '</sheet>';
+      return m + color; // وسم مفتوح يتبعه إغلاق لاحق
+    });
+    zip.file('xl/workbook.xml', wbx);
+    // 2) RTL لكل ورقة: إضافة rightToLeft="1" إلى <sheetView .../> في كل worksheet
+    const jobs = [];
+    zip.forEach((path, entry) => {
+      if (/^xl\/worksheets\/sheet\d+\.xml$/.test(path)) {
+        jobs.push(entry.async('string').then((s) => {
+          s = s.replace(/<sheetView\b([^>]*?)\/>/g, (m0, attrs) => /rightToLeft/.test(attrs) ? m0 : `<sheetView${attrs} rightToLeft="1"/>`);
+          zip.file(path, s);
+        }));
+      }
+    });
+    await Promise.all(jobs);
+    const ab = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+    return new Uint8Array(ab);
   }
 
   /* ─────────── CSV (.csv): UTF-8 BOM — ملف واحد بأقسام واضحة ─────────── */

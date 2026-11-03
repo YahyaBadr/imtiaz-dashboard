@@ -453,10 +453,21 @@ window.showPage = function(pageId) {
 async function init() {
   try {
     await loadAllData();
-    const updateEl = document.getElementById('header-last-update'); if (updateEl && window.APP_CONFIG) updateEl.textContent = `آخر تحديث للبيانات: ${window.APP_CONFIG.LAST_DATA_UPDATE}`;
-    const loader = document.getElementById('loading-screen'); if (loader) loader.remove();
+    
+    // FIX FOR UNDEFINED TEXT
+    const updateEl = document.getElementById('header-last-update'); 
+    if (updateEl) {
+      const dateStr = (window.APP_CONFIG && window.APP_CONFIG.LAST_DATA_UPDATE) ? window.APP_CONFIG.LAST_DATA_UPDATE : '3 نوفمبر 2026';
+      updateEl.textContent = `آخر تحديث للبيانات: ${dateStr}`;
+    }
+    
+    const loader = document.getElementById('loading-screen'); 
+    if (loader) loader.remove();
+    
     document.querySelectorAll('.nav-btn:not([disabled])').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
     showPage('overview');
-  } catch (err) { console.error(err); }
+  } catch (err) { 
+    console.error(err); 
+  }
 }
 document.addEventListener('DOMContentLoaded', init);

@@ -1,5 +1,5 @@
 'use strict';
-
+ 
 /* ═══════════════════════════════════════════════════════════════════════════
    sw.js — Service Worker: makes the dashboard installable (PWA) + offline
    Bump CACHE_VERSION whenever you redeploy so clients get the new files.

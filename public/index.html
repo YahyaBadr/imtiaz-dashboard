@@ -20,18 +20,19 @@
 
   <link rel="preload" href="assets/fonts/cairo-400-arabic-0.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/cairo-700-arabic-6.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="cairo.css?v=300">
-  <link rel="stylesheet" href="style.css?v=300">
-  <link rel="stylesheet" href="print.css?v=300" media="print">
-  <script src="config.js?v=300"></script>
+  <link rel="stylesheet" href="cairo.css?v=301">
+  <link rel="stylesheet" href="style.css?v=301">
+  <link rel="stylesheet" href="print.css?v=301" media="print">
+  <script src="config.js?v=301"></script>
 </head>
 <body>
 
+  <!-- زر إمكانية الوصول: مخفي تماماً ولا يظهر إلا عند الضغط على Tab (لوحة المفاتيح) -->
   <a class="skip-link" href="#main-content">تخطي إلى المحتوى</a>
 
   <header class="site-header">
     <div class="header-inner">
-      <div class="header-top-row">
+      <div class="header-top-row" id="header-row">
         <div class="logo-wrapper area-logo-r"><img src="assets/university_logo.png" alt="جامعة القاهرة" class="header-logo" onerror="this.style.display='none'"></div>
 
         <div class="header-title-box area-title">
@@ -58,6 +59,9 @@
           </button>
           <button type="button" class="header-btn desk-only" data-action="print" title="طباعة">
             <span class="btn-ico" aria-hidden="true">🖨️</span><span class="btn-txt">طباعة</span>
+          </button>
+          <button type="button" class="header-btn header-btn-lock" id="lock-btn" data-action="lock" title="قفل اللوحة" aria-label="قفل اللوحة">
+            <span class="btn-ico" aria-hidden="true">🔒</span><span class="btn-txt">قفل</span>
           </button>
         </div>
 
@@ -89,11 +93,49 @@
   <div id="verify-badge" class="verify-badge hidden"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=300"></script>
-  <script src="pages/overview.js?v=300"></script>
-  <script src="pages/schedule.js?v=300"></script>
-  <script src="pages/units.js?v=300"></script>
-  <script src="pages/not-registered.js?v=300"></script>
+  <!-- ═══════ بوابة الدخول (Access Gate) ═══════
+       تظهر قبل أي شيء. لا تُعرض أي بيانات قبل اجتيازها. -->
+  <div id="gate-overlay" class="gate-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+    <div class="gate-card">
+      <div class="gate-brand">
+        <img src="assets/college_logo.png" alt="" class="gate-logo" onerror="this.style.display='none'">
+        <h2 id="gate-title">لوحة متابعة الإمتياز البيطري</h2>
+        <p class="gate-sub">كلية الطب البيطري — جامعة القاهرة · مكتب وكيل الكلية</p>
+      </div>
+
+      <p class="gate-note" id="gate-note">هذه اللوحة تحتوي على بيانات طلاب. أدخل رمز الدخول للمتابعة.</p>
+
+      <form class="gate-form" id="gate-form" autocomplete="off">
+        <label class="gate-label" for="gate-pass">رمز الدخول</label>
+        <input type="password" class="gate-input" id="gate-pass" name="gatepass"
+               inputmode="text" autocomplete="current-password" enterkeyhint="go"
+               placeholder="••••••" aria-describedby="gate-err">
+        <button type="submit" class="btn btn-plum gate-submit" id="gate-submit">دخول</button>
+        <p class="gate-err hidden" id="gate-err" role="alert"></p>
+      </form>
+
+      <div class="gate-extra hidden" id="gate-setup">
+        <label class="gate-label" for="gate-pass2">تأكيد الرمز الجديد</label>
+        <input type="password" class="gate-input" id="gate-pass2" autocomplete="new-password" enterkeyhint="go" placeholder="أعد كتابة الرمز">
+        <button type="button" class="btn btn-surface gate-submit" data-action="gate-set-pass">حفظ الرمز ودخول</button>
+        <p class="gate-help">هذه أول مرة: اختر رمز دخول للوحة (٤ أحرف أو أكثر)، وسيُحفظ على هذا الجهاز فقط.</p>
+      </div>
+
+      <ul class="install-steps gate-steps hidden" id="gate-steps"></ul>
+
+      <div class="gate-foot">
+        <span class="gate-mode" id="gate-mode"></span>
+        <button type="button" class="gate-link" data-action="gate-help">كيف أحمي بياناتي؟</button>
+        <button type="button" class="gate-link" data-action="gate-forget">نسيت الرمز؟</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=301"></script>
+  <script src="pages/overview.js?v=301"></script>
+  <script src="pages/schedule.js?v=301"></script>
+  <script src="pages/units.js?v=301"></script>
+  <script src="pages/not-registered.js?v=301"></script>
   <script>window.AppBoot && window.AppBoot();</script>
 </body>
 </html>

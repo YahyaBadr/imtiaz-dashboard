@@ -5,7 +5,7 @@
    Bump CACHE_VERSION whenever you redeploy so clients get the new files.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const CACHE_VERSION = 'imtiaz-v3';
+const CACHE_VERSION = 'imtiaz-v5';
 const APP_SHELL = [
   './',
   './index.html',
@@ -43,6 +43,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  // لا نخدم أي شيء داخل مجلد assets/fonts من الكاش القديم بعد تحديث؟ (نعم نخدمه — الملفات ثابتة)
 
   let url;
   try { url = new URL(req.url); } catch (err) { return; }

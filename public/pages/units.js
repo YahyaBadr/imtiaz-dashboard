@@ -33,10 +33,10 @@ function renderUnits(container) {
 
   const units = [...DB.stationsUnits].sort((a, b) => (parseInt(b.registered, 10) || 0) - (parseInt(a.registered, 10) || 0));
 
-  // THE FIX: Hardcoded dimensions directly into the SVG
-  const lotusSvg = `<svg class="title-ornament" width="22" height="12" style="width:22px !important; height:12px !important; max-width:22px !important; max-height:12px !important;" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
+  // زخرفة اللوتس: أبعادها مضبوطة عبر CSS (svg.title-ornament) — لا !important هنا
+  const lotusSvg = `<svg class="title-ornament" viewBox="0 0 24 14" aria-hidden="true"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
 
-  container.innerHTML = `
+container.innerHTML = `
     <div class="card card-sm" style="margin-bottom: var(--gap); background:#FFFFFF; border-right:4px solid var(--c-gold)">
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <div style="display:flex; align-items:center; gap:10px;">
@@ -60,10 +60,6 @@ function renderUnits(container) {
     </div>
   `;
 
-  container.querySelectorAll('.unit-card-header').forEach(header => {
-    header.addEventListener('click', () => { header.closest('.unit-card').classList.toggle('open'); });
-  });
-
   VERIFY.add('إجمالي تسجيلات الوحدات (البانر)', totalUnitRegistrations, () => {
     let sum = 0; document.querySelectorAll('.unit-student-list').forEach(l => { sum += l.querySelectorAll('li').length; }); return sum;
   });
@@ -84,9 +80,9 @@ function buildUnitCard(u, byUnit) {
 
   return `
     <div class="unit-card">
-      <div class="unit-card-header" role="button" tabindex="0">
+      <div class="unit-card-header" role="button" tabindex="0" data-action="toggle-unit">
         <div class="unit-card-top">
-          <div><div class="unit-name">${unitName}</div><div class="unit-gov">📍 المحافظة: ${gov}</div></div>
+          <div><div class="unit-name">${esc(unitName)}</div><div class="unit-gov">📍 المحافظة: ${esc(gov)}</div></div>
           <button class="unit-toggle-btn" tabindex="-1" aria-hidden="true">▾</button>
         </div>
         <div class="unit-stats">
@@ -101,8 +97,8 @@ function buildUnitCard(u, byUnit) {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px">
           <span style="font-size:0.84rem; color:var(--c-text-muted)">كشف الطلاب (<strong class="num">${students.length}</strong> طالب/ة — انقر لفتح الملف):</span>
           <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap">
-            <button class="btn btn-surface btn-sm" onclick="printUnitSheet('${escapeAttr(unitName)}')">🖨️ طباعة كشف الوحدة</button>
-            <button class="btn btn-surface btn-sm" onclick="copyUnitListWithPhones('${escapeAttr(unitName)}', '${listId}')">📋 نسخ الأسماء والهواتف</button>
+            ${btn('🖨️ طباعة كشف الوحدة', 'print-unit', { unit: unitName }, 'btn-surface btn-sm')}
+            ${btn('📋 نسخ الأسماء والهواتف', 'copy-unit', { unit: unitName }, 'btn-surface btn-sm')}
           </div>
         </div>
         <ul class="unit-student-list" id="${listId}">
@@ -111,7 +107,7 @@ function buildUnitCard(u, byUnit) {
             const grpLabel = s.group_id ? `<span class="cartouche-badge" style="font-size:0.74rem">جروب ${s.group_id}</span>` : `<span style="color:var(--c-rose)">بدون جروب</span>`;
             const issueNote = s.issue ? `<span title="${s.issue}" style="cursor:help; font-size:0.8rem">⚠️</span>` : '';
             const sKey = `${s.group_id}_${s.code_short}`.replace(/\s+/g, '');
-            return `<li>${gIcon}<span class="clickable-student-name" onclick="openStudentProfile('${sKey}')" title="اضغط لفتح الملف الكامل للطالب">${s.full_name || 'غير محدد'}</span><span class="student-code">${s.code_short || '—'}</span>${grpLabel}${issueNote}</li>`;
+            return `<li>${gIcon}<span class="clickable-student-name"${act('student', { sid: sKey })} title="اضغط لفتح الملف الكامل للطالب">${esc(s.full_name || 'غير محدد')}</span><span class="student-code">${s.code_short || '—'}</span>${grpLabel}${issueNote}</li>`;
           }).join('')}
         </ul>
       </div>
@@ -119,7 +115,6 @@ function buildUnitCard(u, byUnit) {
 }
 
 function slugify(str) { return (str || '').replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '-').replace(/-+/g, '-'); }
-function escapeAttr(str) { return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
 
 window.printUnitSheet = function(unitName) {
   const students = DB.assignments.filter(a => a.round_key === 'units' && (a.unit_name || '').trim() === unitName.trim());
@@ -139,3 +134,8 @@ window.copyUnitListWithPhones = function(unitName, listId) {
   const lines = students.map(s => { const full = DB.studentLookup[`${s.group_id}_${s.code_short}`.replace(/\s+/g, '')] || {}; return `${s.full_name}\t${s.code_short}\tجروب ${s.group_id}\t${full.phone || ''}`; });
   navigator.clipboard.writeText(`كشف وحدة: ${unitName} (${lines.length} طالب)\n` + lines.join('\n')).then(() => alert(`تم النسخ ✓`)).catch(() => { openModal(`قائمة طلاب ${unitName}`, `<pre style="white-space:pre-wrap; direction:rtl">${lines.join('\n')}</pre>`); });
 };
+
+/* ═══ أزرار صفحة الوحدات — كل الضغطات عبر المعالج الموحّد (data-action) ═══ */
+registerAction('toggle-unit', (el) => { const c = el.closest('.unit-card'); if (c) c.classList.toggle('open'); });
+registerAction('print-unit', (el) => printUnitSheet(el.dataset.unit || ''));
+registerAction('copy-unit', (el) => copyUnitListWithPhones(el.dataset.unit || ''));

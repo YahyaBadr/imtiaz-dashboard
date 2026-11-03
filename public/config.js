@@ -22,7 +22,24 @@ window.APP_CONFIG = {
   ACADEMIC_YEAR: '2026 / 2027',
   VICE_DEAN_EMAIL: 'vicedean@cu.edu.eg',
 
-  /* ── 4) Feature flags ── */
+  /* ── 4) Access Gate — بوابة الدخول (تحمي اللوحة برمز/كلمة مرور) ──
+     PASSPHRASE : الرمز الذي يُطلب في شاشة الدخول. اتركه "" ليطلب من كل جهاز
+                  أن يختار رمزه عند أول فتح (يُحفظ على الجهاز فقط).
+     NOTE: أي رمز تضعه هنا يبقى ظاهراً لكل من يفتح الملف العام، لذلك فهو يمنع
+     الفضوليين ولا يغني عن صلاحيات Google Sheets. لحماية حقيقية استخدم وضع
+     TOKEN (انشر Apps Script بـ Token مطلوب في الطلبات) أو Cloudflare Access.
+     وضع Cloudflare Access: Users → Policies → Add policy → hostname
+     imtiaz-dashboard.pages.dev + Email-OTP / Google Workspace. */
+  GATE: {
+    ENABLED: true,              // false = بدون بوابة دخول
+    PASSPHRASE: '',             // ← ضع رمز اللوحة هنا (مثال: "vet#2026")
+    REMEMBER_HOURS: 12,         // مدة البقاء داخل اللوحة بعد الدخول (على هذا الجهاز)
+    AUTO_LOCK_MINUTES: 0,       // قفل تلقائي بعد الخمول (0 = لا قفل تلقائي)
+    MAX_ATTEMPTS: 5,            // محاولات قبل إيقاف مؤقت قصير
+    LOCKOUT_SECONDS: 30
+  },
+
+  /* ── 5) Feature flags ── */
   SHOW_DATA_NOTES: false,       // صفحة ملاحظات جودة البيانات وتنبيهاتها
   SHOW_NID_BY_DEFAULT: false,   // إظهار الرقم القومي مباشرة (خلاف ذلك يكون مقنّعاً)
   PRESENTATION_MODE: false,     // وضع العرض على البروجيكتور (يخفي أرقام التواصل)

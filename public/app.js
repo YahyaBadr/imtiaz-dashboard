@@ -1,66 +1,123 @@
 'use strict';
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   app.js — النواة: البيانات · التواريخ · النوافذ · الملف الشخصي · البحث · التثبيت
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 window.DB = {};
+const CFG = () => window.APP_CONFIG || {};
 
-window.VERIFY = {
-  checks: [],
-  add(label, countValue, getLen) { this.checks.push({ label, countValue, getLen }); },
-  run() {
-    if (this.checks.length === 0) return;
-    const results = this.checks.map(({ label, countValue, getLen }) => {
-      const listLen = getLen();
-      return { label, countValue, listLen, ok: Number(countValue) === Number(listLen) };
-    });
-    this.checks = [];
-    this._renderBadge(results);
-  },
-  _renderBadge(results) {
-    const badge = document.getElementById('verify-badge');
-    if (!badge) return;
-    const failed = results.filter(r => !r.ok);
-    badge.classList.remove('hidden');
-    if (failed.length === 0) {
-      badge.className = 'verify-badge verify-ok';
-      badge.innerHTML = `✓ تدقيق متطابق (${results.length} فحص رقمي سليم)`;
-    } else {
-      badge.className = 'verify-badge verify-fail';
-      badge.innerHTML = `⚠️ عدم تطابق في ${failed.length} رقم:<br>` + failed.map(f => `<small>${f.label}: المعروض <b>${f.countValue}</b> ≠ القائمة <b>${f.listLen}</b></small>`).join('<br>');
-    }
-  }
+/* ───────────────────────── 1) أدوات عامة ───────────────────────── */
+
+// تهريب HTML (أسماء الطلاب فيها أحياناً علامات ' و " كانت تكسر الأزرار القديمة)
+window.esc = function (v) {
+  return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 };
 
-// ── NEW FORMATTING HELPERS ──
-window.formatDate = function(dateStr) {
-  if (!dateStr) return 'غير محدد';
-  const str = String(dateStr);
-  if (str.includes('T')) return str.split('T')[0]; // Removes the time part
-  return str;
-};
-
-window.formatPhone = function(phone) {
-  if (!phone) return '';
-  let p = String(phone).replace(/\D/g, ''); // Keep only numbers
-  // If it's 10 digits and starts with 1 (Egyptian number missing zero)
-  if (p.length === 10 && p.startsWith('1')) return '0' + p;
-  return p;
-};
-// ─────────────────────────────
-
-function loadCSV(filename) {
-  if (window.APP_CONFIG && window.APP_CONFIG.API_URL) {
-    const sheetName = filename.replace('.csv', '');
-    return fetch(`${window.APP_CONFIG.API_URL}?sheet=${sheetName}`).then(res => res.json()).catch(err => { console.error(err); return []; });
-  }
-  return new Promise((resolve, reject) => {
-    Papa.parse('./data/' + filename, {
-      download: true, header: true, skipEmptyLines: true,
-      complete: r => resolve(r.data),
-      error: e => reject(new Error('فشل قراءة الملف ' + filename))
-    });
+// يبني خصائص عنصر قابل للضغط: data-action + data-* (بدون onclick داخل النصوص)
+window.act = function (action, data) {
+  let s = ` data-action="${esc(action)}" role="button" tabindex="0"`;
+  Object.keys(data || {}).forEach((k) => {
+    if (data[k] !== undefined && data[k] !== null) s += ` data-${k}="${esc(data[k])}"`;
   });
-}
+  return s;
+};
 
-window.cleanGroupId = function(val) {
+// تطبيع النص العربي للبحث (أ إ آ → ا ، ى → ي ، ة → ه ، حذف التشكيل)
+window.normAr = function (v) {
+  return String(v === null || v === undefined ? '' : v)
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+    .trim();
+};
+
+window.toast = function (msg, ms) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(window._toastT);
+  window._toastT = setTimeout(() => el.classList.remove('show'), ms || 2600);
+};
+
+window.copyText = function (text, okMsg) {
+  const done = () => toast(okMsg || 'تم النسخ ✓');
+  const fallback = () => {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;opacity:0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done();
+    } catch (e) { toast('تعذّر النسخ'); }
+  };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done).catch(fallback);
+  else fallback();
+};
+
+/* ───────────────────────── 2) التواريخ (بتوقيت القاهرة) ───────────────────────── */
+// السبب الجذري لمشكلة "كل الجروبات قادم": Apps Script يرسل التاريخ كـ UTC
+// (3 نوفمبر القاهرة = 2026-11-02T22:00:00Z) والكود القديم كان يقص الجزء "T…" فيرجع يوماً للخلف.
+
+function tzParts(d) {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: CFG().TIMEZONE || 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
+  const o = {}; parts.forEach((p) => { o[p.type] = p.value; });
+  return o;
+}
+function dateInTZ(d) { const p = tzParts(d); return `${p.year}-${p.month}-${p.day}`; }
+
+window.formatDate = function (v) {
+  if (v === null || v === undefined || v === '') return '';
+  if (v instanceof Date) return isNaN(v) ? '' : dateInTZ(v);
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{4}-\d{2}-\d{2}T[\d:.]+(Z|[+-]\d{2}:?\d{2})$/.test(s)) {       // لحظة زمنية مطلقة → تاريخ القاهرة
+    const d = new Date(s); if (!isNaN(d)) return dateInTZ(d);
+  }
+  if (/^\d{4}-\d{2}-\d{2}[T ]/.test(s)) return s.slice(0, 10);            // تاريخ/وقت محلي بدون منطقة
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);                    // d/m/yyyy
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return s;
+};
+
+window.getTodayStr = function () { return dateInTZ(new Date()); };
+
+window.computeStatus = function (startDate, endDate) {
+  const s = formatDate(startDate), e = formatDate(endDate);
+  if (!s || !e) return 'upcoming';
+  const today = getTodayStr();
+  if (today > e) return 'finished';
+  if (today >= s) return 'current';
+  return 'upcoming';
+};
+
+window.computeAge = function (birth) {
+  const b = formatDate(birth).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!b) return 'غير محدد';
+  const t = getTodayStr().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  let age = +t[1] - +b[1];
+  if (+t[2] < +b[2] || (+t[2] === +b[2] && +t[3] < +b[3])) age--;
+  return age > 0 && age < 100 ? `${age} سنة` : 'غير محدد';
+};
+
+window.daysUntil = function (dateStr) {
+  const a = Date.parse(getTodayStr() + 'T00:00:00Z'), b = Date.parse(formatDate(dateStr) + 'T00:00:00Z');
+  return isNaN(a) || isNaN(b) ? null : Math.round((b - a) / 86400000);
+};
+
+window.getRoundDates = function (order) {
+  const o = String(order);
+  const row = (DB.roundDates || []).find((r) => String(r.round_order) === o && r.start_date);
+  if (row) return { start: formatDate(row.start_date), end: formatDate(row.end_date) };
+  const d = (CFG().DEFAULT_ROUND_DATES || {})[o];
+  return d ? { start: d.start, end: d.end } : { start: '', end: '' };
+};
+
+/* ───────────────────────── 3) قيم ومسميات ───────────────────────── */
+
+window.cleanGroupId = function (val) {
   if (val === null || val === undefined) return '';
   const str = String(val).trim();
   if (!str) return '';
@@ -68,400 +125,706 @@ window.cleanGroupId = function(val) {
   return isNaN(num) ? str : String(Math.round(num));
 };
 
-window.getTodayStr = function() {
-  const now = new Date(); const y = now.getFullYear(); const m = String(now.getMonth() + 1).padStart(2, '0'); const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+window.normGender = function (g) {
+  const s = String(g || '').trim().toUpperCase();
+  if (s === 'F' || s === 'أنثى' || s === 'انثى' || s.startsWith('FEM')) return 'F';
+  if (s === 'M' || s === 'ذكر' || s.startsWith('MAL')) return 'M';
+  return '';
 };
 
-window.computeStatus = function(startDate, endDate) {
-  if (!startDate || !endDate) return 'upcoming';
-  const today = getTodayStr();
-  const sDate = formatDate(startDate);
-  const eDate = formatDate(endDate);
-  if (today > eDate) return 'finished';
-  if (today >= sDate && today <= eDate) return 'current';
-  return 'upcoming';
+window.formatPhone = function (phone) {
+  let p = String(phone === null || phone === undefined ? '' : phone).trim();
+  if (/^\d+\.0+$/.test(p)) p = p.replace(/\.0+$/, '');
+  p = p.replace(/\D/g, '');
+  if (!p) return '';
+  if (p.startsWith('0020')) p = p.slice(4);
+  if (p.startsWith('20') && p.length === 12) p = p.slice(2);
+  if (p.length === 10 && p.startsWith('1')) p = '0' + p;     // الصفر الأول يضيع في Google Sheets
+  return p;
+};
+window.waLink = function (phone) {
+  const p = formatPhone(phone);
+  return p ? 'https://wa.me/' + (p.startsWith('0') ? '20' + p.slice(1) : p) : '';
 };
 
-window.computeAge = function(birthDateStr) {
-  if (!birthDateStr) return 'غير محدد';
-  const cleanDate = formatDate(birthDateStr);
-  const bdate = new Date(cleanDate);
-  if (isNaN(bdate.getTime())) return 'غير محدد';
-  const today = new Date(getTodayStr());
-  let age = today.getFullYear() - bdate.getFullYear();
-  const m = today.getMonth() - bdate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < bdate.getDate())) age--;
-  return age > 0 ? `${age} سنة` : 'غير محدد';
-};
-
-window.statusBadge = function(status) {
-  const map = { current: ['badge-plum', 'جارٍ الآن'], upcoming: ['badge-grey', 'قادم'], finished: ['badge-emerald', 'انتهى'] };
-  const [cls, label] = map[status] || ['badge-grey', status || 'غير محدد'];
-  return `<span class="badge ${cls}">${label}</span>`;
-};
-
-window.roundLabel = function(key) {
-  const map = { college: 'أقسام الكلية', units: 'وحدات بيطرية', poultry: 'دواجن', slaughter: 'مجازر وسلامة غذاء', equine_lab_fish: 'خيل ومعامل وسمك', elective: 'تدريب اختياري' };
-  return map[key] || key || 'غير محدد';
-};
-
-window.animateCountUp = function(el, target, duration = 600) {
-  if (!el) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = target; return; }
-  const start = performance.now();
-  function step(now) {
-    const p = Math.min((now - start) / duration, 1);
-    const ease = 1 - Math.pow(1 - p, 3);
-    el.textContent = Math.round(target * ease);
-    if (p < 1) requestAnimationFrame(step); else el.textContent = target;
-  }
-  requestAnimationFrame(step);
-};
-
-window.togglePresentationMode = function() {
-  const isPres = document.body.classList.toggle('presentation-mode');
-  const btn = document.getElementById('presentation-btn');
-  if (btn) btn.innerHTML = isPres ? '<span>🖥️ خروج من وضع العرض</span>' : '<span>🖥️ وضع العرض</span>';
-};
-
-window.getInitials = function(name) {
-  if (!name) return '';
+window.getInitials = function (name) {
+  if (!name) return '؟';
   const parts = String(name).trim().split(/\s+/);
   return parts.length === 1 ? parts[0].substring(0, 2) : parts[0].substring(0, 1) + parts[1].substring(0, 1);
 };
 
-window.renderStudentListModal = function(title, students, breadcrumb = '') {
-  const html = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      ${breadcrumb ? `<div class="breadcrumb-bar">${breadcrumb}</div>` : '<div></div>'}
-      <div class="badge badge-plum num" style="font-size:0.9rem">الإجمالي: ${students.length}</div>
-    </div>
-    <input type="text" class="table-search" id="modal-list-search" placeholder="🔍 بحث في القائمة..." style="width:100%; margin-bottom:12px" oninput="filterStudentList(this)">
-    <div style="max-height:55vh; overflow-y:auto; border:1px solid var(--c-border); border-radius:8px;">
-      <table class="student-table">
-        <thead><tr><th>الاسم</th><th>الجروب</th><th>النوع</th></tr></thead>
-        <tbody id="student-list-body">
-          ${students.map(s => {
-            if (!s) return '';
-            const key = `${s.group_id}_${s.code_short}`.replace(/\s+/g, ''); 
-            return `
-              <tr class="clickable-row" onclick="openStudentProfile('${key}')">
-                <td>
-                  <div style="display:flex; align-items:center; gap:8px">
-                    <div class="initials-avatar">${getInitials(s.full_name)}</div>
-                    <strong>${s.full_name || 'غير محدد'}</strong>
-                  </div>
-                </td>
-                <td><span class="cartouche-badge">جروب ${s.group_id || '—'}</span></td>
-                <td>${s.gender === 'F' ? '<span class="gender-f">أنثى ♀</span>' : s.gender === 'M' ? '<span class="gender-m">ذكر ♂</span>' : '—'}</td>
-              </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>`;
-  openModal(title, html);
+window.ROUND_META = {
+  units:           { icon: '🏥', label: 'وحدات بيطرية',       cls: 'badge-round-units' },
+  college:         { icon: '🏛️', label: 'أقسام الكلية',       cls: 'badge-round-college' },
+  poultry:         { icon: '🐔', label: 'دواجن',              cls: 'badge-round-poultry' },
+  slaughter:       { icon: '🥩', label: 'مجازر وسلامة غذاء', cls: 'badge-round-slaughter' },
+  equine_lab_fish: { icon: '🔬', label: 'خيل ومعامل وسمك',    cls: 'badge-round-equine' },
+  elective:        { icon: '🌟', label: 'تدريب اختياري',      cls: 'badge-round-elective' }
+};
+window.ROUND_ORDER = ['units', 'equine_lab_fish', 'poultry', 'slaughter', 'college', 'elective', 'unknown'];
+
+window.roundLabel = function (key) {
+  return (DB.roundNames && DB.roundNames[key]) || (ROUND_META[key] && ROUND_META[key].label) || key || 'غير محدد';
 };
 
-window.filterStudentList = function(input) { const q = input.value.toLowerCase(); document.querySelectorAll('#student-list-body tr').forEach(r => { r.style.display = String(r.textContent).toLowerCase().includes(q) ? '' : 'none'; }); };
-window.openStudentDirectoryModal = function() { renderStudentListModal('دليل كامل طلاب الدفعة', DB.students, 'الرئيسية › الدليل'); };
-window.openGroupRosterModal = function(groupId) { const st = DB.students.filter(s => String(s.group_id) === String(groupId)); renderStudentListModal(`قائمة طلاب جروب ${groupId}`, st); };
-
-window.openStudentProfile = function(rawKey) {
-  try {
-    const cleanKey = String(rawKey).replace(/\s+/g, '');
-    const student = DB.studentLookup[cleanKey];
-    
-    if (!student) { alert('لم يتم العثور على سجل بيانات الطالب'); return; }
-
-    const old = document.getElementById('profile-panel-overlay');
-    if (old) old.remove();
-
-    // Format phone and dates
-    const rawPhone = String(student.phone || '').trim();
-    const displayPhone = formatPhone(rawPhone); 
-    const phoneEmpty = !displayPhone;
-    const phoneClean = displayPhone.replace(/\D/g, '');
-    const phoneForWa = phoneClean.startsWith('0') ? phoneClean.slice(1) : phoneClean;
-    const isPhoneCheck = student.phone_status === 'check';
-    
-    const emailVal = String(student.email || '').trim();
-    const emailEmpty = !emailVal;
-
-    const rawNid = String(student.national_id || '').trim();
-    const isNidCheck = student.nid_status === 'check';
-    const maskedNid = rawNid ? '••••••••••' + (rawNid.length >= 4 ? rawNid.slice(-4) : '') : 'غير متوفر';
-    
-    // Format Dates
-    const displayBirthDate = formatDate(student.birth_date);
-    const displayRegDate = formatDate(student.registered_at);
-    const ageStr = computeAge(displayBirthDate);
-
-    const prefFields = ['pref_FoodSafety_QC', 'pref_SmallAnimal', 'pref_Pharma_Vaccines', 'pref_Equine', 'pref_Poultry', 'pref_LargeAnimal'];
-    const studentPrefs = prefFields.map(key => ({ key, arabicName: DB.fieldsMap[key] || key, rank: parseInt(student[key], 10) || 99 })).sort((a, b) => a.rank - b.rank);
-
-    const journey = buildStudentJourney(student);
-
-    const panel = document.createElement('div');
-    panel.id = 'profile-panel-overlay';
-    panel.className = 'modal-overlay profile-overlay';
-    panel.innerHTML = `
-      <div class="profile-drawer" role="dialog" aria-modal="true">
-        
-        <div class="profile-header">
-          <div style="flex:1">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px">
-              <span class="badge ${student.gender === 'F' ? 'badge-rose' : 'badge-plum'}">${student.gender === 'F' ? 'أنثى ♀' : 'ذكر ♂'}</span>
-              <span class="cartouche-badge-dark">جروب ${student.group_id || '—'}</span>
-              <span class="student-code">${student.code_short || '—'}</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:12px">
-              <div class="initials-avatar" style="width:48px; height:48px; font-size:1.2rem; border:2px solid var(--c-gold);">${getInitials(student.full_name)}</div>
-              <div>
-                <h2 style="font-size:1.35rem; font-weight:700; color:#FFFFFF">${student.full_name || 'غير محدد'}</h2>
-                <div style="font-size:0.84rem; color:#E2D7E5">الكود الأكاديمي: <span class="num">${student.student_code || '—'}</span></div>
-              </div>
-            </div>
-          </div>
-          <button class="modal-close" onclick="closeStudentProfile()" aria-label="إغلاق">✕</button>
-        </div>
-
-        <div class="profile-body">
-          ${student.student_notes ? `<div class="profile-section"><div class="alert-item alert-amber" style="padding:10px 14px; font-size:0.88rem"><span>📌</span><div><strong>ملاحظة إدارية:</strong> ${student.student_notes}</div></div></div>` : ''}
-
-          <div class="profile-section">
-            <div class="profile-section-title">🪪 البيانات الشخصية والرقم القومي</div>
-            <div class="personal-info-card">
-              <div>
-                <div style="font-size:0.78rem; color:var(--c-text-muted)">الرقم القومي</div>
-                <div style="font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:6px; margin-top:2px">
-                  <span id="nid-display" class="num">${window.APP_CONFIG && window.APP_CONFIG.SHOW_NID_BY_DEFAULT ? rawNid : maskedNid}</span>
-                  ${rawNid ? `<button class="btn btn-surface btn-sm" id="nid-toggle-btn" style="padding:1px 6px; font-size:0.72rem" onclick="toggleNidVisibility('${rawNid}', '${maskedNid}')">👁️</button>` : ''}
-                </div>
-                ${isNidCheck ? '<span class="badge badge-amber" style="font-size:0.72rem; margin-top:3px">⚠️ يحتاج مراجعة</span>' : ''}
-              </div>
-              <div>
-                <div style="font-size:0.78rem; color:var(--c-text-muted)">تاريخ الميلاد / السن</div>
-                <div style="font-weight:700; font-size:0.95rem; margin-top:2px">
-                  <span class="num">${displayBirthDate}</span>
-                  <span style="font-size:0.8rem; color:var(--c-text-muted); font-weight:400">(${ageStr})</span>
-                </div>
-              </div>
-              <div style="grid-column: span 2; border-top:1px solid var(--c-border); padding-top:8px">
-                <div style="font-size:0.76rem; color:var(--c-text-muted)">تاريخ التسجيل: <strong class="num">${displayRegDate}</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="profile-section hide-in-presentation">
-            <div class="profile-section-title">📞 بيانات التواصل والاتصال المباشر</div>
-            <div class="contact-box">
-              <div class="contact-row">
-                <div style="flex:1">
-                  <div style="font-size:0.8rem; color:var(--c-text-muted)">رقم الهاتف المحمول</div>
-                  <div style="font-weight:700; font-size:1.05rem; display:flex; align-items:center; gap:6px">
-                    ${phoneEmpty ? '<span style="color:var(--c-text-subtle)">غير متوفر</span>' : `<span class="num">${displayPhone}</span>`}
-                    ${isPhoneCheck ? '<span class="badge badge-amber" style="font-size:0.75rem">⚠️ هاتف يحتاج مراجعة</span>' : ''}
-                  </div>
-                </div>
-                ${!phoneEmpty ? `
-                  <div class="contact-actions">
-                    <a href="tel:${phoneClean}" class="btn btn-plum btn-sm">📞 اتصال</a>
-                    <a href="https://wa.me/20${phoneForWa}" target="_blank" class="btn btn-emerald btn-sm">💬 واتساب</a>
-                    <button class="btn btn-surface btn-sm" onclick="navigator.clipboard.writeText('${displayPhone}'); alert('تم نسخ رقم الهاتف');">📋 نسخ</button>
-                  </div>
-                ` : ''}
-              </div>
-              <div class="contact-row" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--c-surface)">
-                <div style="flex:1">
-                  <div style="font-size:0.8rem; color:var(--c-text-muted)">البريد الإلكتروني</div>
-                  <div style="font-weight:600; font-size:0.95rem">${emailEmpty ? '<span style="color:var(--c-text-subtle)">غير متوفر</span>' : emailVal}</div>
-                </div>
-                ${!emailEmpty ? `
-                  <div class="contact-actions">
-                    <a href="mailto:${emailVal}" class="btn btn-plum btn-sm">✉️ مراسلة</a>
-                    <button class="btn btn-surface btn-sm" onclick="navigator.clipboard.writeText('${emailVal}'); alert('تم نسخ البريد الإلكتروني');">📋 نسخ</button>
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-          </div>
-
-          <div class="profile-section">
-            <div class="profile-section-title">🗺️ المسار التدريبي ومواقع التوزيع</div>
-            <div class="journey-timeline">
-              ${journey.map(step => `
-                <div class="journey-step ${step.status}">
-                  <div class="journey-bullet"></div>
-                  <div class="journey-content">
-                    <div style="display:flex; justify-content:space-between; align-items:center">
-                      <span style="font-weight:700; color:var(--c-plum)">${step.roundName}</span>
-                      ${statusBadge(step.status)}
-                    </div>
-                    <div style="font-size:0.84rem; color:var(--c-text-muted); margin:3px 0">📅 <span class="num">${step.dates}</span></div>
-                    <div style="font-size:0.9rem">📍 موقع التدريب: <strong>${step.station}</strong></div>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-
-          <div class="profile-section">
-            <div class="profile-section-title">⭐ ترتيب الرغبات والمجالات</div>
-            <div class="pref-list">
-              ${studentPrefs.map((p, idx) => `
-                <div class="pref-item">
-                  <span class="pref-rank-badge num">#${idx + 1}</span>
-                  <span class="pref-name">${p.arabicName}</span>
-                  <span class="pref-score">الرغبة: <strong class="num">${p.rank < 99 ? p.rank : '—'}</strong></span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    panel.addEventListener('click', e => { if (e.target === panel) closeStudentProfile(); });
-    document.body.appendChild(panel);
-  } catch (err) {
-    console.error(err); alert("حدث خطأ: " + err.message);
-  }
+window.statusBadge = function (status) {
+  const map = { current: ['badge-plum', 'جارٍ الآن'], upcoming: ['badge-grey', 'قادم'], finished: ['badge-emerald', 'انتهى'] };
+  const m = map[status] || ['badge-grey', status || 'غير محدد'];
+  return `<span class="badge ${m[0]}">${m[1]}</span>`;
 };
 
-window.toggleNidVisibility = function(realNid, maskedNid) {
-  const el = document.getElementById('nid-display'); const btn = document.getElementById('nid-toggle-btn');
+window.animateCountUp = function (el, target, duration) {
   if (!el) return;
-  const isMasked = el.textContent.includes('••');
-  el.textContent = isMasked ? realNid : maskedNid;
-  if (btn) btn.textContent = isMasked ? '🙈' : '👁️';
+  target = Number(target) || 0;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = target; return; }
+  const start = performance.now(); duration = duration || 600;
+  (function step(now) {
+    const p = Math.min((now - start) / duration, 1);
+    el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(step); else el.textContent = target;
+  })(start);
 };
 
-window.closeStudentProfile = function() { const p = document.getElementById('profile-panel-overlay'); if (p) p.remove(); };
+/* ───────────────────────── 4) طبقة البيانات (API + كاش) ───────────────────────── */
 
-function buildStudentJourney(student) {
-  const gid = student.group_id; const sCode = student.student_code;
-  const groupRounds = DB.roundSchedule.filter(r => r.group_id === gid).sort((a,b) => parseInt(a.round_order,10) - parseInt(b.round_order,10));
-  const steps = [];
-  
-  const r1 = groupRounds.find(r => r.round_order === '1') || {};
-  const r1Dates = r1.start_date ? `${formatDate(r1.start_date)} إلى ${formatDate(r1.end_date)}` : 'غير متاح';
-  steps.push({ roundName: `الراوند 1 — ${r1.round_name_ar || 'أقسام الكلية'}`, dates: r1Dates, station: 'غير متاح بعد', status: computeStatus(r1.start_date || '2026-09-20', r1.end_date || '2026-11-03') });
-  
-  const r2 = groupRounds.find(r => r.round_order === '2') || {};
-  const assignR2 = DB.assignments.find(a => (a.group_id === gid && a.code_short === student.code_short) || a.student_code === sCode);
-  const r2Station = assignR2 ? (assignR2.unit_name || assignR2.round_name_ar || 'مسجل') : 'غير مسجل';
-  const r2Dates = r2.start_date ? `${formatDate(r2.start_date)} إلى ${formatDate(r2.end_date)}` : 'غير متاح';
-  steps.push({ roundName: `الراوند 2 — ${r2.round_name_ar || 'وحدات بيطرية'}`, dates: r2Dates, station: r2Station, status: computeStatus(r2.start_date || '2026-11-07', r2.end_date || '2026-12-24') });
-  
-  const r3 = groupRounds.find(r => r.round_order === '3') || {};
-  const r3Dates = r3.start_date ? `${formatDate(r3.start_date)} إلى ${formatDate(r3.end_date)}` : 'غير متاح';
-  steps.push({ roundName: `الراوند 3 — ${r3.round_name_ar || 'دواجن'}`, dates: r3Dates, station: 'غير متاح بعد', status: computeStatus(r3.start_date || '2026-12-26', r3.end_date || '2027-02-09') });
-  
-  const r4 = groupRounds.find(r => r.round_order === '4') || {};
-  const r4Dates = r4.start_date ? `${formatDate(r4.start_date)} إلى ${formatDate(r4.end_date)}` : 'غير متاح';
-  steps.push({ roundName: `الراوند 4 — ${r4.round_name_ar || 'مجازر / خيل'}`, dates: r4Dates, station: 'غير متاح بعد', status: computeStatus(r4.start_date || '2027-02-07', r4.end_date || '2027-03-30') });
-  
-  return steps;
+const SHEETS = {
+  students: '01_students', groups: '02_groups', roundsOverview: '03_rounds_overview', roundSchedule: '04_round_schedule',
+  stationsUnits: '05_stations_units_draft', assignments: '06_assignments_round2', unregistered: '07_unregistered_round2',
+  round2Summary: '08_round2_summary', roundDates: '09_round_dates', fields: '10_fields',
+  issues: '00_data_issues', issuesR2: '00_data_issues_round2'
+};
+const REQUIRED = ['students', 'groups', 'roundSchedule', 'assignments', 'unregistered', 'round2Summary', 'stationsUnits', 'fields'];
+const CACHE_KEY = 'imtiaz_data_cache_v2';
+
+function normKey(k) { return String(k === null || k === undefined ? '' : k).replace(/^\uFEFF/, '').trim(); }
+function normCell(v) {
+  if (v === null || v === undefined) return '';
+  let s = String(v).replace(/^\uFEFF/, '').trim();
+  if (/^-?\d+\.0+$/.test(s)) s = s.replace(/\.0+$/, '');      // 6.0 → 6
+  return s;
+}
+function toRows(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    if (raw.length && Array.isArray(raw[0])) {                  // [[header...],[row...]]
+      const head = raw[0].map(normKey);
+      return raw.slice(1).map((r) => { const o = {}; head.forEach((h, i) => { o[h] = r[i]; }); return o; });
+    }
+    return raw.filter((r) => r && typeof r === 'object' && !Array.isArray(r));
+  }
+  if (typeof raw === 'object') {
+    if (raw.error) throw new Error(String(raw.error));
+    const k = ['data', 'rows', 'values', 'result'].find((x) => Array.isArray(raw[x]));
+    if (k) return toRows(raw[k]);
+  }
+  return [];
+}
+function normalizeRows(raw) {
+  return toRows(raw)
+    .map((r) => { const o = {}; Object.keys(r).forEach((k) => { o[normKey(k)] = normCell(r[k]); }); return o; })
+    .filter((o) => Object.keys(o).some((k) => o[k] !== ''));    // يحذف الصفوف الفارغة (شائعة في Google Sheets)
 }
 
-window.openGlobalSearch = function() {
-  const old = document.getElementById('search-modal-overlay'); if (old) old.remove();
-  const overlay = document.createElement('div'); overlay.id = 'search-modal-overlay'; overlay.className = 'modal-overlay';
-  overlay.innerHTML = `<div class="search-modal-box"><div class="search-input-wrap"><span class="search-icon">🔍</span><input type="text" id="global-search-input" class="search-box-input" placeholder="ابحث..." autofocus><button class="modal-close" onclick="document.getElementById('search-modal-overlay').remove()">✕</button></div><div class="search-results-list" id="search-results-list"></div></div>`;
-  document.body.appendChild(overlay);
-  const input = document.getElementById('global-search-input'); input.focus();
-  input.addEventListener('input', () => {
-    const q = input.value.trim().toLowerCase(); if (!q) { document.getElementById('search-results-list').innerHTML = ''; return; }
-    const matchStudents = DB.students.filter(s => String(s.full_name || '').toLowerCase().includes(q) || String(s.student_code || '').includes(q) || String(s.code_short || '') === q).slice(0, 15);
-    document.getElementById('search-results-list').innerHTML = matchStudents.map(s => {
-      const key = `${s.group_id}_${s.code_short}`.replace(/\s+/g, '');
-      return `<div class="search-result-row" onclick="document.getElementById('search-modal-overlay').remove(); openStudentProfile('${key}')"><div><strong>${s.full_name || 'غير محدد'}</strong><br><small>جروب ${s.group_id}</small></div></div>`;
-    }).join('');
-  });
-};
+function parseCSV(text) {                                       // احتياطي للتجربة المحلية فقط
+  const rows = []; let row = [], cur = '', q = false;
+  text = text.replace(/^\uFEFF/, '');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+    else if (c !== '\r') cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter((r) => r.length > 1 || (r[0] || '') !== '');
+}
 
-window.openModal = function(title, bodyHTML) {
-  const old = document.getElementById('modal-overlay'); if (old) old.remove();
-  const overlay = document.createElement('div'); overlay.id = 'modal-overlay'; overlay.className = 'modal-overlay';
-  overlay.innerHTML = `<div class="modal-box"><div class="modal-header"><h2 class="modal-title">${title}</h2><button class="modal-close" onclick="document.getElementById('modal-overlay').remove()">✕</button></div><div class="modal-body">${bodyHTML}</div></div>`;
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); }); document.body.appendChild(overlay);
-};
+async function fetchSheet(name) {
+  const base = CFG().API_URL;
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), CFG().REQUEST_TIMEOUT_MS || 30000);
+  try {
+    if (!base) {
+      const res = await fetch('./data/' + name + '.csv', { signal: ctl.signal, cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return normalizeRows(parseCSV(await res.text()));
+    }
+    const url = base + (base.indexOf('?') > -1 ? '&' : '?') + 'sheet=' + encodeURIComponent(name);
+    const res = await fetch(url, { signal: ctl.signal, redirect: 'follow', cache: 'no-store' });   // بدون headers مخصصة = بدون preflight
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch (e) { throw new Error('الرد ليس JSON (تأكد أن Apps Script منشور لـ "Anyone")'); }
+    return normalizeRows(json);
+  } finally { clearTimeout(timer); }
+}
 
-window.makeTableSortable = function(tableEl) {
-  const headers = tableEl.querySelectorAll('th[data-col]'); let sortCol = null, sortDir = 1;
-  headers.forEach(th => { th.addEventListener('click', () => {
-      const col = th.dataset.col; if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = 1; }
-      headers.forEach(h => h.classList.remove('sorted-asc', 'sorted-desc')); th.classList.add(sortDir === 1 ? 'sorted-asc' : 'sorted-desc');
-      const tbody = tableEl.querySelector('tbody'); const rows = Array.from(tbody.querySelectorAll('tr'));
-      rows.sort((a, b) => {
-        const av = a.querySelector(`td[data-col="${col}"]`)?.textContent.trim() || ''; const bv = b.querySelector(`td[data-col="${col}"]`)?.textContent.trim() || '';
-        const an = parseFloat(av), bn = parseFloat(bv);
-        if (!isNaN(an) && !isNaN(bn)) return (an - bn) * sortDir; return av.localeCompare(bv, 'ar') * sortDir;
-      }); rows.forEach(r => tbody.appendChild(r));
-  }); });
-};
+async function fetchSheetRetry(name) {
+  try { return await fetchSheet(name); }
+  catch (e1) { await new Promise((r) => setTimeout(r, 800)); return fetchSheet(name); }
+}
 
-window.makeTableSearchable = function(inputEl, tableEl) {
-  inputEl.addEventListener('input', () => { const q = inputEl.value.trim().toLowerCase(); tableEl.querySelectorAll('tbody tr').forEach(row => { row.style.display = q === '' || String(row.textContent).toLowerCase().includes(q) ? '' : 'none'; }); });
-};
+async function fetchAllSheets() {
+  const keys = Object.keys(SHEETS);
+  const settled = await Promise.allSettled(keys.map((k) => fetchSheetRetry(SHEETS[k])));
+  const sheets = {}, errors = {};
+  settled.forEach((r, i) => { if (r.status === 'fulfilled') sheets[keys[i]] = r.value; else errors[keys[i]] = (r.reason && r.reason.message) || 'فشل'; });
+  return { sheets, errors };
+}
 
-async function loadAllData() {
-  const [students, groups, roundsOverview, roundSchedule, stationsUnits, assignments, unregistered, round2Summary, roundDates, fields, issues, issuesR2] = await Promise.all([
-    loadCSV('01_students.csv'), loadCSV('02_groups.csv'), loadCSV('03_rounds_overview.csv'), loadCSV('04_round_schedule.csv'),
-    loadCSV('05_stations_units_draft.csv'), loadCSV('06_assignments_round2.csv'), loadCSV('07_unregistered_round2.csv'),
-    loadCSV('08_round2_summary.csv'), loadCSV('09_round_dates.csv'), loadCSV('10_fields.csv'),
-    loadCSV('00_data_issues.csv'), loadCSV('00_data_issues_round2.csv'),
-  ]);
+function readCache() {
+  if (!CFG().OFFLINE_CACHE) return null;
+  try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); return c && c.sheets ? c : null; } catch (e) { return null; }
+}
+function writeCache(sheets) {
+  if (!CFG().OFFLINE_CACHE) return;
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), sheets })); } catch (e) { /* الذاكرة ممتلئة — لا مشكلة */ }
+}
+function hasRequired(sheets) { return REQUIRED.every((k) => Array.isArray(sheets[k])); }
 
-  DB.students = students.map(r => ({ ...r, group_id: cleanGroupId(r.group_id) }));
-  DB.groups = groups.map(r => ({ ...r, group_id: cleanGroupId(r.group_id) }));
-  DB.roundSchedule = roundSchedule.map(r => ({ ...r, group_id: cleanGroupId(r.group_id) }));
-  DB.stationsUnits = stationsUnits; DB.round2Summary = round2Summary; DB.unregistered = unregistered.map(r => ({ ...r, group_id: cleanGroupId(r.group_id) }));
-  DB.fields = fields; DB.fieldsMap = {}; fields.forEach(f => { DB.fieldsMap[f.column] = f.name_ar; });
+function buildDB(S) {
+  const g = (k) => S[k] || [];
+  DB.students = g('students').map((r) => ({ ...r, group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }));
+  DB.groups = g('groups').map((r) => ({ ...r, group_id: cleanGroupId(r.group_id) })).sort((a, b) => (+a.group_id || 0) - (+b.group_id || 0));
+  DB.roundsOverview = g('roundsOverview');
+  DB.roundSchedule = g('roundSchedule').map((r) => ({ ...r, group_id: cleanGroupId(r.group_id) }));
+  DB.stationsUnits = g('stationsUnits');
+  DB.assignments = g('assignments').map((r) => ({ ...r, group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }));
+  DB.unregistered = g('unregistered').map((r) => ({ ...r, group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }));
+  DB.round2Summary = g('round2Summary');
+  DB.roundDates = g('roundDates');
+  DB.fields = g('fields');
+  DB.issues = g('issues');
+  DB.issuesR2 = g('issuesR2');
+
+  DB.fieldsMap = {}; DB.fields.forEach((f) => { DB.fieldsMap[f.column] = f.name_ar; });
+  DB.prefColumns = DB.fields.map((f) => f.column).filter((c) => /^pref_/.test(c));
+  if (!DB.prefColumns.length) DB.prefColumns = ['pref_Poultry', 'pref_Equine', 'pref_Pharma_Vaccines', 'pref_FoodSafety_QC', 'pref_LargeAnimal', 'pref_SmallAnimal'];
+
+  DB.roundNames = {};
+  [DB.roundsOverview, DB.roundSchedule, DB.round2Summary].forEach((list) => list.forEach((r) => { if (r.round_key && r.round_name_ar) DB.roundNames[r.round_key] = r.round_name_ar; }));
 
   DB.studentLookup = {};
-  DB.students.forEach(s => {
-    const cleanKey = `${s.group_id}_${s.code_short}`.replace(/\s+/g, ''); 
-    DB.studentLookup[cleanKey] = s;
-    DB.studentLookup[String(s.student_code).replace(/\s+/g, '')] = s;
+  DB.students.forEach((s) => {
+    if (s.student_code) DB.studentLookup[s.student_code] = s;
+    if (s.group_id && s.code_short) DB.studentLookup[s.group_id + '_' + s.code_short] = s;
   });
 
-  DB.assignments = assignments.map(r => ({ ...r, group_id: cleanGroupId(r.group_id) }));
-
   DB.roundMatrix = {};
-  DB.roundSchedule.forEach(item => {
-    const key = `${item.round_order}_${item.round_key}`;
+  DB.roundSchedule.forEach((item) => {
+    const key = item.round_order + '_' + item.round_key;
     if (!DB.roundMatrix[key]) DB.roundMatrix[key] = { round_order: item.round_order, round_key: item.round_key, round_name_ar: item.round_name_ar, groups: [], total_students: 0 };
-    const gInfo = DB.groups.find(g => String(g.group_id) === String(item.group_id));
-    const count = gInfo ? parseInt(gInfo.total_students, 10) : 0;
+    const gInfo = DB.groups.find((x) => String(x.group_id) === String(item.group_id));
+    const count = gInfo ? parseInt(gInfo.total_students, 10) || 0 : 0;
     DB.roundMatrix[key].groups.push({ group_id: item.group_id, count });
     DB.roundMatrix[key].total_students += count;
   });
 }
 
-const PAGE_RENDERERS = { 'overview': () => renderOverview(document.getElementById('page-overview')), 'schedule': () => renderSchedule(document.getElementById('page-schedule')), 'units': () => renderUnits(document.getElementById('page-units')), 'not-registered': () => renderNotRegistered(document.getElementById('page-not-registered')) };
-let _activePage = null;
-window.showPage = function(pageId) {
-  if (_activePage === pageId) return;
-  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-  const pageEl = document.getElementById('page-' + pageId); if (!pageEl) return; pageEl.classList.remove('hidden');
-  document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.page === pageId));
-  if (!pageEl.dataset.rendered && PAGE_RENDERERS[pageId]) { PAGE_RENDERERS[pageId](); pageEl.dataset.rendered = 'true'; setTimeout(() => VERIFY.run(), 60); }
-  _activePage = pageId; window.scrollTo({ top: 0, behavior: 'smooth' });
+window.resolveStudent = function (row) {
+  if (!row) return null;
+  if (row.student_code && DB.studentLookup[row.student_code]) return DB.studentLookup[row.student_code];
+  const g = cleanGroupId(row.group_id), c = String(row.code_short || '').trim();
+  if (g && c && DB.studentLookup[g + '_' + c]) return DB.studentLookup[g + '_' + c];
+  return null;
+};
+window.studentKey = function (s) { return s.student_code || (s.group_id + '_' + s.code_short); };
+
+/* ───────────────────────── 5) النوافذ (مع زر الرجوع في الهاتف) ───────────────────────── */
+
+window.Overlays = (function () {
+  const stack = []; let ignore = 0;
+  const lock = () => document.body.classList.toggle('no-scroll', stack.length > 0);
+  const push = () => { try { history.pushState({ ov: stack.length }, '', location.href); } catch (e) { /* ignore */ } };
+
+  function open(el, replace) {
+    if (replace && stack.length) { stack.pop().remove(); document.body.appendChild(el); stack.push(el); lock(); return el; }   // نعيد استخدام نفس خانة التاريخ
+    document.body.appendChild(el); stack.push(el); push(); lock(); return el;
+  }
+  function closeTop(fromPop) {
+    const el = stack.pop(); if (!el) return false;
+    el.remove(); lock();
+    if (!fromPop) { try { ignore++; history.back(); } catch (e) { ignore--; } }
+    return true;
+  }
+  function closeEl(el) {
+    const i = stack.indexOf(el);
+    if (i === -1) { el.remove(); return; }
+    if (i === stack.length - 1) closeTop(false); else { stack.splice(i, 1); el.remove(); lock(); }
+  }
+  function closeAll() {
+    const n = stack.length; if (!n) return;
+    while (stack.length) stack.pop().remove();
+    lock();
+    try { ignore++; history.go(-n); } catch (e) { ignore--; }
+  }
+  window.addEventListener('popstate', () => { if (ignore > 0) { ignore--; return; } closeTop(true); });
+  return { open, closeTop, closeEl, closeAll, count: () => stack.length };
+})();
+
+window.openModal = function (title, bodyHTML, opts) {
+  opts = opts || {};
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal-box ${opts.cls || ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <div class="modal-header"><h2 class="modal-title">${esc(title)}</h2><button type="button" class="modal-close" data-action="close-overlay" aria-label="إغلاق">✕</button></div>
+    <div class="modal-body">${bodyHTML}</div></div>`;
+  Overlays.open(overlay, opts.replace);
+  return overlay;
 };
 
-async function init() {
-  try {
-    await loadAllData();
-    const updateEl = document.getElementById('header-last-update'); 
-    if (updateEl) {
-      const dateStr = (window.APP_CONFIG && window.APP_CONFIG.LAST_DATA_UPDATE) ? window.APP_CONFIG.LAST_DATA_UPDATE : '3 نوفمبر 2026';
-      updateEl.textContent = `آخر تحديث للبيانات: ${dateStr}`;
-    }
-    const loader = document.getElementById('loading-screen'); 
-    if (loader) loader.remove();
-    document.querySelectorAll('.nav-btn:not([disabled])').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
-    showPage('overview');
-  } catch (err) { console.error(err); }
+/* ───────────────────────── 6) قوائم الطلاب ───────────────────────── */
+
+window._rawRows = [];
+
+window.renderStudentListModal = function (title, rows, opts) {
+  opts = opts || {};
+  const items = (rows || []).filter(Boolean).map((row) => {
+    const s = resolveStudent(row);
+    const src = s || row;
+    const g = normGender(src.gender || row.gender);
+    let attrs;
+    if (s) attrs = act('student', { sid: studentKey(s) });
+    else { window._rawRows.push(row); attrs = act('raw-student', { ri: window._rawRows.length - 1 }); }
+    const sub = [src.group_id ? 'جروب ' + src.group_id : 'بدون جروب', src.code_short ? 'كود ' + src.code_short : '', row.unit_name || ''].filter(Boolean).join(' · ');
+    return { attrs, name: src.full_name || row.full_name || 'غير محدد', sub, g, search: normAr((src.full_name || '') + ' ' + (src.code_short || '') + ' ' + (src.student_code || '') + ' ' + (src.group_id ? 'جروب ' + src.group_id : '')) };
+  });
+
+  const html = `
+    ${opts.breadcrumb ? `<div class="breadcrumb-bar">${esc(opts.breadcrumb)}</div>` : ''}
+    <div class="list-toolbar">
+      <input type="search" class="table-search grow" placeholder="🔍 بحث في القائمة…" data-filter-list="#student-list-body" autocomplete="off">
+      <span class="badge badge-plum num" id="list-count">${items.length}</span>
+    </div>
+    <div class="slist" id="student-list-body">
+      ${items.length ? items.map((it) => `
+        <div class="slist-row" data-s="${esc(it.search)}"${it.attrs}>
+          <div class="initials-avatar">${esc(getInitials(it.name))}</div>
+          <div class="slist-main"><div class="slist-name">${esc(it.name)}</div><div class="slist-sub">${esc(it.sub)}</div></div>
+          <span class="slist-g ${it.g === 'F' ? 'gender-f' : it.g === 'M' ? 'gender-m' : ''}">${it.g === 'F' ? '♀' : it.g === 'M' ? '♂' : ''}</span>
+          <span class="slist-arrow" aria-hidden="true">‹</span>
+        </div>`).join('') : '<div class="empty-note">لا توجد أسماء في هذه القائمة.</div>'}
+    </div>`;
+  return openModal(title, html, { replace: opts.replace, cls: 'modal-list' });
+};
+
+window.openStudentDirectoryModal = function () { return renderStudentListModal('دليل طلاب الدفعة', DB.students, { breadcrumb: 'الرئيسية › الدليل' }); };
+window.openGroupRosterModal = function (groupId, opts) {
+  return renderStudentListModal(`طلاب جروب ${groupId}`, DB.students.filter((s) => String(s.group_id) === String(groupId)), opts);
+};
+
+// فلترة أي قائمة (data-filter-list) أثناء الكتابة
+document.addEventListener('input', (e) => {
+  const inp = e.target.closest && e.target.closest('[data-filter-list]');
+  if (!inp) return;
+  const q = normAr(inp.value);
+  const list = document.querySelector(inp.getAttribute('data-filter-list'));
+  if (!list) return;
+  let shown = 0;
+  list.querySelectorAll('[data-s]').forEach((r) => { const ok = !q || r.getAttribute('data-s').indexOf(q) > -1; r.style.display = ok ? '' : 'none'; if (ok) shown++; });
+  const c = document.getElementById('list-count'); if (c) c.textContent = shown;
+});
+
+window.openUnknownStudent = function (row, opts) {
+  const rows = [['الاسم', row.full_name], ['الكود', row.code_short], ['الجروب', row.group_id || 'غير محدد'], ['الوحدة / الراوند', row.unit_name || roundLabel(row.round_key)], ['الهاتف', formatPhone(row.phone)], ['ملاحظة', row.issue]].filter((r) => r[1]);
+  openModal('بيانات الطالب', `<div class="alert-item alert-amber static" style="margin-bottom:12px"><span class="alert-icon">ℹ️</span><div>هذا الاسم غير موجود في ملفات الجروبات، لذلك لا يتوفر له ملف كامل.</div></div>
+    <div class="kv-list">${rows.map((r) => `<div class="kv"><span>${esc(r[0])}</span><strong>${esc(r[1])}</strong></div>`).join('')}</div>`, opts);
+};
+
+/* ───────────────────────── 7) ملف الطالب ───────────────────────── */
+
+function buildStudentJourney(student) {
+  const gid = student.group_id;
+  const sched = DB.roundSchedule.filter((r) => String(r.group_id) === String(gid));
+  const find = (o) => sched.find((r) => String(r.round_order) === String(o)) || {};
+  const mine = DB.assignments.filter((a) => (student.student_code && a.student_code === student.student_code) || (gid && a.group_id === gid && a.code_short === student.code_short));
+  const isMissing = DB.unregistered.some((u) => (gid && u.group_id === gid && u.code_short === student.code_short));
+
+  const step = (order, title, fallbackName, station) => {
+    const r = find(order); const d = getRoundDates(order);
+    const start = formatDate(r.start_date) || d.start, end = formatDate(r.end_date) || d.end;
+    return { roundName: `${title} — ${r.round_name_ar || fallbackName}`, dates: start ? `${start} إلى ${end}` : 'غير متاح', station, status: computeStatus(start, end) };
+  };
+  const r2station = mine.length ? mine.map((a) => a.unit_name || a.round_name_ar || 'مسجل').filter((v, i, arr) => arr.indexOf(v) === i).join(' + ') : (isMissing ? 'غير مسجل ⚠️' : 'غير مسجل');
+  const later = 'لم يُحدد بعد';
+  const d0 = getRoundDates('0');
+  return [
+    step(1, 'الراوند 1', 'أقسام الكلية', later),
+    step(2, 'الراوند 2', 'وحدات بيطرية', r2station),
+    step(3, 'الراوند 3', 'دواجن', later),
+    step(4, 'الراوند 4', 'مجازر / خيل', later),
+    { roundName: 'تدريب اختياري', dates: d0.start ? `${d0.start} إلى ${d0.end}` : 'غير متاح', station: 'حسب اختيار الطالب', status: computeStatus(d0.start, d0.end) }
+  ];
 }
-document.addEventListener('DOMContentLoaded', init);
+
+window.openStudentProfile = function (rawKey, opts) {
+  try {
+    const student = DB.studentLookup[String(rawKey).replace(/\s+/g, '')];
+    if (!student) { toast('لم يتم العثور على سجل الطالب'); return; }
+    closeProfileOnly();
+
+    const phone = formatPhone(student.phone), phoneEmpty = !phone, wa = waLink(student.phone);
+    const email = String(student.email || '').trim();
+    const rawNid = String(student.national_id || '').trim();
+    const masked = rawNid ? '••••••••••' + rawNid.slice(-4) : 'غير متوفر';
+    const showNid = CFG().SHOW_NID_BY_DEFAULT && !document.body.classList.contains('presentation-mode');
+    const birth = formatDate(student.birth_date), reg = formatDate(student.registered_at);
+    const prefs = DB.prefColumns.map((key) => ({ arabicName: DB.fieldsMap[key] || key, rank: parseInt(student[key], 10) || 99 })).sort((a, b) => a.rank - b.rank);
+    const journey = buildStudentJourney(student);
+    const sid = studentKey(student);
+
+    const panel = document.createElement('div');
+    panel.id = 'profile-panel-overlay';
+    panel.className = 'modal-overlay profile-overlay';
+    panel.innerHTML = `
+      <div class="profile-drawer" role="dialog" aria-modal="true" aria-label="ملف الطالب">
+        <div class="profile-header">
+          <div class="profile-head-main">
+            <div class="profile-chips">
+              <span class="badge ${student.gender === 'F' ? 'badge-rose' : 'badge-plum'}">${student.gender === 'F' ? 'أنثى ♀' : student.gender === 'M' ? 'ذكر ♂' : 'غير محدد'}</span>
+              <span class="cartouche-badge-dark">جروب ${esc(student.group_id || '—')}</span>
+              <span class="student-code">${esc(student.code_short || '—')}</span>
+            </div>
+            <div class="profile-who">
+              <div class="initials-avatar lg">${esc(getInitials(student.full_name))}</div>
+              <div><h2>${esc(student.full_name || 'غير محدد')}</h2><div class="profile-sub">الكود الأكاديمي: <span class="num">${esc(student.student_code || '—')}</span></div></div>
+            </div>
+          </div>
+          <button type="button" class="modal-close" data-action="close-overlay" aria-label="إغلاق">✕</button>
+        </div>
+
+        <div class="profile-body">
+          ${student.student_notes ? `<div class="alert-item alert-amber static"><span class="alert-icon">📌</span><div><strong>ملاحظة إدارية:</strong> ${esc(student.student_notes)}</div></div>` : ''}
+
+          <div class="profile-section">
+            <div class="profile-section-title">🪪 البيانات الشخصية</div>
+            <div class="personal-info-card">
+              <div><div class="k">الرقم القومي</div>
+                <div class="v"><span id="nid-display" class="num" data-masked="${showNid ? '0' : '1'}">${esc(showNid ? rawNid || masked : masked)}</span>
+                ${rawNid ? `<button type="button" class="btn btn-surface btn-sm" id="nid-toggle-btn" data-action="toggle-nid" data-sid="${esc(sid)}" aria-label="إظهار/إخفاء الرقم القومي">${showNid ? '🙈' : '👁️'}</button>` : ''}</div>
+                ${student.nid_status === 'check' ? '<span class="badge badge-amber">⚠️ يحتاج مراجعة</span>' : ''}</div>
+              <div><div class="k">تاريخ الميلاد / السن</div><div class="v"><span class="num">${esc(birth || 'غير محدد')}</span> <small class="muted">(${esc(computeAge(birth))})</small></div></div>
+              <div class="span2 divider"><span class="k">تاريخ التسجيل:</span> <strong class="num">${esc(reg || 'غير محدد')}</strong></div>
+            </div>
+          </div>
+
+          <div class="profile-section hide-in-presentation">
+            <div class="profile-section-title">📞 بيانات التواصل</div>
+            <div class="contact-box">
+              <div class="contact-row">
+                <div class="grow"><div class="k">رقم الهاتف</div>
+                  <div class="v big">${phoneEmpty ? '<span class="muted">غير متوفر</span>' : `<span class="num" dir="ltr">${esc(phone)}</span>`}
+                  ${student.phone_status === 'check' ? '<span class="badge badge-amber">⚠️ يحتاج مراجعة</span>' : ''}</div></div>
+                ${phoneEmpty ? '' : `<div class="contact-actions">
+                  <a href="tel:${esc(phone)}" class="btn btn-plum btn-sm">📞 اتصال</a>
+                  <a href="${esc(wa)}" target="_blank" rel="noopener" class="btn btn-emerald btn-sm">💬 واتساب</a>
+                  <button type="button" class="btn btn-surface btn-sm" data-action="copy" data-text="${esc(phone)}" data-msg="تم نسخ رقم الهاتف ✓">📋 نسخ</button></div>`}
+              </div>
+              <div class="contact-row divider-top">
+                <div class="grow"><div class="k">البريد الإلكتروني</div><div class="v email">${email ? esc(email) : '<span class="muted">غير متوفر</span>'}</div></div>
+                ${email ? `<div class="contact-actions">
+                  <a href="mailto:${esc(email)}" class="btn btn-plum btn-sm">✉️ مراسلة</a>
+                  <button type="button" class="btn btn-surface btn-sm" data-action="copy" data-text="${esc(email)}" data-msg="تم نسخ البريد ✓">📋 نسخ</button></div>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-section">
+            <div class="profile-section-title">🗺️ المسار التدريبي</div>
+            <div class="journey-timeline">
+              ${journey.map((st) => `<div class="journey-step ${st.status}"><div class="journey-bullet"></div>
+                <div class="journey-content">
+                  <div class="journey-top"><span class="journey-name">${esc(st.roundName)}</span>${statusBadge(st.status)}</div>
+                  <div class="journey-dates">📅 <span class="num">${esc(st.dates)}</span></div>
+                  <div>📍 موقع التدريب: <strong>${esc(st.station)}</strong></div>
+                </div></div>`).join('')}
+            </div>
+          </div>
+
+          <div class="profile-section">
+            <div class="profile-section-title">⭐ ترتيب الرغبات</div>
+            <div class="pref-list">
+              ${prefs.map((p, i) => `<div class="pref-item"><span class="pref-rank-badge num">#${i + 1}</span><span class="pref-name">${esc(p.arabicName)}</span><span class="pref-score">الرغبة: <strong class="num">${p.rank < 99 ? p.rank : '—'}</strong></span></div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>`;
+    Overlays.open(panel, opts && opts.replace);
+  } catch (err) { console.error(err); toast('حدث خطأ أثناء فتح الملف'); }
+};
+
+function closeProfileOnly() { const p = document.getElementById('profile-panel-overlay'); if (p) Overlays.closeEl(p); }
+window.closeStudentProfile = closeProfileOnly;
+
+/* ───────────────────────── 8) البحث الشامل ───────────────────────── */
+
+window.openGlobalSearch = function () {
+  const old = document.getElementById('search-modal-overlay'); if (old) { Overlays.closeEl(old); }
+  const overlay = document.createElement('div');
+  overlay.id = 'search-modal-overlay'; overlay.className = 'modal-overlay search-overlay';
+  overlay.innerHTML = `<div class="search-modal-box" role="dialog" aria-modal="true" aria-label="بحث">
+    <div class="search-input-wrap"><span class="search-icon" aria-hidden="true">🔍</span>
+      <input type="search" id="global-search-input" class="search-box-input" placeholder="ابحث باسم الطالب أو الكود أو الهاتف أو الوحدة…" autocomplete="off" enterkeyhint="search">
+      <button type="button" class="modal-close dark" data-action="close-overlay" aria-label="إغلاق">✕</button></div>
+    <div class="search-results-list" id="search-results-list"><div class="empty-note">اكتب للبحث في الطلاب والجروبات والوحدات.</div></div></div>`;
+  Overlays.open(overlay);
+  const input = overlay.querySelector('#global-search-input'), out = overlay.querySelector('#search-results-list');
+  setTimeout(() => input.focus(), 50);
+
+  const render = () => {
+    const raw = input.value.trim(), q = normAr(raw), qd = raw.replace(/\D/g, '');
+    if (!q) { out.innerHTML = '<div class="empty-note">اكتب للبحث في الطلاب والجروبات والوحدات.</div>'; return; }
+    const students = DB.students.filter((s) => normAr(s.full_name).indexOf(q) > -1 || (qd.length >= 3 && (String(s.student_code).indexOf(qd) > -1 || formatPhone(s.phone).indexOf(qd) > -1)) || (qd && String(s.code_short) === qd)).slice(0, 25);
+    const groups = DB.groups.filter((g) => normAr('جروب ' + g.group_id + ' ' + (g.group_name || '')).indexOf(q) > -1).slice(0, 8);
+    const units = DB.stationsUnits.filter((u) => normAr(u.unit_name).indexOf(q) > -1).slice(0, 8);
+    let html = '';
+    if (students.length) html += `<div class="search-category-header">الطلاب (${students.length}${students.length === 25 ? '+' : ''})</div>` + students.map((s) => `
+      <div class="search-result-row"${act('student', { sid: studentKey(s), replace: 1 })}>
+        <div class="initials-avatar">${esc(getInitials(s.full_name))}</div><div class="grow"><strong>${esc(s.full_name)}</strong><br><small>جروب ${esc(s.group_id || '—')} · كود ${esc(s.code_short || '—')}</small></div><span class="slist-arrow">‹</span></div>`).join('');
+    if (groups.length) html += '<div class="search-category-header">الجروبات</div>' + groups.map((g) => `
+      <div class="search-result-row"${act('group-roster', { gid: g.group_id, replace: 1 })}><span class="cartouche-badge">جروب ${esc(g.group_id)}</span><div class="grow"><small>${esc(g.total_students || 0)} طالب/ة</small></div><span class="slist-arrow">‹</span></div>`).join('');
+    if (units.length) html += '<div class="search-category-header">الوحدات</div>' + units.map((u) => `
+      <div class="search-result-row"${act('goto-unit', { unit: u.unit_name })}><span>🏥</span><div class="grow"><strong>${esc(u.unit_name)}</strong><br><small>${esc(u.governorate || '')} · ${esc(u.registered || 0)} مقيد</small></div><span class="slist-arrow">‹</span></div>`).join('');
+    out.innerHTML = html || '<div class="empty-note">لا توجد نتائج مطابقة.</div>';
+  };
+  input.addEventListener('input', render);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const first = out.querySelector('[data-action]'); if (first) first.click(); } });
+};
+
+/* ───────────────────────── 9) جداول: فرز وبحث ───────────────────────── */
+
+window.makeTableSortable = function (tableEl) {
+  if (!tableEl) return;
+  const headers = tableEl.querySelectorAll('th[data-col]'); let sortCol = null, dir = 1;
+  headers.forEach((th) => th.addEventListener('click', () => {
+    const col = th.dataset.col; if (sortCol === col) dir *= -1; else { sortCol = col; dir = 1; }
+    headers.forEach((h) => h.classList.remove('sorted-asc', 'sorted-desc')); th.classList.add(dir === 1 ? 'sorted-asc' : 'sorted-desc');
+    const tbody = tableEl.querySelector('tbody'); const rows = Array.from(tbody.querySelectorAll('tr'));
+    const val = (r) => { const td = r.querySelector(`td[data-col="${col}"]`); return td ? (td.dataset.sort !== undefined ? td.dataset.sort : td.textContent.trim()) : ''; };
+    rows.sort((a, b) => { const av = val(a), bv = val(b), an = parseFloat(av), bn = parseFloat(bv); return (!isNaN(an) && !isNaN(bn) ? an - bn : String(av).localeCompare(String(bv), 'ar')) * dir; });
+    rows.forEach((r) => tbody.appendChild(r));
+  }));
+};
+window.makeTableSearchable = function (inputEl, tableEl) {
+  if (!inputEl || !tableEl) return;
+  inputEl.addEventListener('input', () => { const q = normAr(inputEl.value); tableEl.querySelectorAll('tbody tr').forEach((r) => { r.style.display = !q || normAr(r.textContent).indexOf(q) > -1 ? '' : 'none'; }); });
+};
+
+/* ───────────────────────── 10) وضع العرض + التحقق ───────────────────────── */
+
+window.togglePresentationMode = function () {
+  const on = document.body.classList.toggle('presentation-mode');
+  const b = document.querySelector('#presentation-btn .btn-txt'); if (b) b.textContent = on ? 'إنهاء وضع العرض' : 'وضع العرض';
+};
+
+window.VERIFY = {
+  checks: [],
+  add(label, countValue, getLen) { this.checks.push({ label, countValue, getLen }); },
+  run() {
+    if (!this.checks.length) return;
+    const results = this.checks.map((c) => { const len = c.getLen(); return { label: c.label, countValue: c.countValue, listLen: len, ok: Number(c.countValue) === Number(len) }; });
+    this.checks = [];
+    const badge = document.getElementById('verify-badge'); if (!badge) return;
+    const failed = results.filter((r) => !r.ok);
+    badge.classList.remove('hidden');
+    clearTimeout(this._t);
+    if (!failed.length) {
+      badge.className = 'verify-badge verify-ok'; badge.innerHTML = `✓ تدقيق متطابق (${results.length} فحص)`;
+      this._t = setTimeout(() => badge.classList.add('hidden'), 3500);
+    } else {
+      badge.className = 'verify-badge verify-fail';
+      badge.innerHTML = `<button type="button" class="verify-x" data-action="hide-verify" aria-label="إغلاق">✕</button>⚠️ عدم تطابق في ${failed.length} رقم:<br>` + failed.map((f) => `<small>${esc(f.label)}: المعروض <b>${f.countValue}</b> ≠ القائمة <b>${f.listLen}</b></small>`).join('<br>');
+    }
+  }
+};
+
+/* ───────────────────────── 11) التثبيت (PWA) ───────────────────────── */
+
+let deferredPrompt = null;
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function setInstallVisible(v) { const b = document.getElementById('install-btn'); if (b) b.classList.toggle('hidden', !v); }
+
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; if (!isStandalone()) setInstallVisible(true); });
+window.addEventListener('appinstalled', () => { deferredPrompt = null; setInstallVisible(false); toast('تم تثبيت التطبيق ✓'); });
+
+window.installApp = async function () {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    try { const r = await deferredPrompt.userChoice; if (r && r.outcome === 'accepted') setInstallVisible(false); } catch (e) { /* ignore */ }
+    deferredPrompt = null; return;
+  }
+  const ios = isIOS();
+  openModal('تثبيت التطبيق', ios ? `
+    <ol class="install-steps">
+      <li>افتح الموقع في متصفح <strong>Safari</strong>.</li>
+      <li>اضغط زر <strong>المشاركة</strong> <span class="kbd">⬆︎</span> أسفل الشاشة.</li>
+      <li>مرّر لأسفل واختر <strong>«إضافة إلى الشاشة الرئيسية»</strong> (Add to Home Screen).</li>
+      <li>اضغط <strong>إضافة</strong> — ستجد الأيقونة على شاشتك.</li>
+    </ol>` : `
+    <ol class="install-steps">
+      <li><strong>أندرويد (Chrome):</strong> اضغط القائمة <span class="kbd">⋮</span> ثم <strong>«تثبيت التطبيق»</strong> أو «إضافة إلى الشاشة الرئيسية».</li>
+      <li><strong>الكمبيوتر (Chrome / Edge):</strong> اضغط أيقونة التثبيت <span class="kbd">⊕</span> في آخر شريط العنوان.</li>
+      <li>تأكد أن الموقع مفتوح عبر <strong>https</strong>.</li>
+    </ol>`);
+};
+
+function initInstallUI() {
+  if (isStandalone()) { setInstallVisible(false); return; }
+  if (isIOS()) setInstallVisible(true);          // iOS لا يرسل beforeinstallprompt → نعرض الزر مع شرح الخطوات
+}
+
+function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  if (!(location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) return;
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window._swReloaded && !Overlays.count()) { window._swReloaded = true; location.reload(); } });
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch((e) => console.warn('SW:', e)));
+}
+
+/* ───────────────────────── 12) الصفحات والتنقل ───────────────────────── */
+
+const PAGE_RENDERERS = {
+  'overview': () => renderOverview(document.getElementById('page-overview')),
+  'schedule': () => renderSchedule(document.getElementById('page-schedule')),
+  'units': () => renderUnits(document.getElementById('page-units')),
+  'not-registered': () => renderNotRegistered(document.getElementById('page-not-registered'))
+};
+let _activePage = null;
+
+window.showPage = function (pageId) {
+  const pageEl = document.getElementById('page-' + pageId);
+  if (!pageEl) return;
+  if (_activePage === pageId && pageEl.dataset.rendered) return;
+  document.querySelectorAll('.page').forEach((p) => p.classList.add('hidden'));
+  pageEl.classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach((b) => { const on = b.dataset.page === pageId; b.classList.toggle('active', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  if (!pageEl.dataset.rendered) {
+    try { PAGE_RENDERERS[pageId](); pageEl.dataset.rendered = 'true'; }
+    catch (err) { console.error(err); pageEl.innerHTML = `<div class="card error-card"><h3>تعذّر عرض هذه الصفحة</h3><p class="muted">${esc(err.message)}</p><button type="button" class="btn btn-plum" data-action="refresh">إعادة تحميل البيانات</button></div>`; }
+    setTimeout(() => VERIFY.run(), 60);
+  }
+  _activePage = pageId;
+  window.scrollTo({ top: 0, behavior: 'auto' });
+};
+
+function rerenderAll() {
+  document.querySelectorAll('.page').forEach((p) => { delete p.dataset.rendered; p.innerHTML = ''; });
+  const cur = _activePage || 'overview'; _activePage = null; showPage(cur);
+}
+
+/* ───────────────────────── 13) التحميل والتحديث ───────────────────────── */
+
+function setUpdateBadge(extra) {
+  const el = document.getElementById('header-last-update'); if (!el) return;
+  el.textContent = `آخر تحديث للبيانات: ${CFG().LAST_DATA_UPDATE || '—'}${extra ? ' · ' + extra : ''}`;
+}
+function showBanner(msg) { const b = document.getElementById('offline-banner'); if (!b) return; if (msg) { b.textContent = msg; b.classList.remove('hidden'); } else b.classList.add('hidden'); }
+function hash(str) { let h = 0; for (let i = 0; i < str.length; i++) { h = ((h << 5) - h + str.charCodeAt(i)) | 0; } return h; }
+function fingerprint(sheets) { try { const j = JSON.stringify(sheets); return j.length + ':' + hash(j); } catch (e) { return String(Date.now()); } }
+
+function showError(errors) {
+  const keys = Object.keys(errors || {}).filter((k) => REQUIRED.indexOf(k) > -1);
+  const el = document.getElementById('error-screen'); const ld = document.getElementById('loading-screen'); if (ld) ld.classList.add('hidden');
+  document.querySelectorAll('.page').forEach((p) => p.classList.add('hidden'));
+  el.classList.remove('hidden');
+  el.innerHTML = `<div class="card error-card"><div class="error-ico">📡</div><h2>تعذّر تحميل البيانات</h2>
+    <p class="muted">تأكد من الاتصال بالإنترنت، ثم أعد المحاولة. إن استمرت المشكلة فتأكد أن رابط Google Apps Script منشور بصلاحية «أي شخص» وأن أسماء الشيتات صحيحة.</p>
+    ${keys.length ? `<details class="err-details"><summary>تفاصيل فنية</summary><ul>${keys.map((k) => `<li><code>${esc(SHEETS[k])}</code>: ${esc(errors[k])}</li>`).join('')}</ul></details>` : ''}
+    <button type="button" class="btn btn-plum" data-action="retry">🔄 إعادة المحاولة</button></div>`;
+}
+
+let _loading = false, _lastFp = null;
+
+async function refreshData(opts) {
+  opts = opts || {};
+  if (_loading) return;
+  _loading = true;
+  const btn = document.getElementById('refresh-btn'); if (btn) btn.classList.add('spinning');
+  try {
+    const { sheets, errors } = await fetchAllSheets();
+    const cached = readCache();
+    const merged = { ...(cached ? cached.sheets : {}), ...sheets };          // شيت فشل؟ نستخدم آخر نسخة محفوظة له
+    const failedRequired = REQUIRED.filter((k) => !sheets[k]);
+
+    if (!hasRequired(merged)) { if (!opts.silent || !DB.students) showError(errors); else showBanner('تعذّر تحديث البيانات الآن.'); return; }
+
+    const fp = fingerprint(merged);
+    const freshAll = failedRequired.length === 0;
+    if (freshAll) { writeCache(merged); showBanner(null); }
+    else if (!Object.keys(sheets).length) showBanner('لا يوجد اتصال — يتم عرض آخر نسخة محفوظة من البيانات.');
+    else showBanner('تعذّر تحديث بعض الجداول — يتم عرض آخر نسخة محفوظة لها.');
+
+    if (fp !== _lastFp) {
+      _lastFp = fp; buildDB(merged);
+      const ld = document.getElementById('loading-screen'); if (ld) ld.classList.add('hidden');
+      document.getElementById('error-screen').classList.add('hidden');
+      if (opts.firstPaint) { showPage('overview'); } else { rerenderAll(); if (opts.silent) toast('تم تحديث البيانات ✓'); }
+    }
+    if (opts.manual && freshAll) toast('البيانات محدّثة ✓');
+    setUpdateBadge();
+  } finally { _loading = false; if (btn) btn.classList.remove('spinning'); }
+}
+
+async function init() {
+  setUpdateBadge();
+  if (CFG().PRESENTATION_MODE) document.body.classList.add('presentation-mode');
+  initInstallUI(); registerSW();
+
+  const cached = readCache();
+  if (cached && hasRequired(cached.sheets)) {
+    // فتح فوري من آخر نسخة محفوظة ثم تحديث في الخلفية
+    buildDB(cached.sheets); _lastFp = fingerprint(cached.sheets);
+    document.getElementById('loading-screen').classList.add('hidden');
+    showPage('overview');
+    setUpdateBadge('جارٍ التحديث…');
+    try { await refreshData({ silent: true }); } catch (e) { console.error(e); showBanner('أنت تعمل بدون اتصال — يتم عرض آخر نسخة محفوظة.'); setUpdateBadge(); }
+    return;
+  }
+  try { await refreshData({ firstPaint: true }); } catch (e) { console.error(e); showError({ students: e.message }); }
+}
+
+window.AppBoot = function () { init(); };
+
+/* ───────────────────────── 14) معالج الضغطات الموحّد ───────────────────────── */
+// كل العناصر القابلة للضغط تستخدم data-action — لا onclick داخل النصوص.
+
+const ACTIONS = {
+  'page': (el) => { Overlays.closeAll(); showPage(el.dataset.page); },
+  'goto-page': (el) => { Overlays.closeAll(); showPage(el.dataset.page); },
+  'student': (el) => openStudentProfile(el.dataset.sid, { replace: !!el.dataset.replace }),
+  'raw-student': (el) => openUnknownStudent(window._rawRows[+el.dataset.ri] || {}),
+  'group-roster': (el) => openGroupRosterModal(el.dataset.gid, { replace: !!el.dataset.replace }),
+  'directory': () => openStudentDirectoryModal(),
+  'search-open': () => openGlobalSearch(),
+  'refresh': () => refreshData({ silent: false, manual: true }).catch((e) => { console.error(e); toast('تعذّر التحديث'); }),
+  'retry': () => { document.getElementById('error-screen').classList.add('hidden'); const ld = document.getElementById('loading-screen'); ld.classList.remove('hidden'); refreshData({ firstPaint: true }).catch((e) => { console.error(e); showError({ students: e.message }); }); },
+  'print': () => window.print(),
+  'install': () => installApp(),
+  'toggle-presentation': () => togglePresentationMode(),
+  'close-overlay': (el) => { const ov = el.closest('.modal-overlay'); if (ov) Overlays.closeEl(ov); },
+  'hide-verify': () => document.getElementById('verify-badge').classList.add('hidden'),
+  'copy': (el) => copyText(el.dataset.text || '', el.dataset.msg),
+  'toggle-nid': (el) => {
+    const s = DB.studentLookup[el.dataset.sid]; const out = document.getElementById('nid-display'); if (!s || !out) return;
+    const nid = String(s.national_id || ''); const masked = '••••••••••' + nid.slice(-4);
+    const wasMasked = out.dataset.masked === '1';
+    out.textContent = wasMasked ? nid : masked; out.dataset.masked = wasMasked ? '0' : '1'; el.textContent = wasMasked ? '🙈' : '👁️';
+  }
+};
+window.registerAction = function (name, fn) { ACTIONS[name] = fn; };
+
+document.addEventListener('click', (e) => {
+  const ov = e.target;
+  if (ov.classList && ov.classList.contains('modal-overlay')) { Overlays.closeEl(ov); return; }          // الضغط على الخلفية
+  const el = e.target.closest ? e.target.closest('[data-action]') : null;
+  if (!el) return;
+  const fn = ACTIONS[el.dataset.action];
+  if (fn) { if (el.tagName === 'A') return; fn(el, e); }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && Overlays.count()) { Overlays.closeTop(false); return; }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.matches && e.target.matches('[role="button"][data-action]')) { e.preventDefault(); e.target.click(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openGlobalSearch(); }
+});

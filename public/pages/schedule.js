@@ -5,14 +5,20 @@
    (بدون onclick مضمّن حتى لا تنكسر الأزرار مع أسماء الدورات/الجروبات)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const ROUND_META = {
-  units:           { icon: '🏥', label: 'وحدات بيطرية',          cls: 'badge-round-units' },
-  college:         { icon: '🏛️', label: 'أقسام الكلية',           cls: 'badge-round-college' },
-  poultry:         { icon: '🐔', label: 'دواجن',                  cls: 'badge-round-poultry' },
-  slaughter:       { icon: '🥩', label: 'مجازر وسلامة غذاء',      cls: 'badge-round-slaughter' },
-  equine_lab_fish: { icon: '🔬', label: 'خيل ومعامل وسمك',        cls: 'badge-round-equine' },
-  elective:        { icon: '🌟', label: 'تدريب اختياري',          cls: 'badge-round-elective' }
+/* أيقونات SVG موحّدة بدل الإيموجي — تُقرأ من window.ROUND_META في app.js (نفس ترميز الألوان) */
+const ROUND_META = (window.ROUND_META && Object.keys(window.ROUND_META).length) ? window.ROUND_META : {
+  units:           { icon: 'hospital',   label: 'وحدات بيطرية',          cls: 'badge-round-units', tone: 'tone-teal' },
+  college:         { icon: 'landmark',   label: 'أقسام الكلية',           cls: 'badge-round-college', tone: 'tone-rust' },
+  poultry:         { icon: 'chicken',    label: 'دواجن',                  cls: 'badge-round-poultry', tone: 'tone-green' },
+  slaughter:       { icon: 'meat',       label: 'مجازر وسلامة غذاء',      cls: 'badge-round-slaughter', tone: 'tone-mustard' },
+  equine_lab_fish: { icon: 'microscope', label: 'خيل ومعامل وسمك',        cls: 'badge-round-equine', tone: 'tone-navy' },
+  elective:        { icon: 'star',       label: 'تدريب اختياري',          cls: 'badge-round-elective', tone: 'tone-olive' }
 };
+
+/* شريحة نصية صغيرة غير قابلة للكسر منتصفها (tnum للأرقام) — تُستخدم كوحدة واحدة في سطر الـ meta */
+function gChip(txt, isNum) {
+  return `<span class="g-chip${isNum ? ' num' : ''}">${txt}</span>`;
+}
 
 function renderSchedule(container) {
   // التواريخ من الشيت أولاً، ثم ملف config كخطة بديلة — لا تواريخ ثابتة داخل الكود
@@ -38,23 +44,41 @@ function renderSchedule(container) {
     schedMap[gid][String(r.round_order)] = r;
   });
 
+  /* بناء بطاقة خلية واحدة — هيكل صارم من ثلاث مناطق متطابق في كل البطاقات:
+     head : [أيقونة SVG] + [اسم القسم] + [شارة الحالة] في صف واحد space-between
+     meta : رقائق منفصلة nowrap لا تنكسر أبداً في منتصفها
+     foot : شارة الحالة مثبتة أسفل البطاقة (margin-top:auto) لتتساوى في كل صف */
+  function rotCard(opts) {
+    const rKey = opts.rKey, meta = opts.meta, st = opts.status;
+    const chips = opts.chips.map((c) => gChip(c[0], c[1])).join('');
+    return `
+      <div class="rot-card ${esc(rKey)}">
+        <div class="rot-head">
+          ${window.roundIcon ? roundIcon(rKey, true) : iconChip(meta.icon || 'pin', meta.tone || 'tone-gold')}
+          <span class="rot-title">${esc(opts.title)}</span>
+          <span class="rot-status">${statusBadge(st)}</span>
+        </div>
+        <div class="rot-meta">${chips}</div>
+        <div class="rot-foot">${statusBadge(st)}</div>
+      </div>`;
+  }
+
   container.innerHTML = `
     <div class="card card-sm schedule-intro">
       <div class="schedule-intro-row">
         <div class="schedule-intro-main">
-          <span class="schedule-intro-ico" aria-hidden="true">📅</span>
+          <span class="schedule-intro-ico" aria-hidden="true">${iconSvg('calendar')}</span>
           <div>
             <div class="schedule-intro-title">مصفوفة التدوير الزمني للإمتياز</div>
             <div class="schedule-intro-sub">انقر على أي خلية أو جروب لعرض تفاصيل التوزيع والكشوف المعتمدة · اسحب أفقياً على الهاتف لمشاهدة بقية الراوندات</div>
           </div>
         </div>
         <div class="schedule-legend">
-          <span class="badge badge-round-units">🏥 وحدات</span>
-          <span class="badge badge-round-college">🏛️ أقسام</span>
-          <span class="badge badge-round-poultry">🐔 دواجن</span>
-          <span class="badge badge-round-slaughter">🥩 مجازر</span>
-          <span class="badge badge-round-equine">🔬 خيل وسمك</span>
-          <span class="badge badge-round-elective">🌟 اختياري</span>
+          ${['units', 'college', 'poultry', 'slaughter', 'equine_lab_fish', 'elective'].map((k) => {
+            const m = ROUND_META[k];
+            const shortName = { units: 'وحدات', college: 'أقسام', poultry: 'دواجن', slaughter: 'مجازر', equine_lab_fish: 'خيل وسمك', elective: 'اختياري' }[k];
+            return `<span class="badge ${m.cls} legend-chip">${iconSvg(m.icon)} ${shortName}</span>`;
+          }).join('')}
         </div>
       </div>
     </div>
@@ -69,7 +93,6 @@ function renderSchedule(container) {
                 <th>
                   <div class="gantt-head-title">${esc(c.title)}</div>
                   <div class="gantt-head-dates num">${esc(c.dates)}</div>
-                  <div class="gantt-head-status">${statusBadge(computeStatus(c.start, c.end))}</div>
                 </th>`).join('')}
             </tr>
           </thead>
@@ -80,7 +103,7 @@ function renderSchedule(container) {
                 <tr>
                   <td class="gantt-sticky-col">
                     <div class="gantt-group-cell"${act('group-roster', { gid })}>
-                      <div class="gantt-group-top"><span class="cartouche-badge">جروب ${esc(gid)}</span><span class="go" aria-hidden="true">↗</span></div>
+                      <div class="gantt-group-top"><span class="cartouche-badge">جروب ${esc(gid)}</span><span class="go" aria-hidden="true">${iconSvg('external')}</span></div>
                       <div class="gantt-group-count"><strong class="num">${count}</strong> طالب/ة</div>
                     </div>
                   </td>
@@ -88,29 +111,23 @@ function renderSchedule(container) {
                     if (c.order === '0') {
                       const meta = ROUND_META.elective, st = computeStatus(c.start, c.end);
                       return `<td class="gantt-cell"${act('round-detail', { round: 'elective', title: 'تدريب اختياري', gid, count })}>
-                        <div class="gantt-cell-inner elective">
-                          <div class="gantt-round-name"><span aria-hidden="true">${meta.icon}</span><span>تدريب اختياري</span></div>
-                          <div class="gantt-cell-foot"><span class="badge ${meta.cls}">${count} طالب</span>${statusBadge(st)}</div>
-                        </div></td>`;
+                        ${rotCard({ rKey: 'elective', meta, title: 'تدريب اختياري', status: st, chips: [[`${count} طالب`, true]] })}
+                      </td>`;
                     }
                     const row = gs[c.order];
                     if (!row) return `<td class="gantt-cell gantt-empty"><span class="muted small">غير محدد</span></td>`;
-                    const rKey = row.round_key, meta = ROUND_META[rKey] || { icon: '📌', label: row.round_name_ar || roundLabel(rKey), cls: 'badge-grey' };
+                    const rKey = row.round_key, meta = ROUND_META[rKey] || { icon: 'pin', label: row.round_name_ar || roundLabel(rKey), cls: 'badge-grey', tone: 'tone-gold' };
                     const rStatus = computeStatus(row.start_date, row.end_date);
                     const matrixKey = c.order + '_' + rKey, mData = DB.roundMatrix[matrixKey];
-                    let countText = `${count} طالب`;
+                    // كل قطعة معلومة كاملة تُمرَّر كشريحة مستقلة nowrap — الالتفاف يحدث بين الشرائح فقط
+                    const chips = [[`${count} طالب`, true]];
                     if (mData && mData.groups.length > 1) {
                       const others = mData.groups.filter((x) => String(x.group_id) !== gid).map((x) => x.group_id).join('+');
-                      countText = `${count} طالب · مع جروب ${others} · الإجمالي ${mData.total_students}`;
+                      chips.push([`مع جروب ${esc(others)}`, false], [`الإجمالي ${mData.total_students}`, true]);
                     }
                     return `<td class="gantt-cell"${act('round-detail', { round: rKey, title: row.round_name_ar || roundLabel(rKey), gid, count, matrix: matrixKey })}>
-                      <div class="gantt-cell-inner ${esc(rKey)}">
-                        <div class="gantt-round-name"><span aria-hidden="true">${meta.icon}</span><span>${esc(row.round_name_ar || roundLabel(rKey))}</span></div>
-                        <div class="gantt-cell-foot">
-                          <span class="badge ${meta.cls} gantt-count-badge">${esc(countText)}</span>
-                          ${statusBadge(rStatus)}
-                        </div>
-                      </div></td>`;
+                      ${rotCard({ rKey, meta, title: row.round_name_ar || roundLabel(rKey), status: rStatus, chips })}
+                    </td>`;
                   }).join('')}
                 </tr>`;
             }).join('')}
@@ -131,7 +148,7 @@ window.openRoundDetailModal = function (rawKey, roundTitle, groupId, studentCoun
   const mKey = matrixKey || '';
   if (mKey && DB.roundMatrix[mKey] && DB.roundMatrix[mKey].groups.length > 1) {
     const others = DB.roundMatrix[mKey].groups.filter((x) => String(x.group_id) !== gid).map((x) => x.group_id).join('+');
-    extra += `<div class="alert-item alert-amber static"><span class="alert-icon">⚠️</span><div>هذا التوقيت يتدرب فيه <strong>جروب ${esc(gid)}</strong> مع جروب <strong>${esc(others)}</strong>. إجمالي الطلاب المتواجدين: <strong class="num">${DB.roundMatrix[mKey].total_students}</strong> طالب/ة.</div></div>`;
+    extra += `<div class="alert-item alert-amber static"><span class="alert-icon">${iconSvg('alert-triangle')}</span><div>هذا التوقيت يتدرب فيه <strong>جروب ${esc(gid)}</strong> مع جروب <strong>${esc(others)}</strong>. إجمالي الطلاب المتواجدين: <strong class="num">${DB.roundMatrix[mKey].total_students}</strong> طالب/ة.</div></div>`;
   }
 
   const schedRow = DB.roundSchedule.find((r) => String(r.group_id) === gid && r.round_key === roundKey) || {};
@@ -148,11 +165,11 @@ window.openRoundDetailModal = function (rawKey, roundTitle, groupId, studentCoun
 
   const actions = roundKey === 'units'
     ? `<div class="modal-actions">
-         ${btn('الانتقال لصفحة الوحدات البيطرية 🏥', 'goto-page', { page: 'units' })}
-         ${btn(`قائمة طلاب جروب ${gid} 👥`, 'group-roster', { gid, replace: 1 }, 'btn-surface')}
+         ${btn(`${iconSvg('hospital')} الانتقال لصفحة الوحدات البيطرية`, 'goto-page', { page: 'units' })}
+         ${btn(`${iconSvg('users')} قائمة طلاب جروب ${gid}`, 'group-roster', { gid, replace: 1 }, 'btn-surface')}
        </div>`
     : `<div class="modal-actions">
-         ${btn(`استعراض قائمة طلاب جروب ${gid} (${cnt} طالب) 👥`, 'group-roster', { gid, replace: 1 })}
+         ${btn(`${iconSvg('users')} استعراض قائمة طلاب جروب ${gid} (${cnt} طالب)`, 'group-roster', { gid, replace: 1 })}
        </div>`;
 
   openModal(`تفاصيل الدورة — جروب ${gid}`, `

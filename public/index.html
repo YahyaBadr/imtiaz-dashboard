@@ -2,53 +2,81 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#2B1A2B">
+  <meta name="color-scheme" content="light">
+
+  <!-- PWA / Install -->
   <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="assets/college_logo.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="assets/icons/favicon-48.png">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="الإمتياز البيطري">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  
+
   <title>لوحة متابعة الإمتياز البيطري</title>
-  <link rel="stylesheet" href="style.css?v=99">
-  <link rel="stylesheet" href="print.css">
-  <script src="config.js?v=99"></script>
+
+  <link rel="preload" href="assets/fonts/cairo-400-arabic-0.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/cairo-700-arabic-6.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="cairo.css?v=100">
+  <link rel="stylesheet" href="style.css?v=100">
+  <link rel="stylesheet" href="print.css?v=100" media="print">
+  <script src="config.js?v=100"></script>
 </head>
 <body>
+
+  <a class="skip-link" href="#main-content">تخطي إلى المحتوى</a>
 
   <header class="site-header">
     <div class="header-inner">
       <div class="header-top-row">
-        <div class="logo-wrapper"><img src="assets/university_logo.png" alt="الجامعة" class="header-logo" onerror="this.style.display='none'"></div>
-        <div class="header-title-box">
+        <div class="logo-wrapper area-logo-r"><img src="assets/university_logo.png" alt="جامعة القاهرة" class="header-logo" onerror="this.style.display='none'"></div>
+
+        <div class="header-title-box area-title">
           <h1>لوحة متابعة الإمتياز البيطري</h1>
           <p class="header-subtitle">مكتب السيد الأستاذ الدكتور / وكيل الكلية</p>
-          <div class="header-meta-badge" id="header-last-update">آخر تحديث: 3 نوفمبر 2026</div>
+          <div class="header-meta-badge" id="header-last-update">آخر تحديث: …</div>
         </div>
-        <div class="header-actions">
-          <button class="header-btn" onclick="installApp()" style="background:var(--c-gold); color:var(--c-plum); font-weight:bold;">
-            <span>📲 تثبيت التطبيق</span>
+
+        <div class="header-actions area-actions">
+          <button type="button" class="header-btn header-btn-install hidden" id="install-btn" data-action="install">
+            <span class="btn-ico" aria-hidden="true">📲</span><span class="btn-txt">تثبيت التطبيق</span>
           </button>
-          <button class="header-btn" onclick="openGlobalSearch()"><span>🔍 بحث</span></button>
-          <button class="header-btn" onclick="window.print()"><span>🖨️ طباعة</span></button>
+          <button type="button" class="header-btn" id="refresh-btn" data-action="refresh" title="تحديث البيانات">
+            <span class="btn-ico" aria-hidden="true">🔄</span><span class="btn-txt">تحديث</span>
+          </button>
+          <button type="button" class="header-btn" data-action="search-open" title="بحث">
+            <span class="btn-ico" aria-hidden="true">🔍</span><span class="btn-txt">بحث</span>
+          </button>
+          <button type="button" class="header-btn desk-only" id="presentation-btn" data-action="toggle-presentation" title="وضع العرض على الشاشة">
+            <span class="btn-ico" aria-hidden="true">🖥️</span><span class="btn-txt">وضع العرض</span>
+          </button>
+          <button type="button" class="header-btn desk-only" data-action="print" title="طباعة">
+            <span class="btn-ico" aria-hidden="true">🖨️</span><span class="btn-txt">طباعة</span>
+          </button>
         </div>
-        <div class="logo-wrapper"><img src="assets/college_logo.png" alt="الكلية" class="header-logo" onerror="this.style.display='none'"></div>
+
+        <div class="logo-wrapper area-logo-l"><img src="assets/college_logo.png" alt="كلية الطب البيطري" class="header-logo" onerror="this.style.display='none'"></div>
       </div>
     </div>
   </header>
 
-  <nav class="site-nav">
+  <nav class="site-nav" aria-label="التنقل الرئيسي">
     <div class="nav-inner">
-      <button class="nav-btn active" data-page="overview"><span>📊</span><span>الملخص</span></button>
-      <button class="nav-btn" data-page="schedule"><span>📅</span><span>المصفوفة</span></button>
-      <button class="nav-btn" data-page="units"><span>🏥</span><span>الوحدات</span></button>
-      <button class="nav-btn" data-page="not-registered"><span>⚠️</span><span>غير المسجلين</span></button>
+      <button type="button" class="nav-btn active" data-action="page" data-page="overview"><span class="nav-ico" aria-hidden="true">📊</span><span class="nav-txt">الملخص</span></button>
+      <button type="button" class="nav-btn" data-action="page" data-page="schedule"><span class="nav-ico" aria-hidden="true">📅</span><span class="nav-txt">المصفوفة</span></button>
+      <button type="button" class="nav-btn" data-action="page" data-page="units"><span class="nav-ico" aria-hidden="true">🏥</span><span class="nav-txt">الوحدات</span></button>
+      <button type="button" class="nav-btn" data-action="page" data-page="not-registered"><span class="nav-ico" aria-hidden="true">⚠️</span><span class="nav-txt">غير المسجلين</span></button>
     </div>
   </nav>
 
+  <div id="offline-banner" class="offline-banner hidden" role="status"></div>
+
   <main id="main-content" class="main-content">
-    <div id="loading-screen" class="loading-screen"><div class="loading-spinner"></div><p>جاري التحميل…</p></div>
+    <div id="loading-screen" class="loading-screen" role="status"><div class="loading-spinner"></div><p>جاري تحميل البيانات…</p></div>
+    <div id="error-screen" class="error-screen hidden"></div>
     <div id="page-overview" class="page hidden"></div>
     <div id="page-schedule" class="page hidden"></div>
     <div id="page-units" class="page hidden"></div>
@@ -56,19 +84,13 @@
   </main>
 
   <div id="verify-badge" class="verify-badge hidden"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <!-- Notice the ?v=99 at the end of each file -->
-  <script src="lib/papaparse.min.js"></script>
-  <script src="app.js?v=99"></script>
-  <script src="pages/overview.js?v=99"></script>
-  <script src="pages/schedule.js?v=99"></script>
-  <script src="pages/units.js?v=99"></script>
-  <script src="pages/not-registered.js?v=99"></script>
-  
-  <script>
-    window.installApp = function() {
-      alert("لتثبيت التطبيق على جهازك:\n\n📱 للآيفون (iOS):\nاضغط على زر 'مشاركة' (Share) في أسفل الشاشة، ثم اختر 'إضافة إلى الشاشة الرئيسية' (Add to Home Screen).\n\n🤖 للأندرويد (Android):\nاضغط على الثلاث نقاط (⋮) في أعلى المتشفير، ثم اختر 'تثبيت التطبيق' (Install App).");
-    };
-  </script>
+  <script src="app.js?v=100"></script>
+  <script src="pages/overview.js?v=100"></script>
+  <script src="pages/schedule.js?v=100"></script>
+  <script src="pages/units.js?v=100"></script>
+  <script src="pages/not-registered.js?v=100"></script>
+  <script>window.AppBoot && window.AppBoot();</script>
 </body>
 </html>

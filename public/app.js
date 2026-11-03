@@ -486,8 +486,12 @@ window.daysUntil = function (dateStr) {
 };
 
 window.getRoundDates = function (order) {
-  const o = String(order);
-  const row = (DB.roundDates || []).find((r) => String(r.round_order) === o && r.start_date);
+  const o = String(order).trim();
+  let row = (DB.roundDates || []).find((r) => String(r.round_order).trim() === o && r.start_date);
+  if (!row && DB.roundSchedule && DB.roundSchedule.length) {            // احتياطي: جدول الجروبات نفسه يحتوي التواريخ
+    const sch = DB.roundSchedule.find((r) => String(r.round_order).trim() === o && r.start_date);
+    if (sch) row = { start_date: sch.start_date, end_date: sch.end_date };
+  }
   if (row) return { start: formatDate(row.start_date), end: formatDate(row.end_date) };
   const d = (CFG().DEFAULT_ROUND_DATES || {})[o];
   return d ? { start: d.start, end: d.end } : { start: '', end: '' };
@@ -531,6 +535,37 @@ window.getInitials = function (name) {
   return parts.length === 1 ? parts[0].substring(0, 2) : parts[0].substring(0, 1) + parts[1].substring(0, 1);
 };
 
+/* خريطة aliases — احتياطية فقط إن غيّرت أسماء المفاتيح في جدول Google.
+   الأسماء العربية المعروضة تُقرأ من تبويب 03_rounds_overview أولاً،
+   ثم من مفاتيح config.js ROUND_ALIASES — والكود هنا لا يحتاج أي تعديل. */
+const ROUND_ALIAS_FALLBACK = {
+  veterinary_units: 'units', vet_units: 'units', units: 'units', round1_units: 'units',
+  departments: 'college', college_depts: 'college', college: 'college', round4_college: 'college',
+  poultry: 'poultry', poultry_round: 'poultry', round5_poultry: 'poultry',
+  slaughterhouse: 'slaughter', food_safety: 'slaughter', slaughter_food: 'slaughter', slaughter: 'slaughter', round3_slaughter: 'slaughter',
+  equine_labs: 'equine_lab_fish', horse_lab_fish: 'equine_lab_fish', labs_equine: 'equine_lab_fish', equine_lab_fish: 'equine_lab_fish',
+  elective: 'elective', elective_training: 'elective', round6_elective: 'elective'
+};
+window.normRoundKey = function (key) {
+  const raw = String(key === null || key === undefined ? '' : key).trim();
+  if (!raw) return '';
+  const alias = (CFG().ROUND_ALIASES || {});
+  if (alias[raw]) return normRoundKey(alias[raw]);                    // مخصص من config أولاً (ثم تكرار آمن)
+  if (ROUND_ALIAS_FALLBACK[raw]) return ROUND_ALIAS_FALLBACK[raw];
+  const s = raw.toLowerCase().replace(/[\s\-]+/g, '_').replace(/[^\w]/g, '');
+  if (/^(round|rwand|دورة|راوند)[_]?/.test(s)) {                      // "round2_x" → "x"
+    const rest = s.replace(/^(round|rwand)[_]?[0-9]*[_]?/, '');
+    if (rest && ROUND_ALIAS_FALLBACK[rest]) return ROUND_ALIAS_FALLBACK[rest];
+  }
+  if (/unit|وحدة|وحدات/.test(s)) return 'units';
+  if (/poultry|دواجن|دجاج/.test(s)) return 'poultry';
+  if (/slaughter|food|مجزر|مجازر|غذاء/.test(s)) return 'slaughter';
+  if (/equine|horse|lab|fish|خيل|معامل|سمك/.test(s)) return 'equine_lab_fish';
+  if (/college|depart|قسم|اقسام|كلية/.test(s)) return 'college';
+  if (/elective|اختياري/.test(s)) return 'elective';
+  return raw;                                                          // مجال جديد — يُعرض باسمه العربي من الجدول كما هو
+};
+
 window.ROUND_META = {
   units:           { icon: '🏥', label: 'وحدات بيطرية',       cls: 'badge-round-units' },
   college:         { icon: '🏛️', label: 'أقسام الكلية',       cls: 'badge-round-college' },
@@ -542,7 +577,8 @@ window.ROUND_META = {
 window.ROUND_ORDER = ['units', 'equine_lab_fish', 'poultry', 'slaughter', 'college', 'elective', 'unknown'];
 
 window.roundLabel = function (key) {
-  return (DB.roundNames && DB.roundNames[key]) || (ROUND_META[key] && ROUND_META[key].label) || key || 'غير محدد';
+  const k = normRoundKey(key);
+  return (DB.roundNames && (DB.roundNames[k] || DB.roundNames[key])) || (ROUND_META[k] && ROUND_META[k].label) || String(key || '').trim() || 'غير محدد';
 };
 
 window.statusBadge = function (status) {
@@ -672,25 +708,50 @@ function hasRequired(sheets) { return REQUIRED.every((k) => Array.isArray(sheets
 
 function buildDB(S) {
   const g = (k) => S[k] || [];
-  DB.students = g('students').map((r) => ({ ...r, group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }));
-  DB.groups = g('groups').map((r) => ({ ...r, group_id: cleanGroupId(r.group_id) })).sort((a, b) => (+a.group_id || 0) - (+b.group_id || 0));
-  DB.roundsOverview = g('roundsOverview');
-  DB.roundSchedule = g('roundSchedule').map((r) => ({ ...r, group_id: cleanGroupId(r.group_id) }));
-  DB.stationsUnits = g('stationsUnits');
-  DB.assignments = g('assignments').map((r) => ({ ...r, group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }));
-  DB.unregistered = g('unregistered').map((r) => ({ ...r, group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }));
-  DB.round2Summary = g('round2Summary');
-  DB.roundDates = g('roundDates');
-  DB.fields = g('fields');
-  DB.issues = g('issues');
-  DB.issuesR2 = g('issuesR2');
+  // تطبيع مفاتيح الحقول: مسافات/ZWSP/BOM/Case — حتى لا تنكسر اللوحة عند تعديل رأس العمود في الجدول
+  const canonCols = {};
+  (g('fields') || []).forEach((f) => {
+    const col = normKey(f.column); if (!col) return;
+    const c = col.toLowerCase().replace(/[\u200b\u200c\u200d\ufeff]/g, '').replace(/\s+/g, '_');
+    if (!canonCols[c]) canonCols[c] = col;
+  });
+  const fixRow = (r) => {
+    const o = Object.assign({}, r);
+    Object.keys(o).forEach((k) => {
+      const c = normKey(k).toLowerCase().replace(/[\u200b\u200c\u200d\ufeff]/g, '').replace(/\s+/g, '_');
+      if (canonCols[c] && canonCols[c] !== k) { if (o[canonCols[c]] === undefined) o[canonCols[c]] = o[k]; delete o[k]; }
+    });
+    return o;
+  };
+  // قوام الجروب من كشف الطلاب نفسه (أدق من عمود إجمالي قد يكون قديماً في جدول الجروبات)
+  const rosterCount = {};
+  g('students').map(fixRow).forEach((r) => { const gid = cleanGroupId(r.group_id); if (gid) rosterCount[gid] = (rosterCount[gid] || 0) + 1; });
+
+  DB.students = g('students').map((r) => { r = fixRow(r); return { ...r, group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }; });
+  DB.groups = g('groups').map((r) => {
+    r = fixRow(r);
+    const gid = cleanGroupId(r.group_id);
+    const declared = parseInt(r.total_students, 10) || 0;
+    const actual = rosterCount[gid] || 0;
+    return { ...r, group_id: gid, total_students: String(actual > 0 ? actual : declared), _declared_total: String(declared) };
+  }).sort((a, b) => (+a.group_id || 0) - (+b.group_id || 0));
+  DB.roundsOverview = g('roundsOverview').map(fixRow);
+  DB.roundSchedule = g('roundSchedule').map((r) => { r = fixRow(r); return { ...r, round_key: normRoundKey(r.round_key), group_id: cleanGroupId(r.group_id) }; });
+  DB.stationsUnits = g('stationsUnits').map(fixRow);
+  DB.assignments = g('assignments').map((r) => { r = fixRow(r); return { ...r, round_key: normRoundKey(r.round_key), group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }; });
+  DB.unregistered = g('unregistered').map((r) => { r = fixRow(r); return { ...r, round_key: normRoundKey(r.round_key), group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }; });
+  DB.round2Summary = g('round2Summary').map((r) => { r = fixRow(r); return { ...r, round_key: normRoundKey(r.round_key) }; });
+  DB.roundDates = g('roundDates').map(fixRow);
+  DB.fields = g('fields').map(fixRow);
+  DB.issues = g('issues').map(fixRow);
+  DB.issuesR2 = g('issuesR2').map(fixRow);
 
   DB.fieldsMap = {}; DB.fields.forEach((f) => { DB.fieldsMap[f.column] = f.name_ar; });
   DB.prefColumns = DB.fields.map((f) => f.column).filter((c) => /^pref_/.test(c));
   if (!DB.prefColumns.length) DB.prefColumns = ['pref_Poultry', 'pref_Equine', 'pref_Pharma_Vaccines', 'pref_FoodSafety_QC', 'pref_LargeAnimal', 'pref_SmallAnimal'];
 
   DB.roundNames = {};
-  [DB.roundsOverview, DB.roundSchedule, DB.round2Summary].forEach((list) => list.forEach((r) => { if (r.round_key && r.round_name_ar) DB.roundNames[r.round_key] = r.round_name_ar; }));
+  [DB.roundsOverview, DB.roundSchedule, DB.round2Summary].forEach((list) => list.forEach((r) => { if (r.round_key && r.round_name_ar) DB.roundNames[normRoundKey(r.round_key)] = r.round_name_ar; }));
 
   DB.studentLookup = {};
   DB.students.forEach((s) => {
@@ -838,20 +899,38 @@ function buildStudentJourney(student) {
   const gid = student.group_id;
   const sched = DB.roundSchedule.filter((r) => String(r.group_id) === String(gid));
   const find = (o) => sched.find((r) => String(r.round_order) === String(o)) || {};
-  const mine = DB.assignments.filter((a) => (student.student_code && a.student_code === student.student_code) || (gid && a.group_id === gid && a.code_short === student.code_short));
-  const isMissing = DB.unregistered.some((u) => (gid && u.group_id === gid && u.code_short === student.code_short));
+  const mine = DB.assignments.filter((a) => (student.student_code && a.student_code === student.student_code) || (gid && String(a.group_id) === String(gid) && String(a.code_short).trim() === String(student.code_short).trim()));
+  const isMissing = DB.unregistered.some((u) => (gid && String(u.group_id) === String(gid) && String(u.code_short).trim() === String(student.code_short).trim()));
 
   const step = (order, title, fallbackName, station) => {
     const r = find(order); const d = getRoundDates(order);
     const start = formatDate(r.start_date) || d.start, end = formatDate(r.end_date) || d.end;
     return { roundName: `${title} — ${r.round_name_ar || fallbackName}`, dates: start ? `${start} إلى ${end}` : 'غير متاح', station, status: computeStatus(start, end) };
   };
-  const r2station = mine.length ? mine.map((a) => a.unit_name || a.round_name_ar || 'مسجل').filter((v, i, arr) => arr.indexOf(v) === i).join(' + ') : (isMissing ? 'غير مسجل ⚠️' : 'غير مسجل');
+  const r2stationText = (m, miss) => m.length
+    ? m.map((a) => a.unit_name || a.round_name_ar || 'مسجل').filter((v, i, arr) => arr.indexOf(v) === i).join(' + ')
+    : (miss ? 'غير مسجل ⚠️' : 'غير مسجل');
+  // محطة الدورة الحالية لكل طالب — تُقرأ من جدول الجروبات تلقائياً (تعمل لأي دورة قادمة بدون تعديل كود)
+  const todayStr = getTodayStr();
+  let curRow = sched.find((r) => { const s = formatDate(r.start_date), e = formatDate(r.end_date); return s && e && todayStr >= s && todayStr <= e; });
+  if (!curRow) {
+    const upcoming = sched.filter((r) => formatDate(r.start_date) && todayStr < formatDate(r.start_date))
+                          .sort((a, b) => formatDate(a.start_date) < formatDate(b.start_date) ? -1 : 1);
+    curRow = upcoming[0] || sched[sched.length - 1] || null;
+  }
+  let curStation = 'لم يُحدد بعد';
+  if (curRow) {
+    const o = String(curRow.round_order);
+    if (o === '2') curStation = r2stationText(mine, isMissing);
+    else if (o === '1' || curRow.round_key === 'college') curStation = curRow.round_name_ar || roundLabel(curRow.round_key);
+    else curStation = curRow.round_name_ar || roundLabel(curRow.round_key);
+  }
   const later = 'لم يُحدد بعد';
   const d0 = getRoundDates('0');
   return [
     step(1, 'الراوند 1', 'أقسام الكلية', later),
-    step(2, 'الراوند 2', 'وحدات بيطرية', r2station),
+    step(2, 'الراوند 2', 'وحدات بيطرية', r2stationText(mine, isMissing)),
+    { roundName: 'الدورة الحالية (حسب الجدول)', dates: curRow && formatDate(curRow.start_date) ? `${formatDate(curRow.start_date)} إلى ${formatDate(curRow.end_date)}` : 'غير متاح', station: curStation, status: curRow ? computeStatus(formatDate(curRow.start_date) || getRoundDates(curRow.round_order).start, formatDate(curRow.end_date) || getRoundDates(curRow.round_order).end) : 'upcoming' },
     step(3, 'الراوند 3', 'دواجن', later),
     step(4, 'الراوند 4', 'مجازر / خيل', later),
     { roundName: 'تدريب اختياري', dates: d0.start ? `${d0.start} إلى ${d0.end}` : 'غير متاح', station: 'حسب اختيار الطالب', status: computeStatus(d0.start, d0.end) }

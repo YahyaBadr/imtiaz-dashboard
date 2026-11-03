@@ -21,9 +21,6 @@ function renderOverview(container) {
   const prefAverages = computeFieldPreferences();
   const alerts = buildOverviewAlerts();
 
-  // THE FIX: Hardcoded dimensions directly into the SVG
-  const lotusSvg = `<svg class="title-ornament" width="22" height="12" style="width:22px !important; height:12px !important; max-width:22px !important; max-height:12px !important;" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
-
   container.innerHTML = `
     <div class="hero-band">
       <div class="hero-header">
@@ -37,11 +34,11 @@ function renderOverview(container) {
       </div>
     </div>
 
-    ${alerts.length > 0 ? `<h2 class="section-title">${lotusSvg} تنبيهات هامة ومتابعات فورية</h2><div class="alerts-strip">${alerts.map(a => `<div class="alert-item alert-${a.type}" onclick="${a.action}"><span class="alert-icon">${a.icon}</span><div style="flex:1">${a.html}</div><span style="font-size:0.8rem; color:var(--c-text-muted)">عرض ↗</span></div>`).join('')}</div>` : ''}
+    ${alerts.length > 0 ? `<h2 class="section-title">⚠️ تنبيهات هامة ومتابعات فورية</h2><div class="alerts-strip">${alerts.map(a => `<div class="alert-item alert-${a.type}" onclick="${a.action}"><span class="alert-icon">${a.icon}</span><div style="flex:1">${a.html}</div><span style="font-size:0.8rem; color:var(--c-text-muted)">عرض ↗</span></div>`).join('')}</div>` : ''}
 
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:var(--gap); margin-bottom:calc(var(--gap)*1.5)">
       <div>
-        <h2 class="section-title">${lotusSvg} توزيع التدريب بالدورة الثانية (R2)</h2>
+        <h2 class="section-title">📊 توزيع التدريب بالدورة الثانية (R2)</h2>
         <div class="round-summary-grid" style="grid-template-columns:1fr; gap:10px; margin-bottom:0">
           ${DB.round2Summary.map(r => {
             const reg = parseInt(r.registered, 10) || 0; const exp = parseInt(r.expected_students, 10) || 0; const miss = parseInt(r.not_registered, 10) || 0;
@@ -63,7 +60,7 @@ function renderOverview(container) {
       </div>
 
       <div>
-        <h2 class="section-title">${lotusSvg} المجالات الأكثر طلباً</h2>
+        <h2 class="section-title">⭐ المجالات الأكثر طلباً</h2>
         <div class="card field-pref-card">
           <div style="font-size:0.84rem; color:var(--c-text-muted); margin-bottom:4px">متوسط ترتيب الرغبات (انقر على أي مجال لعرض الطلاب):</div>
           <div style="display:flex; flex-direction:column; gap:6px">
@@ -83,7 +80,7 @@ function renderOverview(container) {
       </div>
     </div>
 
-    <h2 class="section-title">${lotusSvg} موقع كل جروب الآن في مصفوفة التدريب</h2>
+    <h2 class="section-title">🔄 موقع كل جروب الآن في مصفوفة التدريب</h2>
     <div class="status-grid">
       ${DB.groups.map(g => {
         const sched = DB.roundSchedule.filter(r => r.group_id === g.group_id);
@@ -92,7 +89,7 @@ function renderOverview(container) {
       }).join('')}
     </div>
 
-    <h2 class="section-title">${lotusSvg} بيانات ومطابقة قوام الجروبات</h2>
+    <h2 class="section-title">👥 بيانات ومطابقة قوام الجروبات</h2>
     <div class="table-wrap">
       <div class="table-header"><span class="table-title">قائمة الجروبات وتوزيع الجنس</span><input type="text" class="table-search" id="groups-search" placeholder="🔍 تصفية الجروبات…"></div>
       <div style="overflow-x:auto">

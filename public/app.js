@@ -213,7 +213,9 @@ window.Gate = (function () {
         ? 'هذه اللوحة تحتوي على بيانات طلاب — الدخول مسموح لحسابات الكلية المعتمدة فقط.'
         : 'أدخل رمز الدخول للمتابعة.');
     if (mode) mode.textContent = modeName === 'sheet' ? 'التحقق عبر حسابات Google Sheet' : (c.PASSPHRASE ? 'رمز مشترك للوحة' : 'رمز محلي على هذا الجهاز');
-    if (chip) chip.textContent = modeName === 'sheet' ? '🔐 دخول بالحسابات المعتمدة' : '🔒 منطقة آمنة';
+    if (chip) chip.innerHTML = modeName === 'sheet'
+      ? `<span class="chip-ico" aria-hidden="true">${iconSvg('lock')}</span>دخول بالحسابات المعتمدة`
+      : `<span class="chip-ico" aria-hidden="true">${iconSvg('shield')}</span>منطقة آمنة`;
     try { const lu = ls.get('imtiaz_gate_last_user_v1'); if (lu && userF && !userF.value) userF.value = lu; } catch (e) {}
     const err = $('gate-err');
     if (err) { err.textContent = msg || ''; err.classList.toggle('hidden', !msg); }
@@ -241,11 +243,11 @@ window.Gate = (function () {
     unlocked = false; currentRole = '';
     ls.del(SESSION_KEY);
     usersCache = null;
-    try { localStorage.removeItem(CACHE_DATA_KEY); } catch (e) {}                 // 🧹 لا بيانات طلاب على الجهاز بعد القفل
+    try { localStorage.removeItem(CACHE_DATA_KEY); } catch (e) {}                 // لا بيانات طلاب على الجهاز بعد القفل
     updateWhoChip();
     closeAllForLock();
     showGate('تم قفل اللوحة.');
-    toast('🔒 تم قفل اللوحة وحذف البيانات المخزّنة');
+    toast('تم قفل اللوحة وحذف البيانات المخزّنة');
   }
 
   function closeAllForLock() {
@@ -277,7 +279,7 @@ window.Gate = (function () {
       try {
         await verifyAgainstSheet(user, pwd);
         rememberUser(user); markUnlocked(user);
-        toast('أهلاً بك 👋' + (currentRole ? ' · ' + currentRole : ''));
+        toast('أهلاً بك' + (currentRole ? ' · ' + currentRole : ''));
         return true;
       } catch (e) {
         const m = (e && e.message) || '';
@@ -823,7 +825,7 @@ window.openModal = function (title, bodyHTML, opts) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `<div class="modal-box ${opts.cls || ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
-    <div class="modal-header"><h2 class="modal-title">${esc(title)}</h2><button type="button" class="modal-close" data-action="close-overlay" aria-label="إغلاق">✕</button></div>
+    <div class="modal-header"><h2 class="modal-title">${esc(title)}</h2><button type="button" class="modal-close" data-action="close-overlay" aria-label="إغلاق">${iconSvg('x')}</button></div>
     <div class="modal-body">${bodyHTML}</div></div>`;
   Overlays.open(overlay, opts.replace);
   return overlay;
@@ -862,7 +864,7 @@ window.renderStudentListModal = function (title, rows, opts) {
   const html = `
     ${opts.breadcrumb ? `<div class="breadcrumb-bar">${esc(opts.breadcrumb)}</div>` : ''}
     <div class="list-toolbar">
-      <input type="search" class="table-search grow" placeholder="🔍 بحث في القائمة…" data-filter-list="#student-list-body" autocomplete="off" enterkeyhint="search">
+      <input type="search" class="table-search grow" placeholder="بحث في القائمة…" data-filter-list="#student-list-body" autocomplete="off" enterkeyhint="search">
       <span class="badge badge-plum num" id="list-count">${items.length}</span>
     </div>
     <div class="slist" id="student-list-body">
@@ -870,8 +872,8 @@ window.renderStudentListModal = function (title, rows, opts) {
         <div class="slist-row" data-s="${esc(it.search)}"${it.attrs}>
           <div class="initials-avatar">${esc(getInitials(it.name))}</div>
           <div class="slist-main"><div class="slist-name">${esc(it.name)}</div><div class="slist-sub">${esc(it.sub)}</div></div>
-          <span class="slist-g ${it.g === 'F' ? 'gender-f' : it.g === 'M' ? 'gender-m' : ''}">${it.g === 'F' ? '♀' : it.g === 'M' ? '♂' : ''}</span>
-          <span class="slist-arrow" aria-hidden="true">‹</span>
+          <span class="slist-g ${it.g === 'F' ? 'gender-f' : it.g === 'M' ? 'gender-m' : ''}">${it.g === 'F' ? iconSvg('female') : it.g === 'M' ? iconSvg('male') : ''}</span>
+          <span class="slist-arrow" aria-hidden="true">${iconSvg('chevron')}</span>
         </div>`).join('') : '<div class="empty-note">لا توجد أسماء في هذه القائمة.</div>'}
     </div>`;
   return openModal(title, html, { replace: opts.replace, cls: 'modal-list' });

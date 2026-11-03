@@ -48,7 +48,7 @@ function buildRoundSection(roundKey, groupsMap) {
 function buildGroupBlock(groupId, students, roundKey) {
   const blockId = 'nr-block-' + roundKey + '-g' + groupId;
   const rows = students.map(s => {
-    const gIcon = s.gender === 'M' ? "<span class=\"gender-m\">${ico('male')}</span>" : s.gender === 'F' ? "<span class=\"gender-f\">${ico('female')}</span>" : '';
+    const gIcon = s.gender === 'M' ? `<span class="gender-m">${ico('male')}</span>` : s.gender === 'F' ? `<span class="gender-f">${ico('female')}</span>` : '';
     const sKey = `${groupId}_${s.code_short}`.replace(/\s+/g, ''); 
     return `<div class="copyable-name" data-name="${esc(s.full_name)}" data-code="${esc(s.code_short || '')}" data-group="${esc(groupId)}">${gIcon}<span class="clickable-student-name"${act('student', { sid: sKey })} title="اضغط لفتح الملف الكامل للطالب">${esc(s.full_name || 'غير محدد')}</span><span class="student-code">${esc(s.code_short || '—')}</span></div>`;
   }).join('');

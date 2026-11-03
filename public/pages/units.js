@@ -103,7 +103,7 @@ function buildUnitCard(u, byUnit) {
         </div>
         <ul class="unit-student-list" id="${listId}">
           ${students.map(s => {
-            const gIcon = s.gender === 'M' ? "<span class=\"gender-m\" title=\"ذكر\">${ico('male')}</span>" : s.gender === 'F' ? "<span class=\"gender-f\" title=\"أنثى\">${ico('female')}</span>" : '';
+            const gIcon = s.gender === 'M' ? `<span class="gender-m" title="ذكر">${ico('male')}</span>` : s.gender === 'F' ? `<span class="gender-f" title="أنثى">${ico('female')}</span>` : '';
             const grpLabel = s.group_id ? `<span class="cartouche-badge" style="font-size:0.74rem">جروب ${s.group_id}</span>` : `<span style="color:var(--c-rose)">بدون جروب</span>`;
             const issueNote = s.issue ? `<span title="${s.issue}" style="cursor:help; font-size:0.8rem">${ico('warning')}</span>` : '';
             const sKey = `${s.group_id}_${s.code_short}`.replace(/\s+/g, '');

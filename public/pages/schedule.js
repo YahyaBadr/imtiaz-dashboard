@@ -148,6 +148,9 @@ function renderSchedule(container) {
         </table>
       </div>
     </div>`;
+  // البند 4 (موبايل): عند الفتح يبدأ التمرير من أول عمود — الحافة اليمنى في RTL (قيمة scrollLeft = 0)
+  const gsInit = document.getElementById('gantt-scroll');
+  if (gsInit) { gsInit.scrollLeft = 0; }
 }
 
 /* ── نافذة تفاصيل الدورة لجروب معيّن (كل الأزرار فيها data-action) ── */

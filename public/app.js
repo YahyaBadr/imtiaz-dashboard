@@ -1207,9 +1207,9 @@ window.moveNavIndicator = function () {
   if (!ind) return;
   const active = inner.querySelector('.nav-btn.active');
   if (!active) { ind.classList.remove('show'); return; }
-  const r = active.getBoundingClientRect(), pr = inner.getBoundingClientRect();
-  ind.style.width = r.width + 'px';
-  ind.style.transform = 'translate(' + (r.left - pr.left + inner.scrollLeft) + 'px, calc(100% - 2px))';
+  // قياس داخل تدفق .nav-inner نفسه (offsetLeft/offsetWidth لا تتأثر بتمرير الحاوية ولا بـ RTL)
+  ind.style.width = active.offsetWidth + 'px';
+  ind.style.transform = 'translateX(' + active.offsetLeft + 'px)';
   ind.classList.add('show');
 };
 window.updateNavBadges = function () {
@@ -1236,7 +1236,7 @@ window.showPage = function (pageId) {
   window.updateNavBadges && window.updateNavBadges();
   if (!pageEl.dataset.rendered) {
     try { PAGE_RENDERERS[pageId](); pageEl.dataset.rendered = 'true'; }
-    catch (err) { console.error(err); pageEl.innerHTML = `<div class="card error-card"><h3>تعذّر عرض هذه الصفحة</h3><p class="muted">${esc(err.message)}</p><button type="button" class="btn btn-plum" data-action="refresh">إعادة تحميل البيانات</button></div>`; }
+    catch (err) { console.error(err); pageEl.innerHTML = `<div class="card error-card"><h3>تعذّر عرض هذه الصفحة</h3><p class="muted">${esc(err.message)}</p><button type="button" class="btn btn-plum" data-action="retry">إعادة تحميل البيانات</button></div>`; }
     setTimeout(() => VERIFY.run(), 60);
   }
   _activePage = pageId;
@@ -1384,7 +1384,6 @@ const ACTIONS = {
   'group-roster': (el) => openGroupRosterModal(el.dataset.gid, { replace: !!el.dataset.replace }),
   'directory': () => openStudentDirectoryModal(),
   'search-open': () => openGlobalSearch(),
-  'refresh': () => refreshData({ silent: false, manual: true }).catch((e) => { console.error(e); toast('تعذّر التحديث'); }),
   'retry': () => { document.getElementById('error-screen').classList.add('hidden'); const ld = document.getElementById('loading-screen'); ld.classList.remove('hidden'); refreshData({ firstPaint: true }).catch((e) => { console.error(e); showError({ students: e.message }); }); },
   'install': () => installApp(),
   'dismiss-install': () => dismissInstall(),
@@ -1401,7 +1400,6 @@ const ACTIONS = {
   },
 
   /* ── بوابة الدخول ── */
-  'lock': () => { if (Gate.isUnlocked()) Gate.lock(); else Gate.showGate(''); },
   'gate-eye': (el) => {
     const inp = document.getElementById('gate-pass'); if (!inp) return;
     const show = inp.type === 'password';

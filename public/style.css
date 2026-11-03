@@ -776,6 +776,24 @@ html.dark .site-nav { background: #1E121E; }
 .export-txt small { font-size: .72rem; color: var(--c-text-muted); }
 @media (max-width: 640px) { .export-menu { min-width: 240px; } }
 
+/* نطاق التصدير (صفحة حالية / ملف شامل) */
+.export-scope-label { font-size: .7rem; font-weight: 800; color: var(--c-text-subtle); padding: 6px 12px 2px; }
+.export-scopes { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+.export-scope {
+  text-align: start; padding: 8px 12px; border: 1px solid transparent; border-radius: 10px;
+  background: transparent; cursor: pointer; font-family: inherit; font-size: .82rem; font-weight: 700;
+  color: var(--c-text-main); transition: background .15s ease, border-color .15s ease;
+}
+.export-scope:hover, .export-scope:focus-visible { background: var(--c-gold-light); outline-offset: -2px; }
+.export-scope.active { background: var(--c-gold-light); border-color: var(--c-gold-border); color: var(--c-plum); }
+.export-scope::before { content: "○ "; color: var(--c-text-muted); }
+.export-scope.active::before { content: "◉ "; color: var(--c-gold); }
+
+/* حالة الزر أثناء التوليد: spinner + تعطيل */
+#export-btn[disabled] { cursor: progress; opacity: .75; }
+#export-btn.spinning .btn-ico:first-child { animation: exportSpin 0.9s linear infinite; transform-origin: center; }
+@keyframes exportSpin { to { transform: rotate(360deg); } }
+
 /* ═══════ الوضع الداكن (html.dark — تُعاد تعريف متغيرات الهوية فقط) ═══════ */
 html.dark body { background-color: #17111B; color: #EDE6F0; }
 html.dark {

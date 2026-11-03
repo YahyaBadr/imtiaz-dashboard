@@ -169,17 +169,23 @@
 
   <!-- ═══════ قائمة التصدير (ملفات حقيقية — تُولّد في المتصفح) ═══════ -->
   <div id="export-menu" class="export-menu hidden" role="menu" aria-labelledby="export-btn">
+    <div class="export-scope-label" role="presentation">نطاق التصدير</div>
+    <div class="export-scopes" role="group" aria-label="اختيار نطاق التصدير">
+      <button type="button" class="export-scope active" role="menuitemradio" aria-checked="true" data-action="export-scope" data-scope="page">تصدير الصفحة الحالية</button>
+      <button type="button" class="export-scope" role="menuitemradio" aria-checked="false" data-action="export-scope" data-scope="full">تصدير الملف الشامل (كل البيانات)</button>
+    </div>
+    <div class="export-scope-label" role="presentation">الصيغة</div>
     <button type="button" class="export-item" role="menuitem" data-action="export-file" data-format="xlsx">
       <span class="export-ico ex-xlsx" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9.5 12.5 5 5"/><path d="m14.5 12.5-5 5"/></svg></span>
       <span class="export-txt"><b>Excel</b><small>ملف ‎.xlsx‎ — عدة أوراق · RTL</small></span>
     </button>
     <button type="button" class="export-item" role="menuitem" data-action="export-file" data-format="pdf">
       <span class="export-ico ex-pdf" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 17v-4h1a1.5 1.5 0 0 1 0 3H9"/><path d="M14 13v4"/><path d="M17.5 13.5H15.5a1.5 1.5 0 0 0 0 3h2"/></svg></span>
-      <span class="export-txt"><b>PDF</b><small>تقرير رسمي بالعربية · A4</small></span>
+      <span class="export-txt"><b>PDF</b><small>تقرير رسمي بالعربية · خط مضمّن · A4</small></span>
     </button>
     <button type="button" class="export-item" role="menuitem" data-action="export-file" data-format="docx">
       <span class="export-ico ex-docx" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h3l1 4 1.5-4h3l-2 6h-2L11 15l-.5 4h-2z"/></svg></span>
-      <span class="export-txt"><b>Word</b><small>مستند ‎.docx‎ — فقرات وجدول RTL</small></span>
+      <span class="export-txt"><b>Word</b><small>مستند ‎.docx‎ — فقرات وجداول RTL</small></span>
     </button>
     <button type="button" class="export-item" role="menuitem" data-action="export-file" data-format="csv">
       <span class="export-ico ex-csv" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h8"/><path d="M14 13h-1.5a1.5 1.5 0 0 0 0 3H14"/></svg></span>
@@ -187,10 +193,11 @@
     </button>
   </div>
 
-  <script src="icons.js?v=308"></script>
-  <script src="app.js?v=308"></script>
-  <script src="export-assets.js?v=308"></script>
-  <script src="export.js?v=308"></script>
+  <script src="icons.js?v=309"></script>
+  <script src="app.js?v=309"></script>
+  <script src="export-core.js?v=309"></script>
+  <script src="export-assets.js?v=309"></script>
+  <script src="export.js?v=309"></script>
   <script src="pages/overview.js?v=308"></script>
   <script src="pages/schedule.js?v=308"></script>
   <script src="pages/units.js?v=308"></script>

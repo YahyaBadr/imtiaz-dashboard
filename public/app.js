@@ -131,7 +131,7 @@ window.renderStudentListModal = function(title, students, breadcrumb = '') {
                 <td>
                   <div style="display:flex; align-items:center; gap:8px">
                     <div class="initials-avatar">${getInitials(s.full_name)}</div>
-                    <strong>${s.full_name}</strong>
+                    <strong>${s.full_name || 'غير محدد'}</strong>
                   </div>
                 </td>
                 <td><span class="cartouche-badge">جروب ${s.group_id || '—'}</span></td>
@@ -144,7 +144,7 @@ window.renderStudentListModal = function(title, students, breadcrumb = '') {
   openModal(title, html);
 };
 
-window.filterStudentList = function(input) { const q = input.value.toLowerCase(); document.querySelectorAll('#student-list-body tr').forEach(r => { r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none'; }); };
+window.filterStudentList = function(input) { const q = input.value.toLowerCase(); document.querySelectorAll('#student-list-body tr').forEach(r => { r.style.display = String(r.textContent).toLowerCase().includes(q) ? '' : 'none'; }); };
 window.openStudentDirectoryModal = function() { renderStudentListModal('دليل كامل طلاب الدفعة', DB.students, 'الرئيسية › الدليل'); };
 window.openGroupRosterModal = function(groupId) { const st = DB.students.filter(s => String(s.group_id) === String(groupId)); renderStudentListModal(`قائمة طلاب جروب ${groupId}`, st); };
 
@@ -159,15 +159,16 @@ window.openStudentProfile = function(rawKey) {
     const old = document.getElementById('profile-panel-overlay');
     if (old) old.remove();
 
-    const rawPhone = (student.phone || '').trim();
+    // FORCE STRING TO PREVENT trim() ERRORS
+    const rawPhone = String(student.phone || '').trim();
     const phoneEmpty = !rawPhone;
     const phoneClean = rawPhone.replace(/\D/g, '');
     const phoneForWa = phoneClean.startsWith('0') ? phoneClean.slice(1) : phoneClean;
     const isPhoneCheck = student.phone_status === 'check';
-    const emailVal = (student.email || '').trim();
+    const emailVal = String(student.email || '').trim();
     const emailEmpty = !emailVal;
 
-    const rawNid = (student.national_id || '').trim();
+    const rawNid = String(student.national_id || '').trim();
     const isNidCheck = student.nid_status === 'check';
     const maskedNid = rawNid ? '••••••••••' + (rawNid.length >= 4 ? rawNid.slice(-4) : '') : 'غير متوفر';
     const ageStr = computeAge(student.birth_date);
@@ -193,8 +194,8 @@ window.openStudentProfile = function(rawKey) {
             <div style="display:flex; align-items:center; gap:12px">
               <div class="initials-avatar" style="width:48px; height:48px; font-size:1.2rem; border:2px solid var(--c-gold);">${getInitials(student.full_name)}</div>
               <div>
-                <h2 style="font-size:1.35rem; font-weight:700; color:#FFFFFF">${student.full_name}</h2>
-                <div style="font-size:0.84rem; color:#E2D7E5">الكود الأكاديمي: <span class="num">${student.student_code}</span></div>
+                <h2 style="font-size:1.35rem; font-weight:700; color:#FFFFFF">${student.full_name || 'غير محدد'}</h2>
+                <div style="font-size:0.84rem; color:#E2D7E5">الكود الأكاديمي: <span class="num">${student.student_code || '—'}</span></div>
               </div>
             </div>
           </div>
@@ -338,10 +339,10 @@ window.openGlobalSearch = function() {
   const input = document.getElementById('global-search-input'); input.focus();
   input.addEventListener('input', () => {
     const q = input.value.trim().toLowerCase(); if (!q) { document.getElementById('search-results-list').innerHTML = ''; return; }
-    const matchStudents = DB.students.filter(s => (s.full_name || '').toLowerCase().includes(q) || String(s.student_code || '').includes(q) || String(s.code_short || '') === q).slice(0, 15);
+    const matchStudents = DB.students.filter(s => String(s.full_name || '').toLowerCase().includes(q) || String(s.student_code || '').includes(q) || String(s.code_short || '') === q).slice(0, 15);
     document.getElementById('search-results-list').innerHTML = matchStudents.map(s => {
       const key = `${s.group_id}_${s.code_short}`.replace(/\s+/g, '');
-      return `<div class="search-result-row" onclick="document.getElementById('search-modal-overlay').remove(); openStudentProfile('${key}')"><div><strong>${s.full_name}</strong><br><small>جروب ${s.group_id}</small></div></div>`;
+      return `<div class="search-result-row" onclick="document.getElementById('search-modal-overlay').remove(); openStudentProfile('${key}')"><div><strong>${s.full_name || 'غير محدد'}</strong><br><small>جروب ${s.group_id}</small></div></div>`;
     }).join('');
   });
 };
@@ -368,7 +369,7 @@ window.makeTableSortable = function(tableEl) {
 };
 
 window.makeTableSearchable = function(inputEl, tableEl) {
-  inputEl.addEventListener('input', () => { const q = inputEl.value.trim().toLowerCase(); tableEl.querySelectorAll('tbody tr').forEach(row => { row.style.display = q === '' || row.textContent.toLowerCase().includes(q) ? '' : 'none'; }); });
+  inputEl.addEventListener('input', () => { const q = inputEl.value.trim().toLowerCase(); tableEl.querySelectorAll('tbody tr').forEach(row => { row.style.display = q === '' || String(row.textContent).toLowerCase().includes(q) ? '' : 'none'; }); });
 };
 
 async function loadAllData() {

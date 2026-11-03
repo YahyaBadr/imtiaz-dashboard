@@ -24,7 +24,8 @@ function renderSchedule(container) {
     elective:        { icon: '🌟', label: 'تدريب اختياري', cls: 'badge-round-elective' }
   };
 
-  const lotusSvg = `<svg class="title-ornament" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
+  // THE FIX: Hardcoded dimensions directly into the SVG
+  const lotusSvg = `<svg class="title-ornament" width="22" height="12" style="width:22px !important; height:12px !important; max-width:22px !important; max-height:12px !important;" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
 
   container.innerHTML = `
     <div class="card card-sm" style="margin-bottom: var(--gap); background:#FFFFFF; border-right:4px solid var(--c-gold)">
@@ -68,7 +69,6 @@ function renderSchedule(container) {
                   if (!row) return `<td><span style="color:var(--c-text-subtle)">غير محدد</span></td>`;
                   const rStatus = computeStatus(row.start_date, row.end_date); const rKey = row.round_key; const meta = roundMeta[rKey] || { icon: '📌', label: row.round_name_ar || rKey, cls: 'badge-grey' };
                   
-                  // THE COMBINED COUNT FIX
                   const matrixKey = `${c.order}_${rKey}`; const mData = DB.roundMatrix[matrixKey];
                   let countText = `${count} طالب`;
                   if (mData && mData.groups.length > 1) {

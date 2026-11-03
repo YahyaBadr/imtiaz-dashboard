@@ -20,10 +20,10 @@
 
   <link rel="preload" href="assets/fonts/cairo-400-arabic-0.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/cairo-700-arabic-6.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="cairo.css?v=301">
-  <link rel="stylesheet" href="style.css?v=301">
-  <link rel="stylesheet" href="print.css?v=301" media="print">
-  <script src="config.js?v=301"></script>
+  <link rel="stylesheet" href="cairo.css?v=302">
+  <link rel="stylesheet" href="style.css?v=302">
+  <link rel="stylesheet" href="print.css?v=302" media="print">
+  <script src="config.js?v=302"></script>
 </head>
 <body>
 
@@ -60,6 +60,7 @@
           <button type="button" class="header-btn desk-only" data-action="print" title="طباعة">
             <span class="btn-ico" aria-hidden="true">🖨️</span><span class="btn-txt">طباعة</span>
           </button>
+          <span class="who-chip hidden" id="who-chip" title="المستخدم الحالي"></span>
           <button type="button" class="header-btn header-btn-lock" id="lock-btn" data-action="lock" title="قفل اللوحة" aria-label="قفل اللوحة">
             <span class="btn-ico" aria-hidden="true">🔒</span><span class="btn-txt">قفل</span>
           </button>
@@ -101,16 +102,26 @@
         <img src="assets/college_logo.png" alt="" class="gate-logo" onerror="this.style.display='none'">
         <h2 id="gate-title">لوحة متابعة الإمتياز البيطري</h2>
         <p class="gate-sub">كلية الطب البيطري — جامعة القاهرة · مكتب وكيل الكلية</p>
+        <span class="gate-chip" id="gate-chip">🔐 دخول بالأسم والصلاحيات</span>
       </div>
 
-      <p class="gate-note" id="gate-note">هذه اللوحة تحتوي على بيانات طلاب. أدخل رمز الدخول للمتابعة.</p>
+      <p class="gate-note" id="gate-note">هذه اللوحة تحتوي على بيانات طلاب. أدخل اسم المستخدم وكلمة المرور للمتابعة.</p>
 
       <form class="gate-form" id="gate-form" autocomplete="off">
-        <label class="gate-label" for="gate-pass">رمز الدخول</label>
-        <input type="password" class="gate-input" id="gate-pass" name="gatepass"
-               inputmode="text" autocomplete="current-password" enterkeyhint="go"
-               placeholder="••••••" aria-describedby="gate-err">
-        <button type="submit" class="btn btn-plum gate-submit" id="gate-submit">دخول</button>
+        <label class="gate-label" for="gate-user">اسم المستخدم</label>
+        <input type="text" class="gate-input" id="gate-user" name="gateuser"
+               inputmode="text" autocomplete="username" enterkeyhint="next"
+               placeholder="مثال: vicedean.office" spellcheck="false" aria-describedby="gate-err">
+
+        <label class="gate-label" for="gate-pass" style="margin-top:6px">كلمة المرور</label>
+        <div class="gate-row-2">
+          <input type="password" class="gate-input" id="gate-pass" name="gatepass"
+                 autocomplete="current-password" enterkeyhint="go" placeholder="••••••••"
+                 aria-describedby="gate-err">
+          <button type="button" class="gate-eye" id="gate-eye" data-action="gate-eye" title="إظهار/إخفاء" aria-label="إظهار كلمة المرور">👁️</button>
+        </div>
+
+        <button type="submit" class="btn btn-plum gate-submit" id="gate-submit">دخول آمن</button>
         <p class="gate-err hidden" id="gate-err" role="alert"></p>
       </form>
 
@@ -118,7 +129,7 @@
         <label class="gate-label" for="gate-pass2">تأكيد الرمز الجديد</label>
         <input type="password" class="gate-input" id="gate-pass2" autocomplete="new-password" enterkeyhint="go" placeholder="أعد كتابة الرمز">
         <button type="button" class="btn btn-surface gate-submit" data-action="gate-set-pass">حفظ الرمز ودخول</button>
-        <p class="gate-help">هذه أول مرة: اختر رمز دخول للوحة (٤ أحرف أو أكثر)، وسيُحفظ على هذا الجهاز فقط.</p>
+        <p class="gate-help">وضع الجهاز المحلي: اختر رمزاً لهذا الجهاز (٤ أحرف أو أكثر).</p>
       </div>
 
       <ul class="install-steps gate-steps hidden" id="gate-steps"></ul>
@@ -126,16 +137,15 @@
       <div class="gate-foot">
         <span class="gate-mode" id="gate-mode"></span>
         <button type="button" class="gate-link" data-action="gate-help">كيف أحمي بياناتي؟</button>
-        <button type="button" class="gate-link" data-action="gate-forget">نسيت الرمز؟</button>
+        <button type="button" class="gate-link" data-action="gate-forget">نسيت كلمة المرور؟</button>
       </div>
     </div>
-  </div>
 
-  <script src="app.js?v=301"></script>
-  <script src="pages/overview.js?v=301"></script>
-  <script src="pages/schedule.js?v=301"></script>
-  <script src="pages/units.js?v=301"></script>
-  <script src="pages/not-registered.js?v=301"></script>
+  <script src="app.js?v=302"></script>
+  <script src="pages/overview.js?v=302"></script>
+  <script src="pages/schedule.js?v=302"></script>
+  <script src="pages/units.js?v=302"></script>
+  <script src="pages/not-registered.js?v=302"></script>
   <script>window.AppBoot && window.AppBoot();</script>
 </body>
 </html>

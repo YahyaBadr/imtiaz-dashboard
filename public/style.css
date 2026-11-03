@@ -520,3 +520,175 @@ body.gated { overflow: hidden; }
   .gate-card { padding: 20px 16px 14px; }
   .gate-brand h2 { font-size: 1rem; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   12) ELITE VISUAL LAYER — الطبقة البصرية الفاخرة (v302)
+   لمسات راقية: خلفية حريرية، زجاجية ناعمة، تدرّج ذهبي، حركات دقيقة.
+   كل ما هنا تجميلي بالكامل — لا يكسر أي سلوك أو طباعة.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --e-grad-gold: linear-gradient(135deg, #F2CE84 0%, #E3A73C 45%, #C88D25 100%);
+  --e-grad-plum: linear-gradient(140deg, #2B1A2B 0%, #40253F 55%, #1E121E 100%);
+  --e-shadow-sm: 0 2px 10px rgba(43, 26, 43, 0.07);
+  --e-shadow-md: 0 10px 30px -8px rgba(43, 26, 43, 0.18);
+  --e-shadow-lg: 0 26px 60px -14px rgba(43, 26, 43, 0.34);
+  --e-ring: 0 0 0 1px rgba(227, 167, 60, 0.22);
+}
+
+/* ── خلفية الصفحة: قماش حريري بطبقات ضوء خفيفة ── */
+body {
+  background:
+    radial-gradient(1100px 500px at 85% -8%, rgba(227, 167, 60, 0.10), transparent 60%),
+    radial-gradient(900px 480px at 8% 4%, rgba(23, 107, 135, 0.07), transparent 55%),
+    var(--c-page-bg);
+  background-attachment: fixed;
+}
+
+/* ── الترويسة: بلّوم عميق + شريط ذهبي علوي ── */
+.site-header { position: relative; }
+.site-header::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 3px;
+  background: var(--e-grad-gold); opacity: .95;
+}
+.site-header::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(620px 200px at 78% -40%, rgba(227, 167, 60, 0.22), transparent 70%);
+}
+.header-title-box h1 {
+  background: linear-gradient(100deg, #FFF6E4 10%, #F3D49A 55%, #E9BE6B 80%, #FFF1D6 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: #F3D49A;
+}
+.header-logo { transition: transform .35s cubic-bezier(.2,.7,.2,1), filter .35s; }
+.logo-wrapper:hover .header-logo { transform: translateY(-2px) scale(1.05); filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
+
+/* ── شريط التنقل: زجاجي لاصق ── */
+.site-nav {
+  position: sticky; top: 0; z-index: 60;
+  backdrop-filter: saturate(1.35) blur(12px); -webkit-backdrop-filter: saturate(1.35) blur(12px);
+  background: rgba(247, 242, 232, 0.82);
+  border-bottom: 1px solid var(--c-border-gold);
+  box-shadow: var(--e-shadow-sm);
+}
+.nav-btn { position: relative; transition: transform .18s ease, color .18s ease, background .18s ease; }
+.nav-btn::after {
+  content: ""; position: absolute; bottom: 4px; right: 50%; transform: translateX(50%) scaleX(0);
+  width: min(70%, 64px); height: 3px; border-radius: 999px; background: var(--e-grad-gold);
+  transition: transform .22s cubic-bezier(.2,.7,.2,1);
+}
+.nav-btn:hover { transform: translateY(-1px); }
+.nav-btn.active::after { transform: translateX(50%) scaleX(1); }
+.nav-btn.active { box-shadow: var(--e-ring); }
+
+/* ── البطاقات: ارتفاع ناعم عند المرور ── */
+.card, .kpi-card, .stat-card { transition: box-shadow .25s ease, transform .25s ease; }
+@media (hover: hover) {
+  .card:hover, .kpi-card:hover, .stat-card:hover { box-shadow: var(--e-shadow-md); transform: translateY(-2px); }
+}
+
+/* ── أزرار ذهبية بتدرّج ولمعة ── */
+.btn-gold, .btn-plum { position: relative; overflow: hidden; }
+.btn-gold { background: var(--e-grad-gold); border-color: transparent; color: #2B1A2B; box-shadow: 0 6px 16px -6px rgba(200, 141, 37, .55); }
+.btn-gold:hover, .btn-plum:hover { transform: translateY(-1px); }
+.btn-gold::after, .btn-plum::after {
+  content: ""; position: absolute; top: -60%; bottom: -60%; width: 34%; right: -60%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.38), transparent);
+  transform: skewX(-18deg); transition: right .5s ease;
+}
+.btn-gold:hover::after, .btn-plum:hover::after { right: 130%; }
+
+/* ── جداول: رؤوس لاصقة وتظليل الصفوف ── */
+.data-table thead th { position: sticky; top: 0; z-index: 2; }
+.data-table tbody tr { transition: background .15s ease, box-shadow .15s ease; }
+.data-table tbody tr:hover { background: var(--c-gold-light); box-shadow: inset 3px 0 0 var(--c-gold); }
+
+/* ── شريط تقدّم دائري داخل المربعات الدائرية ── */
+.ring-progress { --p: 0; display: inline-grid; place-items: center; width: 58px; height: 58px; border-radius: 50%;
+  background: conic-gradient(var(--c-gold) calc(var(--p) * 1%), var(--c-surface) 0); }
+.ring-progress::before { content: ""; grid-area: 1/1; width: 46px; height: 46px; border-radius: 50%; background: var(--c-card-bg); box-shadow: var(--e-ring); }
+.ring-progress b { grid-area: 1/1; font-size: .78rem; font-weight: 800; color: var(--c-plum); }
+
+/* ── ظهور متتالي أنيق للمحتوى ── */
+@keyframes eRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.page:not(.hidden) > * { animation: eRise .42s cubic-bezier(.2,.7,.2,1) both; }
+.page:not(.hidden) > *:nth-child(2) { animation-delay: .05s; }
+.page:not(.hidden) > *:nth-child(3) { animation-delay: .1s; }
+.page:not(.hidden) > *:nth-child(4) { animation-delay: .15s; }
+.page:not(.hidden) > *:nth-child(n+5) { animation-delay: .2s; }
+
+/* ── شاشة تحميل نخيلية: نبض ذهبي + شعار متنفس ── */
+.loading-spinner { border-width: 4px; border-top-color: var(--c-gold); border-right-color: rgba(227,167,60,.35); box-shadow: 0 0 0 6px rgba(227,167,60,.08); }
+@keyframes eBreath { 0%,100% { transform: scale(1); opacity: .92 } 50% { transform: scale(1.06); opacity: 1 } }
+.loading-screen p { animation: eBreath 2.4s ease-in-out infinite; }
+
+/* ── نافذة منبثقة: دخول مطاطي ناعم ── */
+@keyframes ePop { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: none; } }
+.modal-card, .profile-card { animation: ePop .28s cubic-bezier(.2,.7,.2,1); }
+.modal-overlay, .profile-overlay { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+
+/* ── Toast زجاجي ── */
+.toast { background: rgba(43, 26, 43, 0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(227,167,60,.4); box-shadow: var(--e-shadow-lg); }
+
+/* ══ بوابة الدخول الفاخرة ══ */
+.gate-overlay {
+  background:
+    radial-gradient(720px 420px at 82% 8%, rgba(227, 167, 60, 0.20), transparent 62%),
+    radial-gradient(640px 420px at 12% 92%, rgba(23, 107, 135, 0.22), transparent 60%),
+    var(--e-grad-plum);
+}
+.gate-overlay::before {
+  content: ""; position: absolute; inset: -40%;
+  background: conic-gradient(from 0deg, transparent 0 42%, rgba(227,167,60,.10) 50% 58%, transparent 66%);
+  animation: gateSpin 26s linear infinite; pointer-events: none;
+}
+@keyframes gateSpin { to { transform: rotate(1turn); } }
+.gate-card {
+  position: relative; isolation: isolate;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FBF6EC 100%);
+  border: 1px solid rgba(227, 167, 60, 0.55); border-radius: 22px;
+  box-shadow: var(--e-shadow-lg), 0 0 0 6px rgba(255,255,255,.06), inset 0 1px 0 rgba(255,255,255,.9);
+  overflow: hidden;
+}
+.gate-card::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--e-grad-gold);
+}
+.gate-card::after {
+  content: ""; position: absolute; top: -70px; left: -70px; width: 190px; height: 190px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(227,167,60,.20), transparent 65%); pointer-events: none;
+}
+.gate-logo {
+  width: 74px; height: 74px; padding: 10px; border-radius: 50%; object-fit: contain; background: #fff;
+  border: 2px solid var(--c-gold); box-shadow: 0 10px 26px -8px rgba(0,0,0,.4), 0 0 0 6px rgba(227,167,60,.14);
+  animation: eBreath 3.2s ease-in-out infinite;
+}
+.gate-brand h2 { font-size: 1.22rem; letter-spacing: -.01em; }
+.gate-input { border-radius: 14px; background: #FCFAF4; transition: border-color .2s, box-shadow .2s, background .2s; }
+.gate-input:focus { border-color: var(--c-gold); box-shadow: 0 0 0 4px rgba(227,167,60,.22); background: #fff; }
+.gate-submit { border-radius: 14px; letter-spacing: .2px; }
+.gate-row-2 { display: flex; gap: 10px; align-items: stretch; margin-top: 10px; }
+.gate-row-2 .gate-input { flex: 1; }
+.gate-eye { flex: 0 0 48px; min-height: 48px; border-radius: 14px; border: 1.5px solid var(--c-border); background: var(--c-surface); font-size: 1.05rem; cursor: pointer; }
+.gate-eye:hover { border-color: var(--c-gold); }
+.gate-chip { display: inline-flex; align-items: center; gap: 6px; justify-content: center; margin: 2px auto 0;
+  padding: 5px 12px; border-radius: 999px; font-size: .72rem; font-weight: 800; letter-spacing: .2px;
+  color: #6d5a1f; background: linear-gradient(180deg, #FBF2DC, #F3E4BC); border: 1px solid rgba(227,167,60,.45); }
+.gate-foot { gap: 6px 16px; }
+.gate-link { font-size: .8rem; }
+
+/* ── احترام تفضيل تقليل الحركة & الطباعة ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+@media print {
+  body { background: #fff !important; }
+  .site-nav, .site-header::before, .site-header::after { box-shadow: none !important; background: var(--c-plum) !important; }
+  .header-title-box h1 { -webkit-text-fill-color: currentColor; color: #fff !important; background: none !important; }
+}
+
+/* ── شارة المستخدم الحالي في الترويسة ── */
+.who-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px;
+  font-size: .74rem; font-weight: 800; color: #F6E7C4; background: rgba(227,167,60,.16);
+  border: 1px solid rgba(227,167,60,.45); white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.who-chip.hidden { display: none !important; }
+@media (max-width: 768px) { .who-chip { max-width: 130px; } }

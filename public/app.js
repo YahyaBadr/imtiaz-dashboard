@@ -62,6 +62,63 @@ window.Gate = (function () {
   }
   function resetAttempts() { ls.del(ATTEMPTS_KEY); }
 
+  /* ── وضع الجدول: قراءة تبويب Accounts (Username | Password) من نفس Apps Script ── */
+  const USERS_LS_KEY = 'imtiaz_gate_users_v1';           // نسخة احتياطية للعمل بدون اتصال
+  let usersCache = null;                                  // [{u,p}] في الذاكرة
+
+  function normUser(v) { return String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' '); }
+
+  function saveUsersLocal(list) { try { ls.set(USERS_LS_KEY, JSON.stringify({ ts: Date.now(), list: list })); } catch (e) {} }
+  function loadUsersLocal() {
+    try {
+      const o = JSON.parse(ls.get(USERS_LS_KEY) || 'null');
+      if (o && Array.isArray(o.list)) { usersCache = o.list; return o.list; }
+    } catch (e) {}
+    return null;
+  }
+
+  async function fetchAccounts(force) {
+    const c = cfg();
+    const ttl = Math.max(1, Number(c.USERS_TTL_MINUTES) || 60) * 60 * 1000;
+    if (!force && usersCache) return usersCache;
+    if (!force) {
+      try {
+        const o = JSON.parse(ls.get(USERS_LS_KEY) || 'null');
+        if (o && Array.isArray(o.list) && (Date.now() - (o.ts || 0)) < ttl) { usersCache = o.list; return o.list; }
+      } catch (e) {}
+    }
+    const name = c.USERS_SHEET_NAME || 'Accounts';
+    const rows = await window.__gateFetchSheet(name);     // دالة تحقن لاحقاً (تتخطى فحص القفل)
+    const list = [];
+    (rows || []).forEach((r) => {
+      const keys = Object.keys(r);
+      // العمود الأول = اسم المستخدم، الثاني = كلمة المرور (يتوافق مع أي أسماء رؤوس)
+      const u = r[keys[0]] !== undefined ? r[keys[0]] : (r.username || r.Username || r.user || '');
+      const p = r[keys[1]] !== undefined ? r[keys[1]] : (r.password || r.Password || r.pass || '');
+      if (String(u).trim() && String(p).trim()) list.push({ u: normUser(u), p: String(p).trim() });
+    });
+    if (!list.length) throw new Error('EMPTY_ACCOUNTS');
+    usersCache = list; saveUsersLocal(list);
+    return list;
+  }
+
+  async function verifyAgainstSheet(user, pass) {
+    let list;
+    try { list = await fetchAccounts(false); }
+    catch (e) {
+      const fb = loadUsersLocal();
+      if (!fb) throw e;
+      list = fb;                                          // بدون إنترنت — استخدم آخر نسخة آمنة
+    }
+    const u = normUser(user), p = String(pass || '').trim();
+    const hit = list.find((x) => x.u === u && x.p === p);
+    return !!hit;
+  }
+
+  function currentUserName() {
+    try { const s = JSON.parse(ls.get(SESSION_KEY) || 'null'); return (s && s.name) || ''; } catch (e) { return ''; }
+  }
+
   function expectedHashes() {
     const c = cfg(), out = [];
     if (c.PASSPHRASE) out.push({ hash: null, plain: String(c.PASSPHRASE), source: 'config' });
@@ -79,13 +136,23 @@ window.Gate = (function () {
     return list.some((x) => (x.hash ? x.hash === h : x.plain === val));
   }
 
-  function markUnlocked() {
+  function markUnlocked(userName) {
     const c = cfg();
+    const hrs = Math.max(1, Number(c.SESSION_HOURS || c.REMEMBER_HOURS) || 8);
     unlocked = true;
-    ls.set(SESSION_KEY, JSON.stringify({ ts: Date.now(), exp: Date.now() + Math.max(1, c.REMEMBER_HOURS) * 3600 * 1000 }));
+    ls.set(SESSION_KEY, JSON.stringify({ ts: Date.now(), exp: Date.now() + hrs * 3600 * 1000, name: userName || '' }));
     resetAttempts();
     hideGate();
+    updateWhoChip();
     startIdleLock();
+  }
+
+  function updateWhoChip() {
+    const el = document.getElementById('who-chip');
+    if (!el) return;
+    const nm = currentUserName();
+    if (nm) { el.textContent = '👤 ' + nm; el.classList.remove('hidden'); }
+    else { el.classList.add('hidden'); }
   }
 
   function showGate(msg) {
@@ -93,13 +160,22 @@ window.Gate = (function () {
     ov.classList.remove('hidden');
     document.body.classList.add('gated', 'no-scroll');
     const c = cfg();
-    const setup = $('gate-setup'), note = $('gate-note'), mode = $('gate-mode');
-    const needsLocalSetup = !c.PASSPHRASE && !ls.get(LOCAL_KEY);
+    const modeName = (String(c.MODE || 'sheet').toLowerCase() === 'local') ? 'local' : 'sheet';
+    const setup = $('gate-setup'), note = $('gate-note'), mode = $('gate-mode'), chip = $('gate-chip');
+    const userF = $('gate-user'), passF = $('gate-pass');
+    if (userF) userF.style.display = (modeName === 'sheet') ? '' : 'none';
+    const uLabel = document.querySelector('label[for="gate-user"]');
+    if (uLabel) uLabel.style.display = (modeName === 'sheet') ? '' : 'none';
+    const needsLocalSetup = (modeName === 'local') && !ls.get(LOCAL_KEY);
     if (setup) setup.classList.toggle('hidden', !needsLocalSetup);
     if (note) note.textContent = needsLocalSetup
-      ? 'لم يتم تعيين رمز للوحة بعد. اختر رمز دخول خاص بهذا الجهاز (٤ أحرف أو أكثر).'
-      : 'هذه اللوحة تحتوي على بيانات طلاب. أدخل رمز الدخول للمتابعة.';
-    if (mode) mode.textContent = c.PASSPHRASE ? 'الحماية: رمز مشترك للوحة' : 'الحماية: رمز محلي على هذا الجهاز';
+      ? 'لم يتم تعيين رمز بعد. اختر رمز دخول خاص بهذا الجهاز (٤ أحرف أو أكثر).'
+      : (modeName === 'sheet'
+        ? 'هذه اللوحة تحتوي على بيانات طلاب — الدخول مسموح لحسابات الكلية المعتمدة فقط.'
+        : 'أدخل رمز الدخول للمتابعة.');
+    if (mode) mode.textContent = modeName === 'sheet' ? 'التحقق عبر حسابات Google Sheet' : (c.PASSPHRASE ? 'رمز مشترك للوحة' : 'رمز محلي على هذا الجهاز');
+    if (chip) chip.textContent = modeName === 'sheet' ? '🔐 دخول بالحسابات المعتمدة' : '🔒 منطقة آمنة';
+    try { const lu = ls.get('imtiaz_gate_last_user_v1'); if (lu && userF && !userF.value) userF.value = lu; } catch (e) {}
     const err = $('gate-err');
     if (err) { err.textContent = msg || ''; err.classList.toggle('hidden', !msg); }
     const inp = $('gate-pass'); if (inp) setTimeout(() => { try { inp.focus(); } catch (e) { /* ignore */ } }, 60);
@@ -125,6 +201,8 @@ window.Gate = (function () {
   async function lock() {
     unlocked = false;
     ls.del(SESSION_KEY);
+    usersCache = null;
+    updateWhoChip();
     closeAllForLock();
     showGate('تم قفل اللوحة.');
     toast('🔒 تم قفل اللوحة');
@@ -138,33 +216,63 @@ window.Gate = (function () {
 
   function clearDevicePass() { ls.del(LOCAL_KEY); ls.del(SESSION_KEY); unlocked = false; showGate('تم حذف الرمز المحلي — اختر رمزاً جديداً.'); }
 
-  async function submit(pass, confirmPass) {
+  async function submit(userOrPass, pass, confirmPass) {
     const c = cfg();
+    const modeName = (String(c.MODE || 'sheet').toLowerCase() === 'local') ? 'local' : 'sheet';
+    let user = '', pwd = '';
+    if (modeName === 'sheet') { user = String(userOrPass || '').trim(); pwd = String(pass === undefined ? confirmPass : pass || '').trim(); }
+    else { pwd = String(confirmPass !== undefined && pass !== undefined ? pass : (userOrPass || '')).trim(); }
+
     const left = lockoutLeft();
     if (left > 0) { showGate(`محاولات كثيرة — انتظر ${left} ثانية ثم أعد المحاولة.`); return false; }
-    const val = String(pass || '').trim();
-    if (val.length < 4) { showGate('الرمز قصير جداً — استخدم ٤ أحرف على الأقل.'); return false; }
 
-    // أول مرة في الوضع المحلي: إنشاء رمز خاص بالجهاز
+    if (modeName === 'sheet') {
+      if (!user || !pwd) { showGate('أدخل اسم المستخدم وكلمة المرور معاً.'); return false; }
+      // باب طوارئ اختياري من config
+      if (c.PASSPHRASE && pwd === String(c.PASSPHRASE)) { ls.set('imtiaz_gate_last_user_v1', user); markUnlocked(user); return true; }
+      try {
+        const ok = await verifyAgainstSheet(user, pwd);
+        if (ok) { ls.set('imtiaz_gate_last_user_v1', user); markUnlocked(user); toast('أهلاً بك 👋'); return true; }
+      } catch (e) {
+        const msg = (e && e.message) === 'EMPTY_ACCOUNTS'
+          ? 'تبويب الحسابات فارغ — أضف صفّاً باسم مستخدم وكلمة مرور في Google Sheet.'
+          : (navigator.onLine === false
+            ? 'لا يوجد اتصال ولا نسخة محفوظة من الحسابات على هذا الجهاز.'
+            : 'تعذّر التحقق من الحسابات الآن. تحقّق من الاتصال أو اسم التبويب في config.js.');
+        showGate(msg); return false;
+      }
+      const a = bumpAttempts();
+      const remain = Math.max(0, c.MAX_ATTEMPTS - (a.n || 0));
+      showGate(a.until ? `تم إيقاف المحاولات مؤقتاً لمدة ${c.LOCKOUT_SECONDS} ثانية.` : 'بيانات الدخول غير صحيحة. المحاولات المتبقية: ' + remain + '.');
+      return false;
+    }
+
+    // ── الوضع المحلي (بدون جدول) ──
+    if (pwd.length < 4) { showGate('الرمز قصير جداً — استخدم ٤ أحرف على الأقل.'); return false; }
     if (!c.PASSPHRASE && !ls.get(LOCAL_KEY)) {
-      if (confirmPass !== undefined && confirmPass !== val) { showGate('الرمزان غير متطابقين.'); return false; }
-      ls.set(LOCAL_KEY, await sha256(val));
-      markUnlocked();
+      if (confirmPass !== undefined && confirmPass !== pwd) { showGate('الرمزان غير متطابقين.'); return false; }
+      ls.set(LOCAL_KEY, await sha256(pwd));
+      markUnlocked('');
       toast('✓ تم ضبط الرمز — احتفظ به، لا يمكن استعادته');
       return true;
     }
-    if (await check(val)) { markUnlocked(); return true; }
-    const a = bumpAttempts();
-    const remain = Math.max(0, c.MAX_ATTEMPTS - (a.n || 0));
-    showGate(a.until ? `تم إيقاف المحاولات مؤقتاً لمدة ${c.LOCKOUT_SECONDS} ثانية.` : `رمز غير صحيح. المحاولات المتبقية: ${remain}.`);
+    if (await check(pwd)) { markUnlocked(''); return true; }
+    const a2 = bumpAttempts();
+    const remain2 = Math.max(0, c.MAX_ATTEMPTS - (a2.n || 0));
+    showGate(a2.until ? `تم إيقاف المحاولات مؤقتاً لمدة ${c.LOCKOUT_SECONDS} ثانية.` : 'رمز غير صحيح. المحاولات المتبقية: ' + remain2 + '.');
     return false;
   }
 
   function bindUI(onPass) {
     const form = $('gate-form');
-    if (form) form.addEventListener('submit', (e) => { e.preventDefault(); onPass($('gate-pass') ? $('gate-pass').value : ''); });
+    if (form) form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const u = $('gate-user') ? $('gate-user').value : '';
+      const p = $('gate-pass') ? $('gate-pass').value : '';
+      onPass(u, p);
+    });
     const setupBtn = document.querySelector('[data-action="gate-set-pass"]');
-    if (setupBtn) setupBtn.addEventListener('click', () => onPass($('gate-pass') ? $('gate-pass').value : '', $('gate-pass2') ? $('gate-pass2').value : ''));
+    if (setupBtn) setupBtn.addEventListener('click', () => onPass('', $('gate-pass') ? $('gate-pass').value : '', $('gate-pass2') ? $('gate-pass2').value : ''));
   }
 
   function init(onPass) {
@@ -179,6 +287,9 @@ window.Gate = (function () {
   return {
     init, submit, lock, showGate, hideGate, clearDevicePass,
     isUnlocked: () => unlocked,
+    userName: currentUserName,
+    whoChip: updateWhoChip,
+    reloadAccounts: () => fetchAccounts(true).then(() => true).catch(() => false),
     hasConfiguredPass: () => !!cfg().PASSPHRASE || !!ls.get(LOCAL_KEY),
     gateCfg: cfg
   };
@@ -417,8 +528,7 @@ function parseCSV(text) {                                       // احتياط�
   return rows.filter((r) => r.length > 1 || (r[0] || '') !== '');
 }
 
-async function fetchSheet(name) {
-  if (!Gate.isUnlocked()) throw new Error('LOCKED');                 // لا طلب بيانات قبل الدخول
+async function fetchSheetRaw(name) {                                  // بدون فحص القفل — يُستخدم لبوابة الحسابات
   const base = CFG().API_URL;
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), CFG().REQUEST_TIMEOUT_MS || 30000);
@@ -428,7 +538,9 @@ async function fetchSheet(name) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return normalizeRows(parseCSV(await res.text()));
     }
-    const url = base + (base.indexOf('?') > -1 ? '&' : '?') + 'sheet=' + encodeURIComponent(name);
+    let url = base + (base.indexOf('?') > -1 ? '&' : '?') + 'sheet=' + encodeURIComponent(name);
+    const tk = (CFG().GATE && CFG().GATE.API_TOKEN) || '';
+    if (tk) url += '&key=' + encodeURIComponent(tk);   // مفتاح Apps Script إن كان مفعّلاً
     const res = await fetch(url, { signal: ctl.signal, redirect: 'follow', cache: 'no-store' });   // بدون headers مخصصة = بدون preflight
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
@@ -436,6 +548,13 @@ async function fetchSheet(name) {
     try { json = JSON.parse(text); } catch (e) { throw new Error('الرد ليس JSON (تأكد أن Apps Script منشور لـ "Anyone")'); }
     return normalizeRows(json);
   } finally { clearTimeout(timer); }
+}
+
+window.__gateFetchSheet = fetchSheetRaw;                                // حقن دالة التحقق في البوابة
+
+async function fetchSheet(name) {
+  if (!Gate.isUnlocked()) throw new Error('LOCKED');                    // لا طلب بيانات قبل الدخول
+  return fetchSheetRaw(name);
 }
 
 async function fetchSheetRetry(name) {
@@ -982,7 +1101,7 @@ async function init() {
   if (CFG().PRESENTATION_MODE) document.body.classList.add('presentation-mode');
 
   // 1) البوابة أولاً — لا بيانات ولا تسجيل SW قبل الدخول
-  const passedNow = Gate.init((pass, confirm) => onGateSubmit(pass, confirm));
+  const passedNow = Gate.init((user, pass, confirm) => onGateSubmit(user, pass, confirm));
   if (!passedNow) {
     const ld = document.getElementById('loading-screen'); if (ld) ld.classList.add('hidden');
     return;
@@ -991,6 +1110,7 @@ async function init() {
 }
 
 function bootAfterUnlock() {
+  Gate.whoChip();
   initInstallUI(); registerSW();
 
   const cached = readCache();
@@ -1007,8 +1127,8 @@ function bootAfterUnlock() {
 }
 
 // نجاح الدخول → مسح كاش قديم إن طُلب، ثم تحميل البيانات
-async function onGateSubmit(pass, confirm) {
-  const ok = await Gate.submit(pass, confirm);
+async function onGateSubmit(user, pass, confirm) {
+  const ok = await Gate.submit(user, pass, confirm);
   if (!ok) return;
   const ld = document.getElementById('loading-screen'); if (ld) ld.classList.remove('hidden');
   if (!_booted) { _booted = true; bootAfterUnlock(); }
@@ -1048,8 +1168,32 @@ const ACTIONS = {
 
   /* ── بوابة الدخول ── */
   'lock': () => { if (Gate.isUnlocked()) Gate.lock(); else Gate.showGate(''); },
+  'gate-eye': (el) => {
+    const inp = document.getElementById('gate-pass'); if (!inp) return;
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    el.textContent = show ? '🙈' : '👁️';
+    el.setAttribute('aria-label', show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+    try { inp.focus(); } catch (e) {}
+  },
+  'gate-reload-accounts': async () => {
+    const ok = await Gate.reloadAccounts();
+    toast(ok ? 'تم تحديث قائمة الحسابات ✓' : 'تعذّر قراءة تبويب الحسابات');
+  },
   'gate-forget': () => {
     const c = Gate.gateCfg();
+    const isSheet = String(c.MODE || 'sheet').toLowerCase() !== 'local';
+    if (isSheet) {
+      openModal('نسيت كلمة المرور؟', `
+        <p class="muted">كلمات المرور تُدار من تبويب <b>${esc(c.USERS_SHEET_NAME || 'Accounts')}</b> في جدول Google المرتبط باللوحة:</p>
+        <ol class="install-steps">
+          <li>افتح جدول Google → التبويب المذكور.</li>
+          <li>عدّل الصف الخاص بك (اسم المستخدم / كلمة المرور).</li>
+          <li>اضغط «تحديث قائمة الحسابات» بالأسفل أو أعد المحاولة بعد دقيقة.</li>
+        </ol>
+        <div class="modal-actions">${btn('🔄 تحديث قائمة الحسابات', 'gate-reload-accounts', null, 'btn-gold')}</div>`);
+      return;
+    }
     if (c.PASSPHRASE) { toast('الرمز مضبوط من ملف الإعدادات (config.js) — غيّره هناك ثم أعد النشر.'); return; }
     openModal('نسيت الرمز؟', `
       <p class="muted">الرمز محفوظ على هذا الجهاز فقط ولا يمكن استعادته. يمكنك حذفه وضبط رمز جديد:</p>

@@ -1,8 +1,8 @@
 'use strict';
 
 /* ═════════════════════════════════════════════════════════════════════════════════
-   البند 5 — صفحات الراوندات: الراوند ٢ هو المحور المركزي (الدورة الثانية)
-   والراوندات ١ · ٣ · ٤ أماكن شاغرة حتى تُضاف بياناتها لاحقاً.
+   البند 5 — صفحات الراوندات: الراوند ٢ هو المحور المركزي للدورة الثانية
+   والراوندات ١ · ٣ · ٤ أماكن شاغرة حتى تُضاف بياناتهم لاحقاً.
    ════════════════════════════════════════════════════════════════════════════════ */
 
 /* ── كشف طلاب راوند برقمه ('1'..'4') من نفس مصادر اللوحة ── */
@@ -60,28 +60,7 @@ window.getRoundMatrixTotal = function (order) {
   return total;
 };
 
-/* ── تصنيف وحدات الراوند ٢ إلى المجالات الفرعية (للمحور الفرعي) ── */
-/*目前所有单元都归属 "وحدات بيطرية". يمكن توسيع التصنيف لاحقاً لكل مجزر/قسم/تخصص. */
-const R2_DOMAINS = [
-  { key: 'units',    label: 'الوحدات البيطرية',   icon: 'hospital', tone: 'tone-teal' },
-  { key: 'slaughter', label: 'المجازر',            icon: 'meat',     tone: 'tone-mustard' },
-  { key: 'faculty',  label: 'أقسام الكلية',        icon: 'landmark', tone: 'tone-rust' },
-  { key: 'equine',   label: 'خيل ومعامل وسمك',     icon: 'microscope', tone: 'tone-navy' },
-  { key: 'elective', label: 'تدريب اختياري',       icon: 'star',     tone: 'tone-olive' }
-];
-
-function unitsForDomain(domainKey) {
-  const units = (DB.stationsUnits || []).filter(u => String(u.round_key || '').toLowerCase() === 'units');
-  switch (domainKey) {
-    case 'units':    return units; // كل الوحدات البيطرية
-    case 'slaughter': return units.filter(u => /مجزر|مجازر|سلخ|smart/.test(String(u.unit_name || ''))); // 확장 عند توفر البيانات
-    case 'faculty':  return units.filter(u => /كلية|قسم|قسمي/.test(String(u.unit_name || '')));         // 확장 عند توفر البيانات
-    case 'equine':   return units.filter(u => /خيل|معامل|سمك|equine|lab|fish/.test(String(u.unit_name || ''))); // 확장 عند توفر البيانات
-    case 'elective': return []; // 확장 عند توفر البيانات
-    default: return units;
-  }
-}
-
+/* genderBadge مستخدمة في البطاقات والملف الشخصي */
 function genderBadge(g) {
   return g === 'F' ? '<span class="badge badge-rose">أنثى</span>'
        : g === 'M' ? '<span class="badge badge-plum">ذكر</span>'
@@ -89,17 +68,40 @@ function genderBadge(g) {
 }
 
 /* ════════════════════════════════════════════════════════════════════════════════════
-   الراوند ٢ — المحور المركزي للدورة الثانية
+   الراوند ٢ — المحور المركزي للدورة الثانية (بطاقات المجالات مثل صفحة الملخص)
    ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/* تعريف المجالات التدريبية للرايوند ٢ مع أيقونات وألوان */
+const R2_DOMAINS = [
+  { key: 'units',    label: 'الوحدات البيطرية',   icon: 'hospital',   tone: 'tone-teal' },
+  { key: 'college',  label: 'أقسام الكلية',        icon: 'landmark',   tone: 'tone-rust' },
+  { key: 'equine',   label: 'خيل ومعامل وسمك',     icon: 'microscope', tone: 'tone-navy' },
+  { key: 'slaughter',label: 'مجازر وسلامة غذاء',   icon: 'meat',       tone: 'tone-mustard' },
+  { key: 'poultry',  label: 'دواجن',               icon: 'chicken',    tone: 'tone-green' },
+  { key: 'elective', label: 'تدريب اختياري',       icon: 'star',       tone: 'tone-olive' }
+];
+
+/* عدد الطلاب المسجلين لكل مجال من round2Summary */
+function r2SummaryForKey(key) {
+  return (DB.round2Summary || []).find(r => String(r.round_key || '') === key) || {};
+}
+
+/* الطلاب المسجلين في مجال معين من round 2 (من جدول assignments) */
+function r2StudentsForKey(key) {
+  return (DB.assignments || []).filter(a => String(a.round_key || '') === key);
+}
+
+/* غير المسجلين في مجال معين */
+function r2UnregisteredForKey(key) {
+  return (DB.unregistered || []).filter(u => String(u.round_key || '') === key || String(u.round_order || '') === '2');
+}
+
+/*raven البطاقات للرايوند ٢*/
 window.renderRound2Hub = function (container) {
   if (!container) return;
   const d = getRoundDates('2');
   const rows = getRosterForRoundOrder('2');
-  const matrixTotal = getRoundMatrixTotal('2');
   const groupsHere = [...new Set(rows.map((r) => r.gid).filter(Boolean))];
-  const r2Summary = (DB.round2Summary || []).find(r => String(r.round_order || '') === '2' || String(r.round_key || '') === 'units') || {};
-  const reg2 = parseInt(r2Summary.registered, 10) || 0;
-  const miss2 = parseInt(r2Summary.not_registered, 10) || 0;
   const unregR2 = (DB.unregistered || []).filter(u => String(u.round_order || '') === '2' || String(u.round_key || '') === 'units' || !u.round_order);
 
   container.innerHTML = `
@@ -113,10 +115,9 @@ window.renderRound2Hub = function (container) {
           </div>
         </div>
         <div class="round-hero-stats">
-          <div class="rhs"><span class="num rhs-n">${reg2}</span><span>مسجلون في مواقع التدريب</span></div>
-          <div class="rhs"><span class="num rhs-n">${miss2}</span><span>غير مسجلين</span></div>
+          <div class="rhs"><span class="num rhs-n">${rows.length}</span><span>طالب/ة في الكشف</span></div>
           <div class="rhs"><span class="num rhs-n">${groupsHere.length}</span><span>جروب</span></div>
-          ${matrixTotal ? `<div class="rhs"><span class="num rhs-n">${matrixTotal}</span><span>إجمالي المصفوفة</span></div>` : ''}
+          <div class="rhs"><span class="num rhs-n">${unregR2.length}</span><span>غير مسجلين</span></div>
         </div>
       </div>
     </div>
@@ -124,27 +125,33 @@ window.renderRound2Hub = function (container) {
     <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('map-pin')} المجالات التدريبية — الدورة الثانية</h2>
     <div class="r2-domains-grid">
       ${R2_DOMAINS.map(domain => {
-        const units = unitsForDomain(domain.key);
-        const unitCount = units.length;
-        const registered = units.reduce((sum, u) => sum + (parseInt(u.registered, 10) || 0), 0);
-        const hasData = unitCount > 0;
+        const s = r2SummaryForKey(domain.key);
+        const reg = parseInt(s.registered, 10) || 0;
+        const exp = parseInt(s.expected_students, 10) || 0;
+        const miss = parseInt(s.not_registered, 10) || 0;
+        const pct = exp > 0 ? Math.round((reg / exp) * 100) : 0;
+        const hasData = reg > 0 || exp > 0;
         return `
-          <div class="r2-domain-card"${hasData ? ` data-action="goto-page" data-page="round-2-${domain.key}"` : ''} style="cursor:${hasData ? 'pointer' : 'default'};">
+          <div class="r2-domain-card" data-action="goto-page" data-page="round-2-${domain.key}" style="cursor:pointer;">
             <div class="r2-domain-head">
               <span class="r2-domain-ico ${domain.tone}" aria-hidden="true">${iconSvg(domain.icon)}</span>
               <span class="r2-domain-label">${esc(domain.label)}</span>
             </div>
-            <div class="r2-domain-stats">
-              <span class="num">${unitCount}</span><span>وحدة</span>
-              ${hasData ? `<span class="num">${registered}</span><span>مسجل</span>` : '<span class="muted">لا توجد بيانات بعد</span>'}
+            <div class="r2-domain-body">
+              <div class="r2-domain-num"><span class="num">${reg}</span> <span>${exp > 0 ? '/' + exp : ''}</span></div>
+              <div class="r2-domain-progress">
+                <div class="progress-bar"><div class="progress-fill ${domain.tone}" style="width:${Math.min(pct, 100)}%"></div></div>
+                <span class="num">${pct}%</span>
+              </div>
+              <div class="r2-domain-meta">${esc(s.groups || '—')}</div>
             </div>
-            ${!hasData ? `<div class="r2-domain-empty">بيانات هذا المجال تُضاف لاحقاً</div>` : ''}
+            ${miss > 0 ? `<div class="r2-domain-alert"><span class="badge badge-amber num">${miss} غير مسجل</span></div>` : ''}
           </div>`;
       }).join('')}
     </div>
 
-    <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('warning')} غير المسجلين في الراوند ٢</h2>
     ${unregR2.length ? `
+      <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('warning')} غير المسجلين في الراوند ٢</h2>
       <div class="card card-sm">
         <div class="card-body">
           <p>يوجد <strong class="num">${unregR2.length}</strong> طالب/ة غير مسجلين في مواقع التدريب بالدورة الثانية:</p>
@@ -159,103 +166,99 @@ window.renderRound2Hub = function (container) {
               </li>`).join('')}
           </ul>
         </div>
-      </div>` : `<div class="empty-note">جميع الطلاب مسجلون في الدورة الثانية بالكامل.</div>`}
+      </div>` : ''}
   `;
 };
 
-/* ═══ الوحدات ضمن الراوند ٢ (Sub-page) ═══ */
-window.renderRound2Units = function (container) {
+/* ═══ صفحة مجال فرعي تحت راوند ٢ (وحدات، مجازر، كلية، إلخ) ═══ */
+window.renderRound2Domain = function (container, domainKey) {
   if (!container) return;
-  const byUnit = {};
-  (window.getUnitAssignments ? getUnitAssignments() : []).forEach(row => {
-    const unitName = (row.unit_name || '').trim();
-    if (!unitName) return;
-    if (!byUnit[unitName]) byUnit[unitName] = [];
-    byUnit[unitName].push(row);
-  });
-  const units = [...DB.stationsUnits].sort((a, b) => (parseInt(b.registered, 10) || 0) - (parseInt(a.registered, 10) || 0));
+  const domain = R2_DOMAINS.find(d => d.key === domainKey) || { key: domainKey, label: domainKey, icon: 'pin', tone: 'tone-gold' };
+  const students = r2StudentsForKey(domainKey);
+  const unreg = r2UnregisteredForKey(domainKey);
+  const s = r2SummaryForKey(domainKey);
+  const reg = parseInt(s.registered, 10) || 0;
+  const exp = parseInt(s.expected_students, 10) || 0;
+  const miss = parseInt(s.not_registered, 10) || 0;
 
   container.innerHTML = `
-    <div class="card card-sm units-intro-card" style="margin-bottom: var(--gap); border-right:4px solid var(--c-gold)">
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span style="font-size:1.4rem">${ico('hospital')}</span>
-        <div>
-          <div style="font-size:1.15rem; font-weight:700; color:var(--c-plum); display:flex; align-items:center; gap:8px">
-            ${ico('map-pin')} <span>الوحدات البيطرية — الدورة الثانية (R2)</span>
+    <div class="card card-sm domain-header-card" style="margin-bottom: var(--gap); border-right:4px solid var(--c-${domain.tone.replace('tone-','')})">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button type="button" class="btn btn-surface btn-sm" data-action="goto-page" data-page="round-2" style="margin-right:8px;">${ico('arrow-left')} رجوع للرايوند ٢</button>
+          <span class="r2-domain-ico ${domain.tone}" aria-hidden="true" style="font-size:1.5rem;">${iconSvg(domain.icon)}</span>
+          <div>
+            <div style="font-size:1.25rem; font-weight:700; color:var(--c-plum);">${esc(domain.label)} — الدورة الثانية (R2)</div>
+            <div style="font-size:0.86rem; color:var(--c-text-muted); margin-top:2px">${reg} من ${exp} طالب/ة مسجلين${miss > 0 ? ' · ' + miss + ' غير مسجل' : ''}</div>
           </div>
-          <div style="font-size:0.86rem; color:var(--c-text-muted); margin-top:2px">إجمالي الوحدات: <strong class="num">${units.length}</strong> · إجمالي المسجلين: <strong class="num">${Object.values(byUnit).reduce((a, l) => a + l.length, 0)}</strong> طالب/ة</div>
         </div>
       </div>
     </div>
-    <div class="units-grid" id="round2-units-grid">
-      ${units.map(u => {
-        const students = byUnit[u.unit_name] || [];
-        const cap = parseInt(u.capacity, 10); const reg = parseInt(u.registered, 10) || 0;
-        const pct = cap ? Math.min(Math.round((reg / cap) * 100), 100) : 0;
-        return `
-          <div class="unit-card">
-            <div class="unit-card-header" role="button" tabindex="0">
-              <div class="unit-card-top">
-                <div><div class="unit-name">${esc(u.unit_name || '—')}</div><div class="unit-gov">${ico('map-pin')} ${esc(u.governorate || '—')}</div></div>
-              </div>
-              <div class="unit-stats">
-                <span class="unit-count-box">${ico('user')} المقيدون: <strong class="num">${reg}</strong> ${cap ? `/ طاقة: <span class="num">${cap}</span>` : ''}</span>
-                <span class="unit-count-box">${pct}%</span>
-              </div>
-            </div>
-            <div class="unit-card-body">
-              <ul class="unit-student-list">
+
+    <div class="two-col">
+      <section style="flex:2;">
+        <h3 class="section-title" style="margin-top:0;">${ico('users')} الطلاب المسجلون (${students.length})</h3>
+        <div class="card">
+          <div class="table-scroll">
+            <table class="table-cards">
+              <thead>
+                <tr>
+                  <th>الاسم</th><th>الجروب</th><th>الكود</th><th>النوع</th><th>الوحدة</th>
+                </tr>
+              </thead>
+              <tbody>
                 ${students.map(s => `
-                  <li>
-                    <span class="clickable-student-name"${act('student', { sid: (s.group_id + '_' + s.code_short).replace(/\s+/g, '') })} title="ملف ${esc(s.full_name || '')}">${esc(s.full_name || 'غير محدد')}</span>
-                    <span class="student-code">${esc(s.code_short || '—')}</span>
-                    <span class="cartouche-badge" style="font-size:0.74rem">جروب ${esc(s.group_id || '—')}</span>
-                  </li>`).join('') || '<li class="empty-note">لا يوجد طلاب مسجلين في هذه الوحدة.</li>'}
-              </ul>
-            </div>
-          </div>`;
-      }).join('')}
-    </div>`;
-};
-
-/* ═══ المجالات الفرعية الأخرى للراوند ٢ (أماكن شاغرة حتى تُضاف البيانات) ═══ */
-function renderRound2EmptyDomain(container, domain) {
-  if (!container) return;
-  container.innerHTML = `
-    <div class="card card-sm" style="text-align:center; padding:60px 20px;">
-      <span class="schedule-intro-ico" aria-hidden="true" style="font-size:3rem; opacity:0.3;">${iconSvg(domain.icon)}</span>
-      <h2 style="margin-top:16px; color:var(--c-text-muted);">${esc(domain.label)} — الدورة الثانية (R2)</h2>
-      <p style="color:var(--c-text-muted);">بيانات هذا المجال تُضاف لاحقاً. عند توفر شيت التداول الخاص بهذا المجال، ستظهر الوحدات والطلاب هنا تلقائياً.</p>
-    </div>`;
-}
-window.renderRound2Slaughter = function (c) { renderRound2EmptyDomain(c, R2_DOMAINS[1]); };
-window.renderRound2Faculty = function (c) { renderRound2EmptyDomain(c, R2_DOMAINS[2]); };
-window.renderRound2Equine = function (c) { renderRound2EmptyDomain(c, R2_DOMAINS[3]); };
-window.renderRound2Elective = function (c) { renderRound2EmptyDomain(c, R2_DOMAINS[4]); };
-window.renderRound2Unregistered = function (container) {
-  if (!container) return;
-  const unregR2 = (DB.unregistered || []).filter(u => String(u.round_order || '') === '2' || String(u.round_key || '') === 'units' || !u.round_order);
-  container.innerHTML = `
-    <div class="card card-sm" style="border-right:4px solid var(--c-rose)">
-      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
-        <span style="font-size:1.4rem">${ico('warning')}</span>
-        <div><div style="font-weight:700; color:var(--c-rose);">غير المسجلين في الراوند ٢</div><div style="font-size:0.86rem; color:var(--c-text-muted);">${unregR2.length} طالب/ة</div></div>
+                  <tr class="clickable-row"${act('student', { sid: s.sid })} >
+                    <td>
+                      <span class="initials-avatar">${esc(getInitials(s.name || ''))}</span>
+                      <strong>${esc(s.name || 'غير محدد')}</strong>
+                    </td>
+                    <td><span class="cartouche-badge">جروب ${esc(s.gid || '—')}</span></td>
+                    <td class="num">${esc(s.code || '—')}</td>
+                    <td>${genderBadge(s.gender)}</td>
+                    <td>${esc(s.station || '—')}</td>
+                  </tr>`).join('') || '<tr><td colspan="5" class="empty-note">لا يوجد طلاب مسجلين في هذا المجال.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      ${unregR2.length ? `
-        <ul class="slist">
-          ${unregR2.map(u => `
-            <li>
-              <span class="initials-avatar">${esc(getInitials(u.full_name || ''))}</span>
-              <span class="slist-main">
-                <div class="slist-name">${esc(u.full_name || 'غير محدد')}</div>
-                <div class="slist-sub">جروب ${esc(u.group_id || '—')} · كود ${esc(u.code_short || '—')}</div>
-              </span>
-            </li>`).join('')}
-        </ul>` : `<div class="empty-note">جميع الطلاب مسجلون بالكامل.</div>`}
+      <section style="flex:1;">
+        ${miss > 0 ? `
+          <h3 class="section-title">${ico('warning')} غير مسجلين (${miss})</h3>
+          <div class="card card-sm">
+            <ul class="slist">
+              ${unreg.slice(0, 20).map(u => `
+                <li>
+                  <span class="initials-avatar">${esc(getInitials(u.full_name || ''))}</span>
+                  <span class="slist-main">
+                    <div class="slist-name">${esc(u.full_name || 'غير محدد')}</div>
+                    <div class="slist-sub">جروب ${esc(u.group_id || '—')} · كود ${esc(u.code_short || '—')}</div>
+                  </span>
+                </li>`).join('')}
+              ${unreg.length > 20 ? `<li class="empty-note">و ${unreg.length - 20} طالب/ة آخرين...</li>` : ''}
+            </ul>
+          </div>
+        ` : `
+          <div class="card card-sm" style="text-align:center; padding:40px 20px; color:var(--c-green);">
+            ${ico('check')}
+            <h3 style="margin-top:12px;">جميع الطلاب مسجلون</h3>
+            <p style="color:var(--c-text-muted);">لا يوجد طلاب غير مسجلين في هذا المجال.</p>
+          </div>
+        `}
+      </section>
     </div>`;
 };
 
-/* ═══ الراوندات ١ · ٣ · ٤ — أماكن شاغرة ═══ */
+/* دوال عرض المجالات الفرعية الفردية */
+window.renderRound2Units = function (c) { renderRound2Domain(c, 'units'); };
+window.renderRound2College = function (c) { renderRound2Domain(c, 'college'); };
+window.renderRound2Equine = function (c) { renderRound2Domain(c, 'equine'); };
+window.renderRound2Slaughter = function (c) { renderRound2Domain(c, 'slaughter'); };
+window.renderRound2Poultry = function (c) { renderRound2Domain(c, 'poultry'); };
+window.renderRound2Elective = function (c) { renderRound2Domain(c, 'elective'); };
+
+/* ═══ الرايوندات ١ · ٣ · ٤ — أماكن شاغرة ═══ */
 window.renderRoundPlaceholder = function (container, order) {
   if (!container) return;
   const d = getRoundDates(order);
@@ -263,7 +266,7 @@ window.renderRoundPlaceholder = function (container, order) {
     <div class="card card-sm" style="text-align:center; padding:60px 20px;">
       <span class="schedule-intro-ico" aria-hidden="true" style="font-size:3rem; opacity:0.3;">${iconSvg('calendar')}</span>
       <h2 style="margin-top:16px; color:var(--c-text-muted);">الراوند ${esc(order)}</h2>
-      <p style="color:var(--c-text-muted);">بيانات هذا الراوند غير متوفرة بعد. سيتم عرضها عند إضافة بيانات الراوند ${esc(order)}.</p>
+      <p style="color:var(--c-text-muted);">بيانات هذا الراوند غير متوفرة بعد. سيتم عرضها عند إضافة بيانات الرايوند ${esc(order)}.</p>
       ${d.start ? `<p style="font-size:0.85rem; color:var(--c-text-muted); margin-top:8px;">التواريخ المقررة: ${esc(d.start)} إلى ${esc(d.end)}</p>` : ''}
     </div>`;
 };
@@ -275,7 +278,7 @@ window.renderRoundPage = function (order) {
   return renderRoundPlaceholder(container, order);
 };
 
-/* ── بروفايل الطالب «elite» — ללא تغيير ═══ */
+/* ═══ بروفايل الطالب «elite» — بدون تغيير ═══ */
 window.openEliteStudentProfile = function (rawKey) {
   const student = (DB.studentLookup || {})[String(rawKey).replace(/\s+/g, '')];
   if (!student) { toast('لم يتم العثور على سجل الطالب'); return; }
@@ -313,7 +316,7 @@ window.openEliteStudentProfile = function (rawKey) {
           <div class="elite-fact"><span class="k">الهاتف</span><span class="v num" dir="ltr">${esc(phone || 'غير متوفر')}</span></div>
           ${subNow ? `<div class="elite-fact"><span class="k">تدوير خيل/معامل/سمك — الآن</span><span class="v"><strong>${esc(subNow.label)}</strong> · بلوك ${subNow.blockNo}/${subNow.totalBlocks}${rotSeq ? ' · التسلسل: ' + esc(subUnitSeqLabel(rotSeq.sequence)) : ''}</span></div>` : ''}
         </div>
-        <div class="elite-section-title">${ico('calendar')} رحلة الراوندات والأقسام</div>
+        <div class="elite-section-title">${ico('calendar')} رحلة الرايوندات والأقسام</div>
         <div class="elite-timeline">
           ${journey.map((st) => `
             <div class="elite-step ${st.status}">

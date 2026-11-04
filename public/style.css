@@ -1652,6 +1652,16 @@ body {
   transform: translateY(-3px);
   box-shadow: var(--e-shadow-hover);
 }
+/* بند ج: كروت الـ hero تبقى فاتحة في الاتجاهين — النص الغامق الحاد يُقرأ عليها في كل الوضعين */
+.hero-stat-label { color: #5A4A5E; }
+html.dark .hero-stat-card {
+  background: linear-gradient(180deg, #2A2130 0%, #221A27 100%);
+}
+html.dark .hero-stat-card:hover {
+  background: linear-gradient(180deg, #342B3C 0%, #2A2130 100%);
+}
+html.dark .hero-stat-label { color: #E2D7E5; }
+html.dark .domain-period { color: #B4A7BE; }
 .hero-stat-number {
   background: var(--e-gradient-gold);
   -webkit-background-clip: text;

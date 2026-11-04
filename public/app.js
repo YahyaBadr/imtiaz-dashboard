@@ -1222,6 +1222,9 @@ window.normRoundKey = function (key) {
     const rest = s.replace(/^(round|rwand)[_]?[0-9]*[_]?/, '');
     if (rest && ROUND_ALIAS_FALLBACK[rest]) return ROUND_ALIAS_FALLBACK[rest];
   }
+     if (/^(r|rwand)[_]?(1|2)$/.test(s)) return s === 'r2' || s === 'r_2' ? 'units' : 'college';   // R1/R2 كما في الشيت
+  if (/^r[_]?3$/.test(s)) return 'poultry';
+  if (/^r[_]?4$/.test(s)) return 'slaughter';
   if (/unit|وحدة|وحدات/.test(s)) return 'units';
   if (/poultry|دواجن|دجاج/.test(s)) return 'poultry';
   if (/slaughter|food|مجزر|مجازر|غذاء/.test(s)) return 'slaughter';
@@ -1229,6 +1232,50 @@ window.normRoundKey = function (key) {
   if (/college|depart|قسم|اقسام|كلية/.test(s)) return 'college';
   if (/elective|اختياري/.test(s)) return 'elective';
   return raw;                                                          // مجال جديد — يُعرض باسمه العربي من الجدول كما هو
+};
+
+/* ── مصادر التواريخ (03_rounds_overview · 09_round_dates · config) مفهرسة برقم الدورة ──
+   تُبنى داخل buildDB — وتُستخدم لحل رقم الدورة عندما يكون عمود round_order فارغاً أو نصياً. */
+window.__roundDateInfo = {};
+
+/* حسم رقم الدورة لأي صف schedule/assignments/unregistered — بلا اعتماد على مسمى المفتاح:
+   1) round_order إن كان رقمة مفهوماً  2) اسم الراوند العربي (تاني/ثالث …)  3) مفتاح راوند معروف
+   4) تطابق تام مع مصدر تواريخ (اسم/مفتاح)  — وإلا '' (غير محدد). */
+window.resolveRoundOrder = function (row) {
+  const o = normRoundOrder(row && row.round_order);
+  if (o) return o;
+  const name = normAr(String((row && row.round_name_ar) || ''));
+  if (name) {
+    const nm = name.match(/(?:راوند|دورة|round)\s*([0-9]+)/);
+    if (nm) return String(+nm[1]);
+    const words = { 'الاولى': '1', 'الثانية': '2', 'الثالثة': '3', 'الرابعة': '4', 'الخامسة': '5', 'السادسة': '6' };
+    for (const k in words) { if (name.indexOf(k) > -1) return words[k]; }
+  }
+  const rk = normRoundKey(String((row && row.round_key) || ''));
+  if (rk && ROUND_META[rk]) {
+    const idx = ROUND_ORDER.indexOf(rk);
+    if (rk === 'elective') return '0';
+    if (idx > -1 && idx < 6) return String(idx + 1);                  // units→1 · equine→2 · poultry→3 · slaughter→4 · college→5
+  }
+  const info = window.__roundDateInfo || {};
+  for (const ord in info) {
+    const it = info[ord] || {};
+    if ((it.name && name && it.name === name) || (it.key && rk && it.key === rk)) return String(ord);
+  }
+  return '';
+};
+
+/* تطبيع رقم الدورة: "R2" · "2" · "round 2" · "الدورة الثانية" → '2' (أو '0' للاختياري) */
+window.normRoundOrder = function (v) {
+  const s = normAr(String(v === null || v === undefined ? '' : v));
+  if (!s) return '';
+  const m = s.match(/(?:r(?:ound)?|دورة|راوند|rwand)\s*([0-9٠-٩]+)/);
+  if (m) return String(+m[1].replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const d = s.match(/^([0-9٠-٩]+)/);
+  if (d) return String(+d[1].replace(/[٠-٩]/g, (x) => '٠١٢٣٤٥٦٧٨٩'.indexOf(x)));
+  const words = { 'الاولى': '1', 'الثانية': '2', 'الثالثة': '3', 'الرابعة': '4', 'الخامسة': '5', 'السادسة': '6' };
+  for (const k in words) { if (s.indexOf(k) > -1) return words[k]; }
+  return '';
 };
 
 window.ROUND_META = {

@@ -281,6 +281,32 @@ window.renderRound2Domain = function (container, domainKey) {
           </div>`;
         }).join('')}
       </div>`;
+
+    // غير المسجلين لوحدات بيطرية (حتى لو غير موجودين في جدول الطلاب الموحد)
+    if (miss > 0) {
+      contentHtml += `
+        <div class="card card-sm elite-unreg-card" style="margin-top: var(--gap);">
+          <div class="card-body">
+            <div class="elite-unreg-header">
+              <span class="elite-unreg-count">${miss}</span>
+              <span class="elite-unreg-label">طالب/ة غير مسجل في وحدات بيطرية (الدورة الثانية)</span>
+            </div>
+            <ul class="slist elite-slist">
+              ${unreg.map((u) => {
+                const s2 = resolveStudent(u) || u;
+                return `
+                <li class="slist-row">
+                  <span class="initials-avatar">${esc(getInitials(s2.full_name || ''))}</span>
+                  <span class="slist-main">
+                    <div class="slist-name">${esc(s2.full_name || 'غير محدد')}</div>
+                    <div class="slist-sub">جروب ${esc(cleanGroupId(s2.group_id || u.group_id || '')) || '—'} · كود ${esc(s2.code_short || u.code_short || '—')}</div>
+                  </span>
+                </li>`;
+              }).join('')}
+            </ul>
+          </div>
+        </div>`;
+    }
   } else if (domainKey === 'equine_lab_fish') {
     /* واجهة خيل/معامل/سمك: جدول مع عمود التناوب الحالي والبلوك */
     contentHtml = `

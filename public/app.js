@@ -612,6 +612,7 @@ window.subUnitAtDate = function (rot, order, dateStr) {
 window.studentSubUnitNow = function (student) {
   if (!student) return null;
   const rot = parseSubRotation(rotationOrderOf(student), subStartOf(student));
+  console.log('[EQ DEBUG] studentSubUnitNow:', { gid: student.group_id, rotation_order: student.rotation_order, sub_unit_start: student.sub_unit_start, rot });
   if (!rot) return null;
   const gid = String(student.group_id || '').trim();
   const sched = (DB.roundSchedule || []).filter((r) => String(r.group_id) === gid);
@@ -619,6 +620,7 @@ window.studentSubUnitNow = function (student) {
   let row = sched.find((r) => { const s = formatDate(r.start_date), e = formatDate(r.end_date); return s && e && today >= s && today <= e; }) || sched[sched.length - 1];
   if (!row) return null;
   const at = subUnitAtDate(rot, row.round_order, today);
+  console.log('[EQ DEBUG] subUnitAtDate result:', at);
   return at ? Object.assign({}, at, { round_order: row.round_order, sequence: rot.sequence }) : null;
 };
 window.subUnitSeqLabel = function (seq) { return (seq || []).map((k) => SUBUNIT_NAMES[k] || k).join(' › '); };

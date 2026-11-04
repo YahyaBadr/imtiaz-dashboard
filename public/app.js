@@ -1543,14 +1543,6 @@ function initInstallUI() {
   window.addEventListener('focus', () => { if (!deferredPrompt) setInstallVisible(canShowInstall()); });
 }
 
-function registerSW() {
-  if (!('serviceWorker' in navigator)) return;
-  if (!(location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) return;
-  const had = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window._swReloaded && !Overlays.count()) { window._swReloaded = true; location.reload(); } });
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch((e) => console.warn('SW:', e)));
-}
-
 /* ───────────────────────── 12) الصفحات والتنقل ───────────────────────── */
 
 const PAGE_RENDERERS = {
@@ -1727,7 +1719,7 @@ async function init() {
 
 function bootAfterUnlock() {
   Gate.whoChip();
-  initInstallUI(); registerSW();
+  initInstallUI();
   const afterPaint = () => { window.Splash && Splash.dismiss(); VERIFY.run(); };
 
   const cached = readCache();

@@ -53,6 +53,16 @@ window.APP_CONFIG = {
   PRESENTATION_MODE: false,     // وضع العرض على البروجيكتور (يخفي أرقام التواصل)
   ENABLE_EDIT_MODE: false,      // مرحلة لاحقة
 
+  /* ── 6) كروت المجالات الثلاثة — خيل / معامل / سمك (تدوير نصف شهري) ──
+     الترتيب والتواريخ تُقرأ من الشيت عبر دوال app.js (subUnitBlocksForOrder / subUnitAtDate).
+     هنا نحدد فقط مفاتيح المجالات وعناوينها وأيقوناتها وألوانها للعرض في بطاقات الملخص. */
+  DOMAINS: {
+    order: ['horse', 'lab', 'fish'],
+    horse:  { key: 'horse',  label: 'التدريب في الخيل',   icon: 'horse',   tone: 'tone-navy',    color: '#0B2545', glow: 'rgba(11, 37, 69, 0.35)' },
+    lab:    { key: 'lab',    label: 'التدريب في المعامل', icon: 'microscope', tone: 'tone-teal',    color: '#176B87', glow: 'rgba(23, 107, 135, 0.35)' },
+    fish:   { key: 'fish',   label: 'التدريب في السمك',   icon: 'fish',    tone: 'tone-green',   color: '#2A9D72', glow: 'rgba(42, 157, 114, 0.35)' }
+  },
+
   /* ── 5) Backup dates for rounds — used only if sheet 09_round_dates is empty ──
      key = round order as string, format YYYY-MM-DD */
   DEFAULT_ROUND_DATES: {

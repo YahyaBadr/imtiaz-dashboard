@@ -821,7 +821,11 @@ window.ROUND_META = {
   poultry:         { icon: 'chicken',    svg: true, label: 'دواجن',              cls: 'badge-round-poultry', tone: 'tone-green' },
   slaughter:       { icon: 'meat',       svg: true, label: 'مجازر وسلامة غذاء', cls: 'badge-round-slaughter', tone: 'tone-mustard' },
   equine_lab_fish: { icon: 'microscope', svg: true, label: 'خيل ومعامل وسمك',    cls: 'badge-round-equine', tone: 'tone-navy' },
-  elective:        { icon: 'star',       svg: true, label: 'تدريب اختياري',      cls: 'badge-round-elective', tone: 'tone-olive' }
+  elective:        { icon: 'star',       svg: true, label: 'تدريب اختياري',      cls: 'badge-round-elective', tone: 'tone-olive' },
+  /* المجالات الفرعية المنفصلة (تُستدعى من بطاقات التدوير الثلاث) */
+  horse:  { icon: 'horse',    svg: true, label: 'خيل',   cls: 'badge-round-equine', tone: 'tone-navy' },
+  lab:    { icon: 'microscope', svg: true, label: 'معامل', cls: 'badge-round-units',   tone: 'tone-teal' },
+  fish:   { icon: 'fish',     svg: true, label: 'سمك',   cls: 'badge-round-poultry', tone: 'tone-green' }
 };
 // إرجاع أيقونة SVG موحّدة لراوند (مع fallback للرموز القديمة إن وُجدت)
 window.roundIcon = function (rKey, chip) {

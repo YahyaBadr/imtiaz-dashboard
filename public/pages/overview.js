@@ -21,6 +21,46 @@ function renderOverview(container) {
   const prefAverages = computeFieldPreferences();
   const alerts = buildOverviewAlerts();
 
+  /* كروت المجالات الثلاثة المتناوبة — خيل / معامل / سمك (كل أسبوعين) */
+  const domCfg = CFG().DOMAINS || {};
+  const today = getTodayStr();
+  const blocks = subUnitBlocksForOrder('2');  // راوند الدورة الثانية
+  let activeDomain = 'horse';
+  let rotationInfo = '';
+  if (blocks && blocks.blocks) {
+    const todayBlockIdx = Math.max(0, Math.floor((Date.parse(today + 'T00:00:00Z') - Date.parse(blocks.start + 'T00:00:00Z')) / (14 * 86400000));
+    const domOrder = domCfg.order || ['horse', 'lab', 'fish'];
+    activeDomain = domOrder[todayBlockIdx % domOrder.length] || 'horse';
+    const d = domCfg[activeDomain] || {};
+    rotationInfo = `المجال النشط الآن: <strong class="num">${d.label || activeDomain}</strong> · يتم التبديل كل أسبوعين`;
+  }
+
+  const domainCards = (domCfg.order || ['horse', 'lab', 'fish']).map((dk) => {
+    const d = domCfg[dk] || {};
+    const isActive = dk === activeDomain;
+    const nextIdx = (domCfg.order || ['horse', 'lab', 'fish']).indexOf(dk) + 1;
+    const nextDomain = domCfg.order ? domCfg.order[nextIdx % domCfg.order.length] : 'horse';
+    const nextD = domCfg[nextDomain] || {};
+    return `
+      <div class="domain-card ${isActive ? 'domain-active' : ''}"${act('goto-page', { page: 'schedule' })}>
+        <div class="domain-header">
+          <div class="domain-ico ${d.tone || 'tone-gold'}">${ico(d.icon || 'pin')}</div>
+          <span class="domain-badge ${isActive ? 'badge-gold' : 'badge-plum'}">${isActive ? 'نشط الآن' : 'قادم'}</span>
+        </div>
+        <div class="domain-title">${esc(d.label || dk)}</div>
+        <div class="domain-body">
+          <div class="domain-period">${isActive ? rotationInfo : `يبدأ بعد المجالات السابقة · يليه <strong>${esc(nextD.label || nextDomain)}</strong>`}</div>
+          <div class="domain-progress">
+            <div class="domain-track"></div>
+            <div class="domain-fill ${isActive ? '' : 'domain-fill-upcoming'}" style="width:${isActive ? 100 : 33}%"></div>
+          </div>
+        </div>
+        <div class="domain-footer">
+          <span class="domain-go">عرض التفاصيل ${ico('external')}</span>
+        </div>
+      </div>`;
+  }).join('');
+
   container.innerHTML = `
     <section class="hero-band">
       <div class="hero-header">
@@ -33,6 +73,11 @@ function renderOverview(container) {
         <div class="hero-stat-card"${act('goto-page', { page: 'not-registered' })}><div class="hero-stat-number num amber" id="hero-cnt-missing">0</div><div class="hero-stat-label">طلاب غير مسجلين (دورة 2) <span class="go">${ico('external')}</span></div></div>
       </div>
     </section>
+
+    <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>تدوير المجالات — كل أسبوعين يتغير المجال</h2>
+    <div class="domain-grid elite">
+      ${domainCards}
+    </div>
 
     ${alerts.length ? `<h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>تنبيهات هامة ومتابعات فورية</h2>
       <div class="alerts-strip">${alerts.map((a) => `<div class="alert-item alert-${a.type}"${a.attrs}><span class="alert-icon">${a.icon}</span><div class="grow">${a.html}</div><span class="alert-go">عرض ${ico('external')}</span></div>`).join('')}</div>` : ''}

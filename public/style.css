@@ -220,6 +220,15 @@ tr.clickable-row:hover td { background: var(--c-gold-light); }
 .gender-m { color: var(--c-teal); font-weight: 600; }
 .gender-f { color: var(--c-rust); font-weight: 600; }
 
+/* تناوب خيل/معامل/سمك — شارات الوحدة الفرعية */
+.rotation-cell { font-size: 0.8rem; text-align: center; }
+.rotation-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.78rem; margin-bottom: 2px; color: #fff; }
+.rotation-horse { background: var(--c-navy); }
+.rotation-lab   { background: var(--c-teal); }
+.rotation-fish  { background: var(--c-green); }
+.rotation-block { display: block; font-size: 0.7rem; color: var(--c-text-muted); margin-top: 1px; }
+html.dark .rotation-block { color: var(--c-text-muted); }
+
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius-btn); border: 1px solid transparent; font-family: inherit; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; line-height: 1.4; text-decoration: none; }
 .btn:hover  { transform: translateY(-1px); }
 .btn:active { transform: translateY(1px); }

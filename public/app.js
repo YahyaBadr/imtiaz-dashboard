@@ -571,7 +571,7 @@ window.parseSubRotation = function (raw, startRaw) {
   });
   let st = subunitToken(startRaw);
   if (seq.length === 1 && !st) { st = seq[0]; seq.length = 0; }       // «يبدأ معامل» في عمود الترتيب = نقطة بداية لا تسلسل
-  if (!seq.length && st) ['horse', 'lab', 'fish'].forEach(pushTok);   // الشيت حدد البداية فقط → التسلسل الطبيعي للقسم
+  if (!seq.length && st) ['horse', 'fish', 'lab'].forEach(pushTok);   // الشيت حدد البداية فقط → التسلسل الطبيعي للقسم (خيل→سمك→معامل)
   if (!seq.length) return null;
   const startIdx = st ? Math.max(0, seq.indexOf(st)) : 0;
   return { sequence: seq, start: seq[startIdx], startIdx };
@@ -1123,9 +1123,17 @@ function buildDB(S) {
 
 window.resolveStudent = function (row) {
   if (!row) return null;
+  // 1) مطابقة بالـ student_code (الأكثر موثوقية)
   if (row.student_code && DB.studentLookup[row.student_code]) return DB.studentLookup[row.student_code];
+  // 2) مطابقة بـ group_id + code_short
   const g = cleanGroupId(row.group_id), c = String(row.code_short || '').trim();
   if (g && c && DB.studentLookup[g + '_' + c]) return DB.studentLookup[g + '_' + c];
+  // 3) بديل أخير: مطابقة بالاسم الكامل (لتوحيد الأسماء عبر الشيتات المختلفة)
+  const name = normAr(String(row.full_name || '')).trim();
+  if (name) {
+    const found = DB.students.find((s) => normAr(String(s.full_name || '')).trim() === name);
+    if (found) return found;
+  }
   return null;
 };
 window.studentKey = function (s) { return s.student_code || (s.group_id + '_' + s.code_short); };

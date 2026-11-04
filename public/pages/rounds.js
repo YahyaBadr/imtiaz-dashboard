@@ -99,7 +99,7 @@ function r2StudentsForKey(key) {
   const result = [];
   const seen = {};
   (DB.assignments || []).forEach((a) => {
-    // group_id من جدول التسجيلات (assignments) هو المصدر الموثوق لتحديد المجال للرايوند ٢
+    // group_id يُؤخذ من جدول التسجيلات (assignments) لأنه المصدر الموثوق للرايوند ٢
     const gid = cleanGroupId(a.group_id || '');
     const field = groupFieldMap[gid] || 'units';
     if (field !== key) return;
@@ -115,7 +115,13 @@ function r2StudentsForKey(key) {
       gid, code: code || (s.code_short || ''),
       studentCode: s.student_code || a.student_code || '',
       gender: s.gender || a.gender || '',
-      station: a.unit_name || domainLabel(key) || roundLabel(a.round_key || '') || ''
+      station: a.unit_name || domainLabel(key) || roundLabel(a.round_key || '') || '',
+      // تمرير بيانات التناوب من جدول التسجيلات لـ studentSubUnitNow
+      group_id: cleanGroupId(a.group_id || ''),
+      code_short: a.code_short,
+      student_code: a.student_code,
+      rotation_order: a.rotation_order || '',
+      sub_unit_start: a.sub_unit_start || ''
     });
   });
   result.sort((a, b) => (+a.gid || 0) - (+b.gid || 0) || String(a.code).localeCompare(String(b.code), 'ar', { numeric: true }));
@@ -255,11 +261,19 @@ window.renderRound2Domain = function (container, domainKey) {
             <table class="table-cards">
               <thead>
                 <tr>
-                  <th>الاسم</th><th>الجروب</th><th>الكود</th><th>النوع</th><th>الوحدة</th>
+                  <th>الاسم</th><th>الجروب</th><th>الكود</th><th>النوع</th><th>الوحدة</th>${domainKey === 'equine_lab_fish' ? '<th>التناوب الآن</th>' : ''}
                 </tr>
               </thead>
               <tbody>
-                ${students.map((s) => `
+                ${students.map((s) => {
+                  let rotationHtml = '';
+                  if (domainKey === 'equine_lab_fish') {
+                    const rot = window.studentSubUnitNow ? window.studentSubUnitNow({...s, group_id: s.gid, code_short: s.code, student_code: s.studentCode}) : null;
+                    rotationHtml = `<td class="rotation-cell">
+                      ${rot ? `<span class="badge rotation-badge rotation-${rot.key}">${esc(rot.label)}</span><br><span class="rotation-block">بلوك ${rot.blockNo}/${rot.totalBlocks}</span>` : '<span class="muted">—</span>'}
+                    </td>`;
+                  }
+                  return `
                   <tr class="clickable-row"${act('student', { sid: s.sid })} >
                     <td>
                       <span class="initials-avatar">${esc(getInitials(s.name || ''))}</span>
@@ -269,7 +283,9 @@ window.renderRound2Domain = function (container, domainKey) {
                     <td class="num">${esc(s.code || '—')}</td>
                     <td>${genderBadge(s.gender)}</td>
                     <td>${esc(s.station || '—')}</td>
-                  </tr>`).join('') || '<tr><td colspan="5" class="empty-note">لا يوجد طلاب مسجلين في هذا المجال.</td></tr>'}
+                    ${rotationHtml}
+                  </tr>`;
+                }).join('') || `<tr><td colspan="${domainKey === 'equine_lab_fish' ? 6 : 5}" class="empty-note">لا يوجد طلاب مسجلين في هذا المجال.</td></tr>`}
               </tbody>
             </table>
           </div>

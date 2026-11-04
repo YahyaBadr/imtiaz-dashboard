@@ -196,6 +196,14 @@
     return String((student && student.gender) || (row && row.gender) || '').trim();
   }
 
+  /* legacy composite key used by older pages: group_id + '_' + raw short code */
+  function legacyKey(row) {
+    const gid = cleanGroup(row && row.group_id);
+    const raw = String((row && row.code_short) || '').replace(/\D/g, '');
+    if (!gid || !raw) return '';
+    return gid + '_' + raw;
+  }
+
   function aliases(index) {
     const out = Object.create(null);
     if (!index) return out;
@@ -206,6 +214,21 @@
         if (list.length === 1) out[key] = list[0];
       });
     });
+    /* مفاتيح توافقية (resilience):
+       - الكود القصير وحده عندما يكون فريداً في الكشف بالكامل
+       - جروب_كود بصيغة الصفحات القديمة عندما يكون فريداً
+       تُسجَّل المفاتيح الفريدة فقط؛ أي مفتاح مكرر بين طالبين يُترك غامضاً عمداً. */
+    const uniqShort = Object.create(null), dupShort = Object.create(null);
+    const uniqLegacy = Object.create(null), dupLegacy = Object.create(null);
+    (index.students || []).forEach((st) => {
+      const sh = st._code_short;
+      if (sh) { if (uniqShort[sh]) dupShort[sh] = true; else uniqShort[sh] = st; }
+      const raw = String(st.code_short || '').replace(/\D/g, '');
+      const lk = cleanGroup(st.group_id) + '_' + raw;
+      if (lk !== '_') { if (uniqLegacy[lk]) dupLegacy[lk] = true; else uniqLegacy[lk] = st; }
+    });
+    Object.keys(uniqShort).forEach((key) => { if (!dupShort[key] && !out[key]) out[key] = uniqShort[key]; });
+    Object.keys(uniqLegacy).forEach((key) => { if (!dupLegacy[key] && !out[key]) out[key] = uniqLegacy[key]; });
     return out;
   }
 
@@ -220,6 +243,7 @@
     buildIndex,
     resolve,
     findByKey,
+    legacyKey,
     aliases,
     groupConflict,
     displayName,

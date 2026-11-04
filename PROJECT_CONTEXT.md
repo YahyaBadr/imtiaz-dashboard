@@ -149,6 +149,16 @@ for local passphrase), session in `localStorage`. `lock()` wipes
    `DB.fieldsMap`/`DB.prefColumns`, `DB.roundNames` built here.
 5. Dates: `formatDate()`/`getTodayStr()` in `Africa/Cairo`; Apps Script
    sends UTC ISO strings — converted, never string-sliced.
+6. **تاريخ الميلاد من الرقم القومي** (`window.extractBirthFromNID`): إذا كان
+   `birth_date` فاضياً والرقم القومي موجود، يُستخرج التاريخ من الأرقام 2-7
+   من الرقم القومي (الصيغة المصرية: قرن + سنة + شهر + يوم). مثال:
+   `30304242102642` → `2003-04-24`.
+7. **توحيد `student_code` من `raw_code`**: في `normalizeRows`، إذا كان
+   `student_code` فاضياً و`raw_code` موجود، يُحول `raw_code` إلى الكود
+   الكامل `1101202110` + 4 أرقام (مثال: `676` → `11012021100676`) ليتطابق
+   مع `student_code` في جدول التسجيلات (`assignments`). هذا يحل مشكلة فقدان
+   بيانات طلاب مثل "نعمة عادل عزالدين" الذين الكود القصير لديهم لا يطابق
+   الكود الكامل في التسجيلات.
 
 ### 3.5 Display rules
 

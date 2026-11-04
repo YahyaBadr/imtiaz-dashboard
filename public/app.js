@@ -469,6 +469,25 @@ window.formatDate = function (v) {
 
 window.getTodayStr = function () { return dateInTZ(new Date()); };
 
+/* استخراج تاريخ الميلاد من الرقم القومي المصري
+   الصيغة: 14 رقمًا — الرقم 1 قرن، رقم 2-3 سنة، رقم 4-5 شهر، رقم 6-7 يوم
+   مثال: 30304242102642 → 2003-04-24 */
+window.extractBirthFromNID = function (nid) {
+  const n = String(nid || '').replace(/\D/g, '');
+  if (!n || n.length < 7) return '';
+  const yy = n.slice(1, 3);
+  const mm = n.slice(3, 5);
+  const dd = n.slice(5, 7);
+  const y = '20' + yy;   // الرقم القومي المصري يبدأ بمؤشر القرن (2=2000s)
+  const m = mm.padStart(2, '0');
+  const d = dd.padStart(2, '0');
+  // التحقق من صحة التاريخ
+  const dateStr = `${y}-${m}-${d}`;
+  const dObj = new Date(dateStr + 'T00:00:00');
+  if (isNaN(dObj) || dObj.getFullYear() !== parseInt(y) || dObj.getMonth() + 1 !== parseInt(m) || dObj.getDate() !== parseInt(d)) return '';
+  return dateStr;
+};
+
 window.computeStatus = function (startDate, endDate) {
   const s = formatDate(startDate), e = formatDate(endDate);
   if (!s || !e) return 'upcoming';
@@ -874,13 +893,15 @@ function normalizeRows(raw, opts) {
     .map((r) => {
       const o = {};
       Object.keys(r).forEach((k) => { o[normKey(k)] = normCell(r[k]); });
-      // R2: master_students exposes a single raw_code column (mixed short/full
-      // codes preserved as-is). Carry data_flag through silently for later use;
-      // do not display it yet. Names (Arabic/English variants) are kept as-is.
+      // R2: master_students يعرض raw_code موحد (كود قصير أو كامل). نحوله للكود الكامل 1101202110+4 أرقام
+      // حتى يتطابق مع student_code في جدول التسجيلات (assignments).
       if (o.raw_code !== undefined && o.raw_code !== '') {
-        const c = String(o.raw_code).trim();
-        if (o.code_short === undefined || o.code_short === '') o.code_short = c;
-        if (o.student_code === undefined || o.student_code === '') o.student_code = c;
+        const c = String(o.raw_code).trim().replace(/\D/g, '');
+        if (c) {
+          const norm = c.startsWith('1101202110') && c.length === 14 ? c : '1101202110' + c.padStart(4, '0');
+          if (o.code_short === undefined || o.code_short === '') o.code_short = c.length <= 4 ? c : c.slice(-4);
+          if (o.student_code === undefined || o.student_code === '') o.student_code = norm;
+        }
       }
       if (o.data_flag !== undefined) o.data_flag = String(o.data_flag).trim();
       return o;
@@ -1016,7 +1037,7 @@ function buildDB(S) {
   const rosterCount = {};
   g('students').map(fixRow).forEach((r) => { const gid = cleanGroupId(r.group_id); if (gid) rosterCount[gid] = (rosterCount[gid] || 0) + 1; });
 
-  DB.students = g('students').map((r) => { r = fixRow(r); return { ...r, group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }; });
+  DB.students = g('students').map((r) => { r = fixRow(r); return { ...r, group_id: cleanGroupId(r.group_id), gender: normGender(r.gender), birth_date: r.birth_date || extractBirthFromNID(r.national_id) }; });
   DB.groups = g('groups').map((r) => {
     r = fixRow(r);
     const gid = cleanGroupId(r.group_id);

@@ -837,10 +837,10 @@ window.animateCountUp = function (el, target, duration) {
 /* ───────────────────────── 4) طبقة البيانات (API + كاش) ───────────────────────── */
 
 const SHEETS = {
-  students: '01_students', groups: '02_groups', roundsOverview: '03_rounds_overview', roundSchedule: '04_round_schedule',
-  stationsUnits: '05_stations_units_draft', assignments: '06_assignments_round2', unregistered: '07_unregistered_round2',
-  round2Summary: '08_round2_summary', roundDates: '09_round_dates', fields: '10_fields',
-  issues: '00_data_issues', issuesR2: '00_data_issues_round2'
+  students: 'master_students', groups: '02_groups_r2', roundsOverview: '03_rounds_overview_r2', roundSchedule: '04_round_schedule_r2',
+  stationsUnits: '05_stations_units_draft_r2', assignments: '06_assignments_round2_r2', unregistered: '07_unregistered_round2_r2',
+  round2Summary: '08_round2_summary_r2', roundDates: '09_round_dates_r2', fields: '10_fields_r2',
+  issues: '00_data_issues_r2', issuesR2: '00_data_issues_round2_r2'
 };
 const REQUIRED = ['students', 'groups', 'roundSchedule', 'assignments', 'unregistered', 'round2Summary', 'stationsUnits', 'fields'];
 const CACHE_KEY = 'imtiaz_data_cache_v2';
@@ -868,9 +868,23 @@ function toRows(raw) {
   }
   return [];
 }
-function normalizeRows(raw) {
+function normalizeRows(raw, opts) {
+  opts = opts || {};
   return toRows(raw)
-    .map((r) => { const o = {}; Object.keys(r).forEach((k) => { o[normKey(k)] = normCell(r[k]); }); return o; })
+    .map((r) => {
+      const o = {};
+      Object.keys(r).forEach((k) => { o[normKey(k)] = normCell(r[k]); });
+      // R2: master_students exposes a single raw_code column (mixed short/full
+      // codes preserved as-is). Carry data_flag through silently for later use;
+      // do not display it yet. Names (Arabic/English variants) are kept as-is.
+      if (o.raw_code !== undefined && o.raw_code !== '') {
+        const c = String(o.raw_code).trim();
+        if (o.code_short === undefined || o.code_short === '') o.code_short = c;
+        if (o.student_code === undefined || o.student_code === '') o.student_code = c;
+      }
+      if (o.data_flag !== undefined) o.data_flag = String(o.data_flag).trim();
+      return o;
+    })
     .filter((o) => Object.keys(o).some((k) => o[k] !== ''));    // يحذف الصفوف الفارغة (شائعة في Google Sheets)
 }
 

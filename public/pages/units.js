@@ -20,7 +20,9 @@ function renderUnits(container) {
   Object.values(byUnit).flat().forEach(r => {
     const gid = (r.group_id || '').trim();
     if (!gid || gid === '0') { noGroupCount++; } else {
-      const sKey = `${gid}_${r.code_short}`;
+      // البند أ: مفتاح التجميع عبر فهرس الهوية الموحد — الصفوف غير المحلولة تحصل على مفتاح خام خاص بها
+      const st = resolveStudent(r);
+      const sKey = st ? studentKey(st) : `raw:${gid}:${String(r.code_short || r.student_code || r.full_name || '').trim()}`;
       studentsWithGroup.add(sKey);
       if (!studentUnitsMap[sKey]) studentUnitsMap[sKey] = [];
       studentUnitsMap[sKey].push(r.unit_name.trim());
@@ -117,8 +119,8 @@ function buildUnitCard(u, byUnit) {
             const grpLabel = s.group_id ? `<span class="cartouche-badge" style="font-size:0.74rem">جروب ${s.group_id}</span>` : `<span style="color:var(--c-rose)">بدون جروب</span>`;
             const issueNote = s.issue ? `<span title="${s.issue}" style="cursor:help; font-size:0.8rem">${ico('warning')}</span>` : '';
             const person = resolveStudent(s);
-            const sKey = person ? studentKey(person) : '';
-            const attrs = sKey ? act('student', { sid: sKey }) : '';
+            // البند أ: الصف غير المحلول يبقى قابلاً للضغط — كارت «بيانات الطالب» من الصف الخام بدل نقطة ميتة
+            const attrs = person ? act('student', { sid: studentKey(person) }) : rawAttrs(s);
             return `<li>${gIcon}<span class="clickable-student-name"${attrs} title="اضغط لفتح الملف الكامل للطالب">${esc(s.full_name || 'غير محدد')}</span><span class="student-code">${s.code_short || '—'}</span>${grpLabel}${issueNote}</li>`;
           }).join('')}
         </ul>

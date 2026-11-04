@@ -51,8 +51,8 @@ function buildGroupBlock(groupId, students, roundKey) {
     const gIcon = s.gender === 'M' ? `<span class="gender-m">${ico('male')}</span>` : s.gender === 'F' ? `<span class="gender-f">${ico('female')}</span>` : '';
     const person = resolveStudent(s);
     const name = window.ImtiazIdentity.displayName(s, person);
-    const sid = person ? studentKey(person) : '';
-    const attrs = sid ? act('student', { sid }) : '';
+    // البند أ: الصف غير المحلول يبقى قابلاً للضغط — كارت «بيانات الطالب» من الصف الخام بدل نقطة ميتة
+    const attrs = person ? act('student', { sid: studentKey(person) }) : rawAttrs(s);
     const conflict = window.ImtiazIdentity.groupConflict(groupId, person && person.group_id);
     const conflictHtml = conflict
       ? `<span class="badge badge-amber conflict-badge" title="الجروب في كشف غير المسجلين: ${esc(conflict.sourceGroup)} — في سجل الطلاب: ${esc(conflict.masterGroup)}">جروب ${esc(conflict.sourceGroup)} ≠ السجل ${esc(conflict.masterGroup)}</span>`

@@ -1166,6 +1166,28 @@ function buildDB(S) {
     });
     return set;
   };
+
+  /* ── البند أ: تعارضات الجروب (كشف الرايوند ٢ ≠ سجل الطلاب) تُسجَّل كصفوف قضايا
+     حتى تظهر في لوحة «قضايا البيانات» وصفحة التصدير — لا تعارض صامت.
+     كل طالب/صف يُسجَّل مرة واحدة فقط؛ تُعاد القائمة من جديد مع كل بناء للبيانات فلا تتضاعف. */
+  const conflictIssues = DB.issuesR2.slice();
+  const conflictSeen = Object.create(null);
+  DB.assignments.concat(DB.unregistered).forEach((row) => {
+    const s = resolveStudent(row);
+    const conflict = window.ImtiazIdentity.groupConflict(row.group_id, s && s.group_id);
+    if (!conflict) return;
+    const id = rowIdentity(row);
+    if (conflictSeen[id]) return;
+    conflictSeen[id] = true;
+    conflictIssues.push({
+      full_name: window.ImtiazIdentity.displayName(row, s),
+      code_short: (s && s.code_short) || (row.code_short || ''),
+      group_id: conflict.sourceGroup,
+      issue: 'تعارض جروب: كشف الدورة = ' + conflict.sourceGroup + '، سجل الطلاب = ' + conflict.masterGroup,
+      _synthetic: true
+    });
+  });
+  DB.issuesR2 = conflictIssues;
   DB.round2Summary = DB.round2Summary.map((r) => {
     const key = normRoundKey(r.round_key);
     if (!key || !Object.values(r2GroupField).includes(key)) return r;
@@ -1266,6 +1288,13 @@ window.btn = function (label, action, data, cls) {
 
 window._rawRows = [];
 
+// البند أ: لا نقاط ضغط ميتة — أي صف لا يُحلَّ إلى سجل طالب كامل يُسجَّل هنا
+// ويُفتح له كارت «بيانات الطالب» من الصف الخام عبر action «raw-student».
+window.rawAttrs = function (row) {
+  window._rawRows.push(row || {});
+  return act('raw-student', { ri: window._rawRows.length - 1 });
+};
+
 // يتكرر في كل نافذة: منع تمرير الصفحة خلف النافذة + إخفاء بحث الهيدر على الهاتف
 document.addEventListener('click', (e) => {
   const box = e.target.closest && e.target.closest('.modal-box');
@@ -1323,8 +1352,18 @@ document.addEventListener('input', (e) => {
 });
 
 window.openUnknownStudent = function (row, opts) {
-  const rows = [['الاسم', row.full_name], ['الكود', row.code_short], ['الجروب', row.group_id || 'غير محدد'], ['الوحدة / الراوند', row.unit_name || roundLabel(row.round_key)], ['الهاتف', formatPhone(row.phone)], ['ملاحظة', row.issue]].filter((r) => r[1]);
-  openModal('بيانات الطالب', `<div class="alert-item alert-amber static" style="margin-bottom:12px"><span class="alert-icon">${ico('info')}</span><div>هذا الاسم غير موجود في ملفات الجروبات، لذلك لا يتوفر له ملف كامل.</div></div>
+  const gender = row.gender ? (String(row.gender) === 'F' ? 'أنثى' : String(row.gender) === 'M' ? 'ذكر' : String(row.gender)) : '';
+  const rows = [
+    ['الاسم', row.full_name],
+    ['الكود', row.code_short],
+    ['الجروب', row.group_id || 'غير محدد'],
+    ['النوع', gender],
+    ['الوحدة / الراوند', row.unit_name || roundLabel(row.round_key)],
+    ['الهاتف', formatPhone(row.phone)],
+    ['البريد', row.email],
+    ['ملاحظة', row.issue]
+  ].filter((r) => r[1]);
+  openModal('بيانات الطالب', `<div class="alert-item alert-amber static" style="margin-bottom:12px"><span class="alert-icon">${ico('info')}</span><div>لم يتم العثور على سجل كامل لهذا الطالب — البيانات أدناه مأخوذة من صف الكشف مباشرة.</div></div>
     <div class="kv-list">${rows.map((r) => `<div class="kv"><span>${esc(r[0])}</span><strong>${esc(r[1])}</strong></div>`).join('')}</div>`, opts);
 };
 

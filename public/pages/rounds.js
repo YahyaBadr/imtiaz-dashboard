@@ -15,7 +15,8 @@ window.getRosterForRoundOrder = function (order) {
   const seen = {};
   const pushRow = (row, stationName) => {
     const code = String(row.code_short || '').trim();
-    const s = resolveStudent(row) || row;
+    const resolved = resolveStudent(row);
+    const s = resolved || row;
     // group_id يُؤخذ من مصدر البيانات الحالي (assignments/unregistered)، وليس من جدول students،
     // لأن group_id في students قد يختلف عن group_id في تسجيلات الرايوند ٢ (مثل نعمة عادل: 1.0 في assignments و 2 في students).
     const gid = cleanGroupId(row.group_id || '');
@@ -23,8 +24,11 @@ window.getRosterForRoundOrder = function (order) {
     const key = (s && s._identityKey) || (gid + '_' + code + '_' + (s.student_code || ''));
     if (seen[key]) return;
     seen[key] = true;
+    // البند أ: الصف غير المحلول يبقى قابلاً للضغط — كارت «بيانات الطالب» من الصف الخام بدل نقطة ميتة
+    const clickAttrs = resolved ? act('student', { sid: studentKey(resolved) }) : rawAttrs(row);
     list.push({
-      sid: s ? studentKey(s) : '',
+      sid: resolved ? studentKey(resolved) : '',
+      clickAttrs,
       name: rowName(row, s),
       gid, code: code || (s.code_short || ''),
       studentCode: s.student_code || '',
@@ -80,10 +84,10 @@ function unregisteredRow(u) {
   const name = rowName(u, s);
   const gid = cleanGroupId(u.group_id || '');
   const code = String(u.code_short || (s && s.code_short) || '').trim();
-  const sid = s ? studentKey(s) : '';
-  const nameHtml = sid
-    ? `<span class="clickable-student-name"${act('student', { sid })} title="اضغط لفتح الملف الكامل للطالب">${esc(name)}</span>`
-    : esc(name);
+  // البند أ: الصف غير المحلول يبقى قابلاً للضغط — كارت «بيانات الطالب» من الصف الخام بدل نقطة ميتة
+  const nameHtml = s
+    ? `<span class="clickable-student-name"${act('student', { sid: studentKey(s) })} title="اضغط لفتح الملف الكامل للطالب">${esc(name)}</span>`
+    : `<span class="clickable-student-name"${rawAttrs(u)} title="اضغط لعرض بيانات الكشف">${esc(name)}</span>`;
   return `
     <li class="slist-row">
       <span class="initials-avatar">${esc(getInitials(name))}</span>
@@ -136,13 +140,16 @@ function r2StudentsForKey(key) {
     if (field !== key) return;
     if (!(a.full_name || a.code_short)) return;
     const code = String(a.code_short || '').trim();
-    const s = resolveStudent(a) || a;
+    const resolved = resolveStudent(a);
+    const s = resolved || a;
     const k = (s && s._identityKey) || (gid + '_' + code + '_' + (a.student_code || ''));
     if (seen[k]) return;
     seen[k] = true;
     const conflict = window.ImtiazIdentity.groupConflict(gid, s.group_id);
     result.push({
-      sid: s ? studentKey(s) : '',
+      sid: resolved ? studentKey(resolved) : '',
+      // البند أ: الصف غير المحلول يبقى قابلاً للضغط — كارت «بيانات الطالب» من الصف الخام بدل نقطة ميتة
+      clickAttrs: resolved ? act('student', { sid: studentKey(resolved) }) : rawAttrs(a),
       name: rowName(a, s),
       gid, code: code || (s.code_short || ''),
       studentCode: s.student_code || a.student_code || '',
@@ -294,7 +301,7 @@ window.renderRound2Domain = function (container, domainKey) {
             <div class="unit-card-body">
               <ul class="unit-student-list">
                 ${unitStudents.map((st) => `
-                  <li data-action="student" data-sid="${esc(st.sid)}">
+                  <li${st.clickAttrs}>
                     <span class="initials-avatar">${esc(getInitials(st.name || ''))}</span>
                     <div class="unit-student-info">
                       <div class="unit-student-name">${esc(st.name || 'غير محدد')} ${conflictChip(st.conflict)}</div>
@@ -344,7 +351,7 @@ window.renderRound2Domain = function (container, domainKey) {
                       ${rot ? `<span class="badge rotation-badge rotation-${rot.key}">${esc(rot.label)}</span><br><span class="rotation-block">بلوك ${rot.blockNo}/${rot.totalBlocks}</span>` : '<span class="muted">—</span>'}
                     </td>`;
                     return `
-                    <tr class="clickable-row"${act('student', { sid: s.sid })} >
+                    <tr class="clickable-row"${s.clickAttrs} >
                       <td>
                         <span class="initials-avatar">${esc(getInitials(s.name || ''))}</span>
                         <strong>${esc(s.name || 'غير محدد')}</strong>
@@ -400,7 +407,7 @@ window.renderRound2Domain = function (container, domainKey) {
                 </thead>
                 <tbody>
                   ${students.map((s) => `
-                    <tr class="clickable-row"${act('student', { sid: s.sid })} >
+                    <tr class="clickable-row"${s.clickAttrs} >
                       <td>
                         <span class="initials-avatar">${esc(getInitials(s.name || ''))}</span>
                         <strong>${esc(s.name || 'غير محدد')}</strong>

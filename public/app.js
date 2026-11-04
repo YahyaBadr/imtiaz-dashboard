@@ -1860,6 +1860,11 @@ registerAction('goto-unit', (el) => {
   }, 120);
 });
 
+// تبديل فتح/إغلاق كارد الوحدة البيطرية عند الضغط عليه
+registerAction('toggle-unit', (el) => {
+  el.classList.toggle('open');
+});
+
 document.addEventListener('click', (e) => {
   const ov = e.target;
   if (ov.classList && ov.classList.contains('modal-overlay')) { Overlays.closeEl(ov); return; }          // الضغط على الخلفية

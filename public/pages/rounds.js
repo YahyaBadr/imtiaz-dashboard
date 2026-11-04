@@ -241,7 +241,182 @@ window.renderRound2Domain = function (container, domainKey) {
   const reg = parseInt(s.registered, 10) || students.length;
   const exp = parseInt(s.expected_students, 10) || 0;
   const miss = parseInt(s.not_registered, 10) || 0;
-  console.log('[R2 DEBUG] renderRound2Domain domainKey=', domainKey, 'students.count=', students.length, 'reg=', reg, 'exp=', exp, 'miss=', miss);
+
+  let contentHtml = '';
+  if (domainKey === 'units') {
+    /* واجهة الوحدات البيطرية: كارد لكل وحدة، وعند الضغط تظهر أسماء أهلها */
+    const grouped = {};
+    students.forEach((st) => {
+      const unit = st.station || 'غير محدد';
+      if (!grouped[unit]) grouped[unit] = [];
+      grouped[unit].push(st);
+    });
+    const unitNames = Object.keys(grouped).sort();
+    contentHtml = `
+      <div class="units-grid">
+        ${unitNames.map((unitName) => {
+          const unitStudents = grouped[unitName];
+          return `
+          <div class="unit-card" data-action="toggle-unit" data-unit="${esc(unitName)}" style="cursor:pointer;">
+            <div class="unit-card-header">
+              <span class="unit-card-ico">${iconSvg('hospital')}</span>
+              <div class="unit-card-info">
+                <div class="unit-card-name">${esc(unitName)}</div>
+                <div class="unit-card-count">${unitStudents.length} طالب/ة</div>
+              </div>
+            </div>
+            <div class="unit-card-body">
+              <ul class="unit-student-list">
+                ${unitStudents.map((st) => `
+                  <li data-action="student" data-sid="${esc(studentKey(st))}">
+                    <span class="initials-avatar">${esc(getInitials(st.name || ''))}</span>
+                    <div class="unit-student-info">
+                      <div class="unit-student-name">${esc(st.name || 'غير محدد')}</div>
+                      <div class="unit-student-sub">جروب ${esc(st.gid || '—')} · كود ${esc(st.code || '—')}</div>
+                    </div>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } else if (domainKey === 'equine_lab_fish') {
+    /* واجهة خيل/معامل/سمك: جدول مع عمود التناوب الحالي والبلوك */
+    contentHtml = `
+      <div class="two-col">
+        <section style="flex:2;">
+          <h3 class="section-title" style="margin-top:0;">${ico('users')} الطلاب المسجلون (${students.length})</h3>
+          <div class="card">
+            <div class="table-scroll">
+              <table class="table-cards">
+                <thead>
+                  <tr>
+                    <th>الاسم</th><th>الجروب</th><th>الكود</th><th>النوع</th><th>الوحدة</th><th>التناوب الآن</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${students.map((s) => {
+                    const rot = window.studentSubUnitNow ? window.studentSubUnitNow({...s, group_id: s.gid, code_short: s.code, student_code: s.studentCode}) : null;
+                    const rotationHtml = `<td class="rotation-cell">
+                      ${rot ? `<span class="badge rotation-badge rotation-${rot.key}">${esc(rot.label)}</span><br><span class="rotation-block">بلوك ${rot.blockNo}/${rot.totalBlocks}</span>` : '<span class="muted">—</span>'}
+                    </td>`;
+                    return `
+                    <tr class="clickable-row"${act('student', { sid: s.sid })} >
+                      <td>
+                        <span class="initials-avatar">${esc(getInitials(s.name || ''))}</span>
+                        <strong>${esc(s.name || 'غير محدد')}</strong>
+                      </td>
+                      <td><span class="cartouche-badge">جروب ${esc(s.gid || '—')}</span></td>
+                      <td class="num">${esc(s.code || '—')}</td>
+                      <td>${genderBadge(s.gender)}</td>
+                      <td>${esc(s.station || '—')}</td>
+                      ${rotationHtml}
+                    </tr>`;
+                  }).join('') || '<tr><td colspan="6" class="empty-note">لا يوجد طلاب مسجلين في هذا المجال.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+        <section style="flex:1;">
+          ${miss > 0 ? `
+            <h3 class="section-title">${ico('warning')} غير مسجلين (${miss})</h3>
+            <div class="card card-sm elite-unreg-card">
+              <div class="card-body">
+                <div class="elite-unreg-header">
+                  <span class="elite-unreg-count">${miss}</span>
+                  <span class="elite-unreg-label">طالب/ة غير مسجل في مواقع التدريب بالدورة الثانية</span>
+                </div>
+                <ul class="slist elite-slist">
+                  ${unreg.map((u) => {
+                    const s2 = resolveStudent(u) || u;
+                    return `
+                    <li class="slist-row">
+                      <span class="initials-avatar">${esc(getInitials(s2.full_name || ''))}</span>
+                      <span class="slist-main">
+                        <div class="slist-name">${esc(s2.full_name || 'غير محدد')}</div>
+                        <div class="slist-sub">جروب ${esc(cleanGroupId(s2.group_id || u.group_id || '')) || '—'} · كود ${esc(s2.code_short || u.code_short || '—')}</div>
+                      </span>
+                    </li>`;
+                  }).join('')}
+                </ul>
+              </div>
+            </div>
+          ` : `
+            <div class="card card-sm" style="text-align:center; padding:40px 20px; color:var(--c-green);">
+              ${ico('check')}
+              <h3 style="margin-top:12px;">جميع الطلاب مسجلون</h3>
+              <p style="color:var(--c-text-muted);">لا يوجد طلاب غير مسجلين في هذا المجال.</p>
+            </div>
+          `}
+        </section>
+      </div>`;
+  } else {
+    /* واجهة باقي المجالات (college, slaughter, poultry): جدول عادي */
+    contentHtml = `
+      <div class="two-col">
+        <section style="flex:2;">
+          <h3 class="section-title" style="margin-top:0;">${ico('users')} الطلاب المسجلون (${students.length})</h3>
+          <div class="card">
+            <div class="table-scroll">
+              <table class="table-cards">
+                <thead>
+                  <tr>
+                    <th>الاسم</th><th>الجروب</th><th>الكود</th><th>النوع</th><th>الوحدة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${students.map((s) => `
+                    <tr class="clickable-row"${act('student', { sid: s.sid })} >
+                      <td>
+                        <span class="initials-avatar">${esc(getInitials(s.name || ''))}</span>
+                        <strong>${esc(s.name || 'غير محدد')}</strong>
+                      </td>
+                      <td><span class="cartouche-badge">جروب ${esc(s.gid || '—')}</span></td>
+                      <td class="num">${esc(s.code || '—')}</td>
+                      <td>${genderBadge(s.gender)}</td>
+                      <td>${esc(s.station || '—')}</td>
+                    </tr>`).join('') || '<tr><td colspan="5" class="empty-note">لا يوجد طلاب مسجلين في هذا المجال.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+        <section style="flex:1;">
+          ${miss > 0 ? `
+            <h3 class="section-title">${ico('warning')} غير مسجلين (${miss})</h3>
+            <div class="card card-sm elite-unreg-card">
+              <div class="card-body">
+                <div class="elite-unreg-header">
+                  <span class="elite-unreg-count">${miss}</span>
+                  <span class="elite-unreg-label">طالب/ة غير مسجل في مواقع التدريب بالدورة الثانية</span>
+                </div>
+                <ul class="slist elite-slist">
+                  ${unreg.map((u) => {
+                    const s2 = resolveStudent(u) || u;
+                    return `
+                    <li class="slist-row">
+                      <span class="initials-avatar">${esc(getInitials(s2.full_name || ''))}</span>
+                      <span class="slist-main">
+                        <div class="slist-name">${esc(s2.full_name || 'غير محدد')}</div>
+                        <div class="slist-sub">جروب ${esc(cleanGroupId(s2.group_id || u.group_id || '')) || '—'} · كود ${esc(s2.code_short || u.code_short || '—')}</div>
+                      </span>
+                    </li>`;
+                  }).join('')}
+                </ul>
+              </div>
+            </div>
+          ` : `
+            <div class="card card-sm" style="text-align:center; padding:40px 20px; color:var(--c-green);">
+              ${ico('check')}
+              <h3 style="margin-top:12px;">جميع الطلاب مسجلون</h3>
+              <p style="color:var(--c-text-muted);">لا يوجد طلاب غير مسجلين في هذا المجال.</p>
+            </div>
+          `}
+        </section>
+      </div>`;
+  }
 
   container.innerHTML = `
     <div class="card card-sm domain-header-card" style="margin-bottom: var(--gap); border-right:4px solid var(--c-${domainTone(domain.key).replace('tone-','')})">
@@ -257,68 +432,8 @@ window.renderRound2Domain = function (container, domainKey) {
       </div>
     </div>
 
-    <div class="two-col">
-      <section style="flex:2;">
-        <h3 class="section-title" style="margin-top:0;">${ico('users')} الطلاب المسجلون (${students.length})</h3>
-        <div class="card">
-          <div class="table-scroll">
-            <table class="table-cards">
-              <thead>
-                <tr>
-                  <th>الاسم</th><th>الجروب</th><th>الكود</th><th>النوع</th><th>الوحدة</th>${domainKey === 'equine_lab_fish' ? '<th>التناوب الآن</th>' : ''}
-                </tr>
-              </thead>
-              <tbody>
-                ${students.map((s) => {
-                  let rotationHtml = '';
-                  if (domainKey === 'equine_lab_fish') {
-                    const rot = window.studentSubUnitNow ? window.studentSubUnitNow({...s, group_id: s.gid, code_short: s.code, student_code: s.studentCode}) : null;
-                    rotationHtml = `<td class="rotation-cell">
-                      ${rot ? `<span class="badge rotation-badge rotation-${rot.key}">${esc(rot.label)}</span><br><span class="rotation-block">بلوك ${rot.blockNo}/${rot.totalBlocks}</span>` : '<span class="muted">—</span>'}
-                    </td>`;
-                  }
-                  return `
-                  <tr class="clickable-row"${act('student', { sid: s.sid })} >
-                    <td>
-                      <span class="initials-avatar">${esc(getInitials(s.name || ''))}</span>
-                      <strong>${esc(s.name || 'غير محدد')}</strong>
-                    </td>
-                    <td><span class="cartouche-badge">جروب ${esc(s.gid || '—')}</span></td>
-                    <td class="num">${esc(s.code || '—')}</td>
-                    <td>${genderBadge(s.gender)}</td>
-                    <td>${esc(s.station || '—')}</td>
-                    ${rotationHtml}
-                  </tr>`;
-                }).join('') || `<tr><td colspan="${domainKey === 'equine_lab_fish' ? 6 : 5}" class="empty-note">لا يوجد طلاب مسجلين في هذا المجال.</td></tr>`}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <section style="flex:1;">
-        ${miss > 0 ? `
-          <h3 class="section-title">${ico('warning')} غير مسجلين (${miss})</h3>
-          <div class="card card-sm">
-            <ul class="slist">
-              ${unreg.map((u) => `
-                <li>
-                  <span class="initials-avatar">${esc(getInitials(u.full_name || ''))}</span>
-                  <span class="slist-main">
-                    <div class="slist-name">${esc(u.full_name || 'غير محدد')}</div>
-                    <div class="slist-sub">جروب ${esc(u.group_id || '—')} · كود ${esc(u.code_short || '—')}</div>
-                  </span>
-                </li>`).join('')}
-            </ul>
-          </div>
-        ` : `
-          <div class="card card-sm" style="text-align:center; padding:40px 20px; color:var(--c-green);">
-            ${ico('check')}
-            <h3 style="margin-top:12px;">جميع الطلاب مسجلون</h3>
-            <p style="color:var(--c-text-muted);">لا يوجد طلاب غير مسجلين في هذا المجال.</p>
-          </div>
-        `}
-      </section>
-    </div>`;
+    ${contentHtml}
+  `;
 };
 
 window.renderRound2Units = function (c) { renderRound2Domain(c, 'units'); };

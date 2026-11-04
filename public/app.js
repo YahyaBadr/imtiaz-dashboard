@@ -17,7 +17,7 @@ window.Gate = (function () {
   const SESSION_KEY = 'imtiaz_gate_session_v1';
   const LOCAL_KEY = 'imtiaz_gate_local_pass_v1';
   const ATTEMPTS_KEY = 'imtiaz_gate_attempts_v1';
-  const CACHE_DATA_KEY = 'imtiaz_data_cache_v2';        // كاش بيانات اللوحة (يُمسح عند القفل)
+  const CACHE_DATA_KEY = 'imtiaz_data_cache_v3_r2';        // كاش بيانات اللوحة (يُمسح عند القفل)
   let unlocked = false, idleTimer = null;
 
   const cfg = () => Object.assign({ ENABLED: true, PASSPHRASE: '', REMEMBER_HOURS: 12, AUTO_LOCK_MINUTES: 0, MAX_ATTEMPTS: 5, LOCKOUT_SECONDS: 30 }, CFG().GATE || {});
@@ -843,7 +843,7 @@ const SHEETS = {
   issues: '00_data_issues_r2', issuesR2: '00_data_issues_round2_r2'
 };
 const REQUIRED = ['students', 'groups', 'roundSchedule', 'assignments', 'unregistered', 'round2Summary', 'stationsUnits', 'fields'];
-const CACHE_KEY = 'imtiaz_data_cache_v2';
+const CACHE_KEY = 'imtiaz_data_cache_v3_r2';
 
 function normKey(k) { return String(k === null || k === undefined ? '' : k).replace(/^\uFEFF/, '').trim(); }
 function normCell(v) {

@@ -2,9 +2,9 @@
 
 /* ═════════════════════════════════════════════════════════════════════════════════
    البند 5 — صفحات الراوندات
-   الرايوند ٢ هو المحور المركزي للدورة الثانية.
+   راوند ٢ هو المحور المركزي للدورة الثانية.
    الإختياري = راوند ٥ (صفحة مستقلة).
-   الرايوندات ١ · ٣ · ٤ أماكن شاغرة.
+   راوندات ١ · ٣ · ٤ أماكن شاغرة.
    ════════════════════════════════════════════════════════════════════════════════ */
 
 /* ── كشف طلاب راوند برقمه ('1'..'4') من نفس مصادر اللوحة ── */
@@ -14,10 +14,12 @@ window.getRosterForRoundOrder = function (order) {
   if (!window.DB) return list;
   const seen = {};
   const pushRow = (row, stationName) => {
-    const gid = cleanGroupId(row.group_id || '');
     const code = String(row.code_short || '').trim();
-    if (!gid && !code) return;
     const s = resolveStudent(row) || row;
+    // عند وجود student_code متطابق بين الجدولين (مثل نعمة عادل كود 11012021100676)،
+    // نستخدم group_id من سجل الطالب الموحد وليس من مصدر التسجيل الذي قد يكون غير متسق.
+    const gid = cleanGroupId((s && s.student_code ? s.group_id : row.group_id) || '');
+    if (!gid && !code) return;
     const key = gid + '_' + code + '_' + (s.student_code || '');
     if (seen[key]) return;
     seen[key] = true;
@@ -33,11 +35,9 @@ window.getRosterForRoundOrder = function (order) {
 
   const schedRows = (DB.roundSchedule || []).filter((r) => String(r.round_order) === order);
   if (schedRows.length) {
-    // تسجيلات فردية من جدول التسجيلات لهذا الرايوند
     (DB.assignments || []).forEach((a) => {
       if (String(resolveRoundOrder(a)) === order && (a.full_name || a.code_short)) pushRow(a, a.unit_name || '');
     });
-    // باقي أعضاء كل جروب في هذا الرايوند (من جدول الطلاب حسب جدولة الجولات)
     schedRows.forEach((r) => {
       const gid = cleanGroupId(r.group_id);
       if (!gid) return;
@@ -91,10 +91,13 @@ function domainIcon(key) { const d = R2_DOMAINS.find((x) => x.key === key); retu
 function domainTone(key) { const d = R2_DOMAINS.find((x) => x.key === key); return d ? d.tone : 'tone-gold'; }
 
 /* الطلاب المسجلين في مجال معين للرايوند ٢ — يُربط عبر group_id من جدول الجولات */
+/* عند وجود student_code موحد (مثل نعمة عادل 11012021100676)، يُستخدم group_id من سجل الطالب
+   وليس group_id غير المتسق في جدول التسجيلات. */
 function r2StudentsForKey(key) {
   const groupFieldMap = window.buildR2GroupFieldMap ? window.buildR2GroupFieldMap() : {};
   return (DB.assignments || []).filter((a) => {
-    const gid = String(cleanGroupId(a.group_id || ''));
+    const s = resolveStudent(a);
+    const gid = s ? String(cleanGroupId(s.group_id || '')) : String(cleanGroupId(a.group_id || ''));
     const field = groupFieldMap[gid] || 'units';
     return field === key && (a.full_name || a.code_short);
   });
@@ -121,7 +124,6 @@ window.renderRound2Hub = function (container) {
   const rows = getRosterForRoundOrder('2');
   const groupsHere = [...new Set(rows.map((r) => r.gid).filter(Boolean))];
 
-  // غير المسجلين بشكل عام في الرايوند ٢ (جميع المجالات)
   const groupFieldMap = window.buildR2GroupFieldMap ? window.buildR2GroupFieldMap() : {};
   const unregR2 = (DB.unregistered || []).filter((u) => {
     const gid = String(cleanGroupId(u.group_id || ''));
@@ -135,7 +137,7 @@ window.renderRound2Hub = function (container) {
         <div class="round-hero-main">
           <span class="schedule-intro-ico" aria-hidden="true">${iconSvg('calendar')}</span>
           <div>
-            <div class="round-hero-title">الرايوند ٢ — الدورة الثانية (R2)</div>
+            <div class="round-hero-title">راوند ٢ — الدورة الثانية (R2)</div>
             <div class="round-hero-sub">${esc(d.start || '—')} إلى ${esc(d.end || '—')} · كل البيانات الخاصة بالدورة الثانية فقط</div>
           </div>
         </div>
@@ -176,7 +178,7 @@ window.renderRound2Hub = function (container) {
     </div>
 
     ${unregR2.length ? `
-      <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('warning')} غير المسجلين في الرايوند ٢</h2>
+      <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('warning')} غير المسجلين في راوند ٢</h2>
       <div class="card card-sm">
         <div class="card-body">
           <p>يوجد <strong class="num">${unregR2.length}</strong> طالب/ة غير مسجلين في مواقع التدريب بالدورة الثانية:</p>
@@ -210,7 +212,7 @@ window.renderRound2Domain = function (container, domainKey) {
     <div class="card card-sm domain-header-card" style="margin-bottom: var(--gap); border-right:4px solid var(--c-${domainTone(domain.key).replace('tone-','')})">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
         <div style="display:flex; align-items:center; gap:10px;">
-          <button type="button" class="btn btn-surface btn-sm" data-action="goto-page" data-page="round-2" style="margin-right:8px;">${ico('arrow-left')} رجوع للرايوند ٢</button>
+          <button type="button" class="btn btn-surface btn-sm" data-action="goto-page" data-page="round-2" style="margin-right:8px;">${ico('arrow-left')} رجوع لراوند ٢</button>
           <span class="r2-domain-ico ${domainTone(domain.key)}" aria-hidden="true" style="font-size:1.5rem;">${iconSvg(domainIcon(domain.key))}</span>
           <div>
             <div style="font-size:1.25rem; font-weight:700; color:var(--c-plum);">${esc(domain.label)} — الدورة الثانية (R2)</div>
@@ -274,7 +276,6 @@ window.renderRound2Domain = function (container, domainKey) {
     </div>`;
 };
 
-/* دوال عرض المجالات الفردية للرايوند ٢ */
 window.renderRound2Units = function (c) { renderRound2Domain(c, 'units'); };
 window.renderRound2College = function (c) { renderRound2Domain(c, 'college'); };
 window.renderRound2Equine = function (c) { renderRound2Domain(c, 'equine_lab_fish'); };
@@ -287,20 +288,20 @@ window.renderRound0Elective = function (container) {
   container.innerHTML = `
     <div class="card card-sm" style="text-align:center; padding:60px 20px;">
       <span class="schedule-intro-ico" aria-hidden="true" style="font-size:3rem; opacity:0.3;">${iconSvg('star')}</span>
-      <h2 style="margin-top:16px; color:var(--c-text-muted);">الرايوند الإختياري (رايوند ٥)</h2>
+      <h2 style="margin-top:16px; color:var(--c-text-muted);">الرايوند الإختياري (راوند ٥)</h2>
       <p style="color:var(--c-text-muted);">بيانات الرايوند الإختياري تُضاف لاحقاً في جدول مستقل.</p>
     </div>`;
 };
 
-/* ═══ الرايوندات ١ · ٣ · ٤ — أماكن شاغرة ═══ */
+/* ═══ راوندات ١ · ٣ · ٤ — أماكن شاغرة ═══ */
 window.renderRoundPlaceholder = function (container, order) {
   if (!container) return;
   const d = getRoundDates(order);
   container.innerHTML = `
     <div class="card card-sm" style="text-align:center; padding:60px 20px;">
       <span class="schedule-intro-ico" aria-hidden="true" style="font-size:3rem; opacity:0.3;">${iconSvg('calendar')}</span>
-      <h2 style="margin-top:16px; color:var(--c-text-muted);">الرايوند ${esc(order)}</h2>
-      <p style="color:var(--c-text-muted);">بيانات هذا الرايوند غير متوفرة بعد. سيتم عرضها عند إضافة بيانات الرايوند ${esc(order)}.</p>
+      <h2 style="margin-top:16px; color:var(--c-text-muted);">راوند ${esc(order)}</h2>
+      <p style="color:var(--c-text-muted);">بيانات هذا الراوند غير متوفرة بعد. سيتم عرضها عند إضافة بيانات راوند ${esc(order)}.</p>
       ${d.start ? `<p style="font-size:0.85rem; color:var(--c-text-muted); margin-top:8px;">التواريخ المقررة: ${esc(d.start)} إلى ${esc(d.end)}</p>` : ''}
     </div>`;
 };
@@ -350,7 +351,7 @@ window.openEliteStudentProfile = function (rawKey) {
           <div class="elite-fact"><span class="k">الهاتف</span><span class="v num" dir="ltr">${esc(phone || 'غير متوفر')}</span></div>
           ${subNow ? `<div class="elite-fact"><span class="k">تدوير خيل/معامل/سمك — الآن</span><span class="v"><strong>${esc(subNow.label)}</strong> · بلوك ${subNow.blockNo}/${subNow.totalBlocks}${rotSeq ? ' · التسلسل: ' + esc(window.subUnitSeqLabel(rotSeq.sequence)) : ''}</span></div>` : ''}
         </div>
-        <div class="elite-section-title">${ico('calendar')} رحلة الرايوندات والأقسام</div>
+        <div class="elite-section-title">${ico('calendar')} رحلة الراوندات والأقسام</div>
         <div class="elite-timeline">
           ${journey.map((st) => `
             <div class="elite-step ${st.status}">

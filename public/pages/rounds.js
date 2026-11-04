@@ -454,7 +454,7 @@ window.renderRound2Domain = function (container, domainKey) {
           <button type="button" class="btn btn-surface btn-sm" data-action="goto-page" data-page="round-2" style="margin-right:8px;">${ico('arrow-left')} رجوع لراوند ٢</button>
           <span class="r2-domain-ico ${domainTone(domain.key)}" aria-hidden="true" style="font-size:1.5rem;">${iconSvg(domainIcon(domain.key))}</span>
           <div>
-            <div style="font-size:1.25rem; font-weight:700; color:var(--c-plum);">${esc(domain.label)} — الدورة الثانية (R2)</div>
+            <div style="font-size:1.25rem; font-weight:700; color:var(--c-heading);">${esc(domain.label)} — الدورة الثانية (R2)</div>
             <div style="font-size:0.86rem; color:var(--c-text-muted); margin-top:2px">${reg} من ${exp} طالب/ة مسجلين${miss > 0 ? ' · ' + miss + ' غير مسجل' : ''}${declaredExp && declaredExp !== exp ? ' · العدد المعلن في الشيت: ' + declaredExp : ''}</div>
           </div>
         </div>

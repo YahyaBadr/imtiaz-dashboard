@@ -469,6 +469,9 @@
 
   function applyTheme(dark) {
     document.documentElement.classList.toggle('dark', dark);
+    /* بند ج: نثبّت data-theme مع الكلاس — كلا مصدري الحقيقة متزامنان
+       (أي قراءة خارجية أو جهاز يقرأ data-theme يجد القيمة الصحيحة) */
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     document.querySelectorAll('.t-ico-moon').forEach((el) => el.classList.toggle('hidden', dark));
     document.querySelectorAll('.t-ico-sun').forEach((el) => el.classList.toggle('hidden', !dark));
     const btn = document.getElementById('theme-toggle');

@@ -21,7 +21,7 @@ function renderNotRegistered(container) {
         <div style="display:flex; align-items:center; gap:10px;">
           <span class="empty-ico">${ico('warning')}</span>
           <div>
-            <div style="font-size:1.15rem; font-weight:700; color:var(--c-plum); display:flex; align-items:center; gap:8px">${lotusSvg}<span>الطلاب غير المسجلين بالدورة الثانية (R2)</span></div>
+            <div style="font-size:1.15rem; font-weight:700; color:var(--c-heading); display:flex; align-items:center; gap:8px">${lotusSvg}<span>الطلاب غير المسجلين بالدورة الثانية (R2)</span></div>
             <div style="font-size:0.86rem; color:var(--c-text-muted); margin-top:2px">الإجمالي: <strong class="num" style="color:var(--c-rose)">${totalMissing}</strong> طالب/ة لم يعتمد تسجيلهم حتى الآن</div>
           </div>
         </div>
@@ -66,7 +66,7 @@ function buildGroupBlock(groupId, students, roundKey) {
   return `
     <div style="margin-bottom: var(--gap)">
       <div class="nr-header">
-        <div style="display:flex; align-items:center; gap:8px"><span class="cartouche-badge">جروب ${groupId}</span><span style="font-weight:700; font-size:0.92rem; color:var(--c-plum)">طلاب غير مسجلين</span></div>
+        <div style="display:flex; align-items:center; gap:8px"><span class="cartouche-badge">جروب ${groupId}</span><span style="font-weight:700; font-size:0.92rem; color:var(--c-heading)">طلاب غير مسجلين</span></div>
         <div style="display:flex; gap:8px; align-items:center"><span class="badge badge-grey num">${students.length} طلاب</span>${btn('نسخ', 'copy-block', { block: blockId, label: 'جروب ' + groupId + ' — ' + roundLabel(roundKey) }, 'btn-surface btn-sm')}</div>
       </div>
       <div class="copyable-list"><div class="copyable-list-inner" id="${blockId}">${rows}</div></div>

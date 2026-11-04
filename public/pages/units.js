@@ -53,11 +53,11 @@ container.innerHTML = `
         <div style="display:flex; align-items:center; gap:10px;">
           <span style="font-size:1.4rem">${ico('hospital')}</span>
           <div>
-            <div style="font-size:1.15rem; font-weight:700; color:var(--c-plum); display:flex; align-items:center; gap:8px">
+            <div style="font-size:1.15rem; font-weight:700; color:var(--c-heading); display:flex; align-items:center; gap:8px">
               ${lotusSvg}
               <span><span class="num">${units.length}</span> وحدات بيطرية معتمدة (القاهرة والجيزة)</span>
             </div>
-            <div style="font-size:0.86rem; color:var(--c-text-muted); margin-top:2px">إجمالي الطلاب المسجلين بالوحدات: <strong class="num" style="color:var(--c-plum)">${shownTotal}</strong> طالب/ة</div>
+            <div style="font-size:0.86rem; color:var(--c-text-muted); margin-top:2px">إجمالي الطلاب المسجلين بالوحدات: <strong class="num" style="color:var(--c-heading)">${shownTotal}</strong> طالب/ة</div>
           </div>
         </div>
         <div style="font-size:0.86rem; color:var(--c-text-muted); background:var(--c-page-bg); padding:6px 14px; border-radius:var(--radius-badge); border:1px solid var(--c-border);">

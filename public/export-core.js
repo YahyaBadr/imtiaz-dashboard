@@ -250,11 +250,11 @@
           subTxt = (window.subUnitSeqLabel ? subUnitSeqLabel(rot.sequence) : '') + blocksTxt;
         }
       }
-      (perGroup[gid] = perGroup[gid] || []).push([secLabel, formatDate(r.start_date) || '—', formatDate(r.end_date) || '—', statusText(computeStatus(r.start_date, r.end_date)), subTxt || '—']);
+      (perGroup[gid] = perGroup[gid] || []).push([gid, secLabel, formatDate(r.start_date) || '—', formatDate(r.end_date) || '—', statusText(computeStatus(r.start_date, r.end_date)), subTxt || '—']);
       (perRound[r.round_order] = perRound[r.round_order] || []).push([gid, secLabel]);
     });
     const groupSheets = Object.keys(perGroup).sort((a, b) => N(a) - N(b)).map((gid) => ({
-      gid, rows: perGroup[gid].slice().sort((x, y) => String(x[1]).localeCompare(String(y[1])))
+      gid, rows: perGroup[gid].slice().sort((x, y) => String(x[2]).localeCompare(String(y[2])))
     }));
     const unitRegsByGid = {};
     (((window.getUnitAssignments ? window.getUnitAssignments() : []) || [])).forEach((row) => {

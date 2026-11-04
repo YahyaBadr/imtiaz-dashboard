@@ -475,7 +475,7 @@ body.no-scroll { overflow: hidden; }
    min-width:0 لنفس السبب؛ (3) شريط التمرير الرأسي للطبقة الثابتة كان يخصم من
    العرض المتاح. الحل: clip على المحور الأفقي + انكماش مرن لكل العناصر الحرجة. */
 html { overflow-x: clip; }
-.gate-overlay { position: fixed; inset: 0; z-index: 900; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: calc(18px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-left)) calc(18px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right)); background: linear-gradient(135deg, var(--c-plum) 0%, #40253F 55%, #1E121E 100%); overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; }
+.gate-overlay { position: fixed; inset: 0; z-index: 900; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: calc(18px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-left)) calc(18px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right)); background: linear-gradient(135deg, var(--c-plum) 0%, #40253F 55%, #1E121E 100%); overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable both-edges; overscroll-behavior: contain; }
 .gate-overlay > * { max-width: 100%; min-width: 0; }
 .gate-overlay.hidden { display: none !important; }
 .gate-card { background: var(--c-card-bg); border: 1.5px solid var(--c-gold-border); border-radius: var(--radius-card); box-shadow: 0 26px 60px rgba(20, 10, 20, 0.45); width: min(100%, 430px); max-width: 430px; margin-inline: auto; padding: 26px 22px 18px; animation: pageFadeIn 0.2s ease; }
@@ -657,7 +657,7 @@ html.dark .site-nav { background: #1E121E; }
     var(--e-grad-plum);
 }
 .gate-overlay::before {
-  content: ""; position: absolute; inset: -40%;
+  content: ""; position: fixed; inset: -40%; z-index: 0;   /* fixed: لا يساهم في مساحة تمرير الـoverlay (كان يسبب إزاحة أفقية) */
   background: conic-gradient(from 0deg, transparent 0 42%, rgba(227,167,60,.10) 50% 58%, transparent 66%);
   animation: gateSpin 26s linear infinite; pointer-events: none;
 }

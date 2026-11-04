@@ -34,6 +34,14 @@ function renderUnits(container) {
 
   const units = [...DB.stationsUnits].sort((a, b) => (parseInt(b.registered, 10) || 0) - (parseInt(a.registered, 10) || 0));
 
+  // حارس التصفير: لو كشف الأفراد فاضي بينما شيت الوحدات نفسه يعلن مسجلين → نعرض أرقام الشيت مع تنبيه، مش صفر صامت
+  const sheetTotal = units.reduce((acc, u) => acc + (parseInt(u.registered, 10) || 0), 0);
+  const sheetOnly = totalUnitRegistrations === 0 && sheetTotal > 0;
+  const shownTotal = sheetOnly ? sheetTotal : totalUnitRegistrations;
+  const sheetOnlyNote = sheetOnly
+    ? `<div class="alert-item alert-amber static" style="margin-top:10px"><span class="alert-icon">${ico('warning')}</span><div>الأرقام مأخوذة من شيت الوحدات (<strong class="num">${sheetTotal}</strong> مسجل/ة)، وكشف الأسماء غير متاح لأن صفوف التسجيلات لا تحمل اسم الوحدة/الراوند بصيغة مفهومة — راجع أعمدة شيت التسجيلات.</div></div>`
+    : '';
+
   // زخرفة اللوتس: أبعادها مضبوطة عبر CSS (svg.title-ornament) — لا !important هنا
   const lotusSvg = `<svg class="title-ornament" viewBox="0 0 24 14" aria-hidden="true"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
 
@@ -47,13 +55,14 @@ container.innerHTML = `
               ${lotusSvg}
               <span><span class="num">${units.length}</span> وحدات بيطرية معتمدة (القاهرة والجيزة)</span>
             </div>
-            <div style="font-size:0.86rem; color:var(--c-text-muted); margin-top:2px">إجمالي الطلاب المسجلين بالوحدات: <strong class="num" style="color:var(--c-plum)">${totalUnitRegistrations}</strong> طالب/ة</div>
+            <div style="font-size:0.86rem; color:var(--c-text-muted); margin-top:2px">إجمالي الطلاب المسجلين بالوحدات: <strong class="num" style="color:var(--c-plum)">${shownTotal}</strong> طالب/ة</div>
           </div>
         </div>
         <div style="font-size:0.86rem; color:var(--c-text-muted); background:var(--c-page-bg); padding:6px 14px; border-radius:var(--radius-badge); border:1px solid var(--c-border);">
           <strong>تفصيل التسجيل:</strong> <span class="num">${totalUnitRegistrations}</span> تسجيل = <span class="num">${uniqueStudentsCount}</span> طالب + <span class="num">${multiUnitCount}</span> طلاب في وحدتين + <span class="num">${noGroupCount}</span> غير موجودين في ملفات الجروبات
         </div>
       </div>
+      ${sheetOnlyNote}
     </div>
 
     <div class="units-grid" id="units-grid">

@@ -147,7 +147,7 @@ function renderSchedule(container) {
               ${roundCols.map((c) => `
                 <th>
                   <div class="gantt-head-title">${esc(c.title)}</div>
-                  <div class="gantt-head-dates num">${esc(c.dates)}</div>
+                  <div class="gantt-head-dates num">${escDates(c.dates)}</div>
                 </th>`).join('')}
             </tr>
           </thead>

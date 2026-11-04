@@ -173,7 +173,7 @@ window.openEliteStudentProfile = function (rawKey) {
               <span class="elite-bullet"></span>
               <div class="elite-step-content">
                 <div class="elite-step-top"><span class="elite-step-name">${esc(st.roundName)}</span>${statusBadge(st.status)}</div>
-                <div class="elite-step-dates num">${esc(st.dates)}</div>
+                <div class="elite-step-dates num">${escDates(st.dates)}</div>
                 <div class="elite-step-station">${esc(st.station)}</div>
               </div>
             </div>`).join('')}

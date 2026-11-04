@@ -16,9 +16,9 @@ window.getRosterForRoundOrder = function (order) {
   const pushRow = (row, stationName) => {
     const code = String(row.code_short || '').trim();
     const s = resolveStudent(row) || row;
-    // عند وجود student_code متطابق بين الجدولين (مثل نعمة عادل كود 11012021100676)،
-    // نستخدم group_id من سجل الطالب الموحد وليس من مصدر التسجيل الذي قد يكون غير متسق.
-    const gid = cleanGroupId((s && s.student_code ? s.group_id : row.group_id) || '');
+    // group_id يُؤخذ من مصدر البيانات الحالي (assignments/unregistered)، وليس من جدول students،
+    // لأن group_id في students قد يختلف عن group_id في تسجيلات الرايوند ٢ (مثل نعمة عادل: 1.0 في assignments و 2 في students).
+    const gid = cleanGroupId(row.group_id || '');
     if (!gid && !code) return;
     const key = gid + '_' + code + '_' + (s.student_code || '');
     if (seen[key]) return;
@@ -91,28 +91,29 @@ function domainIcon(key) { const d = R2_DOMAINS.find((x) => x.key === key); retu
 function domainTone(key) { const d = R2_DOMAINS.find((x) => x.key === key); return d ? d.tone : 'tone-gold'; }
 
 /* الطلاب المسجلين في مجال معين للرايوند ٢ — يُربط عبر group_id من جدول الجولات */
-/* عند وجود student_code موحد (مثل نعمة عادل 11012021100676)، يُستخدم group_id من سجل الطالب
-   وليس group_id غير المتسق في جدول التسجيلات. تُعيد كائنات معالجة بنفس بنية مخرجات
-   getRosterForRoundOrder حتى تظهر بيانات الطلبة (اسم، كود، نوع، وحدة) بشكل صحيح. */
+/* group_id يُؤخذ من جدول التسجيلات (assignments) لأنه المصدر الموثوق للرايوند ٢.
+// عند وجود student_code موحد (مثل نعمة عادل 11012021100676)، يُجلب الاسم والنوع من جدول الطلاب عبر resolveStudent.
+// تُعيد كائنات معالجة بنفس بنية مخرجات getRosterForRoundOrder حتى تظهر بيانات الطلبة بشكل صحيح. */
 function r2StudentsForKey(key) {
   const groupFieldMap = window.buildR2GroupFieldMap ? window.buildR2GroupFieldMap() : {};
   const result = [];
   const seen = {};
   (DB.assignments || []).forEach((a) => {
-    const s = resolveStudent(a) || a;
-    const gid = cleanGroupId((s && s.student_code ? s.group_id : a.group_id) || '');
+    // group_id من جدول التسجيلات (assignments) هو المصدر الموثوق لتحديد المجال للرايوند ٢
+    const gid = cleanGroupId(a.group_id || '');
     const field = groupFieldMap[gid] || 'units';
     if (field !== key) return;
     if (!(a.full_name || a.code_short)) return;
     const code = String(a.code_short || '').trim();
-    const k = gid + '_' + code + '_' + (s.student_code || '');
+    const k = gid + '_' + code + '_' + (a.student_code || '');
     if (seen[k]) return;
     seen[k] = true;
+    const s = resolveStudent(a) || a;
     result.push({
       sid: s ? studentKey(s) : '',
       name: s.full_name || a.full_name || 'غير محدد',
       gid, code: code || (s.code_short || ''),
-      studentCode: s.student_code || '',
+      studentCode: s.student_code || a.student_code || '',
       gender: s.gender || a.gender || '',
       station: a.unit_name || domainLabel(key) || roundLabel(a.round_key || '') || ''
     });
@@ -121,12 +122,11 @@ function r2StudentsForKey(key) {
   return result;
 }
 
-/* غير المسجلين في مجال معين للرايوند ٢ — يُربط عبر student_code الموحد ثم group_id من جدول الجولات */
+/* غير المسجلين في مجال معين للرايوند ٢ — يُربط عبر group_id من جدول الجولات */
 function r2UnregisteredForKey(key) {
   const groupFieldMap = window.buildR2GroupFieldMap ? window.buildR2GroupFieldMap() : {};
   return (DB.unregistered || []).filter((u) => {
-    const s = resolveStudent(u);
-    const gid = s ? String(cleanGroupId(s.group_id || '')) : String(cleanGroupId(u.group_id || ''));
+    const gid = String(cleanGroupId(u.group_id || ''));
     const field = groupFieldMap[gid] || 'units';
     return field === key;
   });

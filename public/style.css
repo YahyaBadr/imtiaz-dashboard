@@ -1024,6 +1024,8 @@ html.dark .rot-card { background: var(--c-surface); border-color: var(--c-border
 .ico-chip.tone-olive   { color: var(--c-olive);   background: rgba(91, 110, 79, 0.15);   box-shadow: inset 0 0 0 1px rgba(91, 110, 79, 0.28); }
 .ico-chip.tone-gold    { color: var(--c-gold-hover); background: var(--c-gold-light);    box-shadow: inset 0 0 0 1px var(--c-gold-border); }
 html.dark .ico-chip { filter: brightness(1.35); }
+html.dark .ico-chip.tone-rust { color: #C97B5A; }
+html.dark .badge-round-college { color: #C97B5A; }
 
 /* حجم موحّد لكل أيقونات SVG داخل الواجهة */
 .ico { width: 1em; height: 1em; display: inline-block; vertical-align: -0.16em; flex-shrink: 0; }
@@ -1247,6 +1249,20 @@ html.dark .g-chip { background: color-mix(in srgb, var(--c-card-bg) 70%, transpa
 .rhs { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 12px; padding: 8px 14px; text-align: center; min-width: 92px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
 .rhs-n { display: block; font-weight: 800; font-size: 1.15rem; color: var(--c-plum); line-height: 1.2; }
 .rhs > span:last-child { font-size: 0.74rem; color: var(--c-text-muted); }
+
+/* ── بطاقة غير المسجلين فخمة (Elite) ── */
+.elite-unreg-card { border-left: 4px solid var(--c-gold); }
+.elite-unreg-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--c-border); }
+.elite-unreg-count { font-weight: 800; font-size: 1.5rem; color: var(--c-plum); }
+.elite-unreg-label { font-size: 0.9rem; color: var(--c-text-muted); }
+.elite-slist { display: flex; flex-direction: column; gap: 8px; }
+.elite-slist .slist-row { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 10px; padding: 12px 14px; transition: all 0.15s ease; cursor: default; }
+.elite-slist .slist-row:hover { background: color-mix(in srgb, var(--c-gold) 8%, var(--c-surface)); border-color: var(--c-gold); }
+.elite-slist .initials-avatar { width: 40px; height: 40px; font-size: 1rem; flex-shrink: 0; }
+.elite-slist .slist-name { font-weight: 700; color: var(--c-text-main); font-size: 0.95rem; }
+.elite-slist .slist-sub { font-size: 0.82rem; color: var(--c-text-muted); }
+html.dark .elite-slist .slist-row { background: rgba(255,255,255,0.03); }
+html.dark .elite-slist .slist-row:hover { background: rgba(212, 166, 42, 0.12); }
 
 /* ── شبكة كروت الطلاب ── */
 .round-roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 12px; }

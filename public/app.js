@@ -1558,7 +1558,6 @@ const PAGE_RENDERERS = {
   'round-3': () => renderRoundPage('3'),
   'round-4': () => renderRoundPage('4'),
   'round-5': () => renderRound0Elective(document.getElementById('page-round-5')),
-  'units': () => renderUnits(document.getElementById('page-units')),
   'not-registered': () => renderNotRegistered(document.getElementById('page-not-registered'))
 };
 let _activePage = null;
@@ -1843,10 +1842,10 @@ const ACTIONS = {
 };
 window.registerAction = function (name, fn) { ACTIONS[name] = fn; };
 
-// فتح صفحة الوحدات البيطرية مع فتح وحدة بعينها وتمرير الشاشة إليها
+// فتح صفحة راوند ٢ (الوحدات البيطرية تظهر ككارد داخل الراوند)
 registerAction('goto-unit', (el) => {
   Overlays.closeAll();
-  showPage('units');
+  showPage('round-2');
   const want = String(el.dataset.unit || '').trim();
   setTimeout(() => {
     const cards = document.querySelectorAll('#units-grid .unit-card');

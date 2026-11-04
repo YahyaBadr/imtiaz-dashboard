@@ -114,18 +114,19 @@ function r2StudentsForKey(key) {
       gid, code: code || (s.code_short || ''),
       studentCode: s.student_code || '',
       gender: s.gender || a.gender || '',
-      station: a.unit_name || roundLabel(a.round_key || '') || ''
+      station: a.unit_name || domainLabel(key) || roundLabel(a.round_key || '') || ''
     });
   });
   result.sort((a, b) => (+a.gid || 0) - (+b.gid || 0) || String(a.code).localeCompare(String(b.code), 'ar', { numeric: true }));
   return result;
 }
 
-/* غير المسجلين في مجال معين للرايوند ٢ */
+/* غير المسجلين في مجال معين للرايوند ٢ — يُربط عبر student_code الموحد ثم group_id من جدول الجولات */
 function r2UnregisteredForKey(key) {
   const groupFieldMap = window.buildR2GroupFieldMap ? window.buildR2GroupFieldMap() : {};
   return (DB.unregistered || []).filter((u) => {
-    const gid = String(cleanGroupId(u.group_id || ''));
+    const s = resolveStudent(u);
+    const gid = s ? String(cleanGroupId(s.group_id || '')) : String(cleanGroupId(u.group_id || ''));
     const field = groupFieldMap[gid] || 'units';
     return field === key;
   });
@@ -197,18 +198,24 @@ window.renderRound2Hub = function (container) {
 
     ${unregR2.length ? `
       <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('warning')} غير المسجلين في راوند ٢</h2>
-      <div class="card card-sm">
+      <div class="card card-sm elite-unreg-card">
         <div class="card-body">
-          <p>يوجد <strong class="num">${unregR2.length}</strong> طالب/ة غير مسجلين في مواقع التدريب بالدورة الثانية:</p>
-          <ul class="slist">
-            ${unregR2.map((u) => `
-              <li>
-                <span class="initials-avatar">${esc(getInitials(u.full_name || ''))}</span>
+          <div class="elite-unreg-header">
+            <span class="elite-unreg-count">${unregR2.length}</span>
+            <span class="elite-unreg-label">طالب/ة غير مسجل في مواقع التدريب بالدورة الثانية</span>
+          </div>
+          <ul class="slist elite-slist">
+            ${unregR2.map((u) => {
+              const s = resolveStudent(u) || u;
+              return `
+              <li class="slist-row">
+                <span class="initials-avatar">${esc(getInitials(s.full_name || ''))}</span>
                 <span class="slist-main">
-                  <div class="slist-name">${esc(u.full_name || 'غير محدد')}</div>
-                  <div class="slist-sub">جروب ${esc(u.group_id || '—')} · كود ${esc(u.code_short || '—')}</div>
+                  <div class="slist-name">${esc(s.full_name || 'غير محدد')}</div>
+                  <div class="slist-sub">جروب ${esc(cleanGroupId(s.group_id || u.group_id || '')) || '—'} · كود ${esc(s.code_short || u.code_short || '—')}</div>
                 </span>
-              </li>`).join('')}
+              </li>`;
+            }).join('')}
           </ul>
         </div>
       </div>` : ''}

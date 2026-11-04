@@ -469,19 +469,26 @@ body.no-scroll { overflow: hidden; }
 /* ═══════════════════════════════════════════════════════════════════════════
    15) ACCESS GATE — بوابة الدخول
    ═══════════════════════════════════════════════════════════════════════════ */
-.gate-overlay { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; padding: calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom)); background: linear-gradient(135deg, var(--c-plum) 0%, #40253F 55%, #1E121E 100%); overflow-y: auto; }
+/* بند1: صفر تمرير أفقي في صفحة الدخول عند أي عرض (320→1900).
+   السببان الجذريان: (1) .gate-overlay تدفّقها flex بدون min-width:0 → الكارت
+   لا ينكمش تحت حجمه الأدنى ويتجاوز الـviewport؛ (2) .gate-row-2 input+زر بلا
+   min-width:0 لنفس السبب؛ (3) شريط التمرير الرأسي للطبقة الثابتة كان يخصم من
+   العرض المتاح. الحل: clip على المحور الأفقي + انكماش مرن لكل العناصر الحرجة. */
+html { overflow-x: clip; }
+.gate-overlay { position: fixed; inset: 0; z-index: 900; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: calc(18px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-left)) calc(18px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right)); background: linear-gradient(135deg, var(--c-plum) 0%, #40253F 55%, #1E121E 100%); overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; }
+.gate-overlay > * { max-width: 100%; min-width: 0; }
 .gate-overlay.hidden { display: none !important; }
-.gate-card { background: var(--c-card-bg); border: 1.5px solid var(--c-gold-border); border-radius: var(--radius-card); box-shadow: 0 26px 60px rgba(20, 10, 20, 0.45); width: 100%; max-width: 430px; padding: 26px 22px 18px; animation: pageFadeIn 0.2s ease; }
+.gate-card { background: var(--c-card-bg); border: 1.5px solid var(--c-gold-border); border-radius: var(--radius-card); box-shadow: 0 26px 60px rgba(20, 10, 20, 0.45); width: min(100%, 430px); max-width: 430px; margin-inline: auto; padding: 26px 22px 18px; animation: pageFadeIn 0.2s ease; }
 .gate-brand { text-align: center; margin-bottom: 14px; }
 .gate-logo { width: 62px; height: 62px; object-fit: contain; margin-bottom: 8px; }
 .gate-brand h2 { color: var(--c-plum); font-size: 1.12rem; font-weight: 800; line-height: 1.4; }
 .gate-sub { color: var(--c-text-muted); font-size: 0.8rem; margin-top: 4px; }
 .gate-note { color: var(--c-text-muted); font-size: 0.86rem; text-align: center; margin: 8px 0 16px; line-height: 1.7; }
-.gate-form { display: flex; flex-direction: column; gap: 10px; }
+.gate-form { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.gate-input { width: 100%; min-width: 0; box-sizing: border-box; padding: 13px 14px; font-size: 1.05rem; font-family: inherit; letter-spacing: 2px; text-align: center; color: var(--c-text-main); background: var(--c-surface); border: 1.5px solid var(--c-border); border-radius: 12px; -webkit-appearance: none; appearance: none; }
 .gate-extra { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--c-border); }
 .gate-extra.hidden { display: none !important; }
 .gate-label { font-size: 0.8rem; font-weight: 700; color: var(--c-plum); }
-.gate-input { width: 100%; padding: 13px 14px; font-size: 1.05rem; font-family: inherit; letter-spacing: 2px; text-align: center; color: var(--c-text-main); background: var(--c-surface); border: 1.5px solid var(--c-border); border-radius: 12px; -webkit-appearance: none; appearance: none; }
 .gate-input:focus { outline: none; border-color: var(--c-gold); background: #FFFFFF; box-shadow: 0 0 0 3px rgba(227, 167, 60, 0.22); }
 .gate-submit { width: 100%; justify-content: center; padding: 13px 16px; font-size: 1rem; font-weight: 800; min-height: 48px; }
 .gate-err { color: var(--c-rose); background: var(--c-rose-bg); border: 1px solid var(--c-rose-border); border-radius: 10px; padding: 9px 12px; font-size: 0.84rem; font-weight: 700; text-align: center; }
@@ -678,13 +685,14 @@ html.dark .site-nav { background: #1E121E; }
 .gate-input { border-radius: 14px; background: #FCFAF4; transition: border-color .2s, box-shadow .2s, background .2s; }
 .gate-input:focus { border-color: var(--c-gold); box-shadow: 0 0 0 4px rgba(227,167,60,.22); background: #fff; }
 .gate-submit { border-radius: 14px; letter-spacing: .2px; }
-.gate-row-2 { display: flex; gap: 10px; align-items: stretch; margin-top: 10px; }
-.gate-row-2 .gate-input { flex: 1; }
+.gate-row-2 { display: flex; gap: 10px; align-items: stretch; margin-top: 10px; min-width: 0; }
+.gate-row-2 .gate-input { flex: 1 1 0; min-width: 0; width: auto; }
 .gate-eye { flex: 0 0 48px; min-height: 48px; border-radius: 14px; border: 1.5px solid var(--c-border); background: var(--c-surface); font-size: 1.05rem; cursor: pointer; }
 .gate-eye:hover { border-color: var(--c-gold); }
-.gate-chip { display: inline-flex; align-items: center; gap: 6px; justify-content: center; margin: 2px auto 0;
+.gate-chip { display: inline-flex; align-items: center; gap: 6px; justify-content: center; margin: 2px auto 0; max-width: 100%; min-width: 0;
   padding: 5px 12px; border-radius: 999px; font-size: .72rem; font-weight: 800; letter-spacing: .2px;
   color: #6d5a1f; background: linear-gradient(180deg, #FBF2DC, #F3E4BC); border: 1px solid rgba(227,167,60,.45); }
+.gate-chip > span:not(.chip-ico) { min-width: 0; overflow-wrap: anywhere; }
 .gate-foot { gap: 6px 16px; }
 .gate-link { font-size: .8rem; }
 
@@ -799,6 +807,15 @@ html.dark .site-nav { background: #1E121E; }
 .export-scope::before { content: "○ "; color: var(--c-text-muted); }
 .export-scope.active::before { content: "◉ "; color: var(--c-gold); }
 
+/* بند 3 — قائمتا الجروب/الراوند داخل قائمة التصدير (تعمل في الثيمَين، بلا تجاوز عرض) */
+.export-pick {
+  display: block; width: 100%; box-sizing: border-box; min-width: 0;
+  margin: 0 0 6px; padding: 8px 10px; border-radius: 10px;
+  border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text-main);
+  font-family: inherit; font-size: .82rem; font-weight: 700; cursor: pointer;
+}
+html.dark .export-pick { background: #241C2A; color: var(--c-text-main); border-color: var(--c-border); }
+
 /* حالة الزر أثناء التوليد: spinner + تعطيل */
 #export-btn[disabled] { cursor: progress; opacity: .75; }
 #export-btn.spinning .btn-ico:first-child { animation: exportSpin 0.9s linear infinite; transform-origin: center; }
@@ -895,6 +912,17 @@ html.dark .btn-surface,
 html.dark .breadcrumb-bar a,
 html.dark .breadcrumb-bar button,
 html.dark th:hover { color: var(--c-text-main); }
+
+/* بند2(ب): btn-surface كان يرسم بخلفية بيضاء ثابتة في الداكن (قاعدة السطر 231)
+   بينما قاعدته هنا تعالج النص فقط → نص فاتح فوق أبيض = غير مرئي.
+   الآن الخلفية والنص معاً: #EDE6F0 فوق #2A2130 ≈ تباين 9.6:1 (≥4.5). */
+html.dark .btn-surface { background: var(--c-surface); border-color: var(--c-border); }
+html.dark .btn-surface:hover { background: #332A3B; border-color: var(--c-border-gold); }
+
+/* بند2(أ): الكروت المعلوماتية العلوية كانت تحمل inline style بخلفية بيضاء
+   تتجاوز html.dark .card — صارت كلاسات، فتطابق أرضية سطح الثيم الداكن. */
+html.dark .units-intro-card,
+html.dark .nreg-intro-card { background: var(--c-card-bg); border-color: var(--c-border); }
 
 /* أزرار ذهبية: النص البلاّوم الداكن مقروء فوق الذهبي في الوضعين — لا تغيير */
 
@@ -1205,5 +1233,85 @@ html.dark .g-chip { background: color-mix(in srgb, var(--c-card-bg) 70%, transpa
   .site-nav { padding-inline: env(safe-area-inset-left) env(safe-area-inset-right); }
   .main-content { padding-bottom: calc(var(--gap) + env(safe-area-inset-bottom)); }
   .toast, .verify-badge { bottom: calc(12px + env(safe-area-inset-bottom)); }
+}
+
+
+/* ═══════════ البند 5 — صفحة كل راوند + بروفايل الطالب «elite» ═══════════ */
+
+/* ── هيرو الراوند ── */
+.round-hero-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; min-width: 0; }
+.round-hero-main { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 260px; }
+.round-hero-title { font-weight: 800; font-size: 1.06rem; color: var(--c-plum); line-height: 1.3; }
+.round-hero-sub { font-size: 0.85rem; color: var(--c-text-muted); overflow-wrap: anywhere; }
+.round-hero-stats { display: flex; align-items: stretch; gap: 10px; flex-wrap: wrap; }
+.rhs { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 12px; padding: 8px 14px; text-align: center; min-width: 92px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.rhs-n { display: block; font-weight: 800; font-size: 1.15rem; color: var(--c-plum); line-height: 1.2; }
+.rhs > span:last-child { font-size: 0.74rem; color: var(--c-text-muted); }
+
+/* ── شبكة كروت الطلاب ── */
+.round-roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 12px; }
+.round-student-card { text-align: right; background: var(--c-card-bg); border: 1px solid var(--c-border); border-radius: var(--radius-card); box-shadow: var(--shadow-xs); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; font: inherit; color: inherit; min-width: 0; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease; }
+.round-student-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); border-color: var(--c-gold); }
+.round-student-card:focus-visible { outline: 2px solid var(--c-gold); outline-offset: 2px; }
+.rsc-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.rsc-id { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.rsc-name { font-weight: 700; font-size: 0.94rem; color: var(--c-text-main); overflow-wrap: anywhere; }
+.rsc-sub { font-size: 0.78rem; color: var(--c-text-muted); }
+.rsc-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.rsc-unit { font-size: 0.76rem; color: var(--c-plum); background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius-badge); padding: 1px 8px; overflow-wrap: anywhere; }
+
+/* ── بروفايل elite ── */
+.elite-profile-overlay { z-index: 70; }
+.elite-card { background: var(--c-card-bg); border: 1.5px solid var(--c-gold-border); border-radius: 18px; box-shadow: 0 26px 60px rgba(20, 10, 20, .45); width: min(100% - 20px, 560px); max-height: min(88vh, 780px); display: flex; flex-direction: column; overflow: hidden; animation: pageFadeIn .18s ease; min-width: 0; }
+.elite-head { position: relative; background: linear-gradient(135deg, #2B1A2B 0%, #1E121E 60%, #241726 100%); border-bottom: 2px solid var(--c-gold); padding: 20px 20px 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; }
+.elite-head-inner { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1; }
+.elite-avatar { background: rgba(227, 167, 60, .18); color: var(--c-gold); border: 1.5px solid var(--c-gold); flex: 0 0 auto; }
+.elite-id { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.elite-name { margin: 0; font-weight: 800; font-size: clamp(1.06rem, 4.5vw, 1.35rem); color: #F6EFE3; line-height: 1.35; overflow-wrap: anywhere; }
+.elite-code-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.elite-code { font-weight: 800; font-size: .92rem; letter-spacing: .3px; color: var(--c-gold); background: rgba(227, 167, 60, .12); border: 1px solid rgba(227, 167, 60, .45); border-radius: var(--radius-pill); padding: 2px 12px; direction: ltr; }
+.elite-body { padding: 16px 20px 20px; overflow-y: auto; overflow-x: hidden; min-width: 0; }
+.elite-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 10px; margin-bottom: 6px; }
+.elite-fact { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.elite-fact .k { font-size: .74rem; color: var(--c-text-muted); }
+.elite-fact .v { font-size: .9rem; color: var(--c-text-main); font-weight: 600; overflow-wrap: anywhere; }
+.elite-section-title { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: .95rem; color: var(--c-plum); margin: 16px 0 10px; }
+.elite-section-title .ico { width: 18px; height: 18px; }
+
+/* ── timeline الرحلة ── */
+.elite-timeline { position: relative; display: flex; flex-direction: column; gap: 12px; padding-inline-start: 6px; min-width: 0; }
+.elite-timeline::before { content: ""; position: absolute; inset-block: 8px; inset-inline-start: 12px; width: 2px; background: linear-gradient(180deg, var(--c-gold), var(--c-border)); border-radius: 2px; }
+.elite-step { position: relative; display: flex; gap: 14px; min-width: 0; }
+.elite-bullet { flex: 0 0 auto; width: 14px; height: 14px; margin-top: 4px; border-radius: 50%; background: var(--c-card-bg); border: 2.5px solid var(--c-gold); box-shadow: 0 0 0 3px var(--c-card-bg); z-index: 1; }
+.elite-step.done .elite-bullet { background: var(--c-gold); }
+.elite-step.upcoming .elite-bullet { border-color: var(--c-border); }
+.elite-step-content { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 12px; padding: 10px 14px; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.elite-step.current .elite-step-content { border-color: var(--c-gold-border); box-shadow: var(--shadow-xs); }
+.elite-step-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.elite-step-name { font-weight: 700; font-size: .9rem; color: var(--c-text-main); overflow-wrap: anywhere; }
+.elite-step-dates { font-size: .78rem; color: var(--c-text-muted); direction: ltr; text-align: right; }
+.elite-step-station { font-size: .82rem; color: var(--c-plum); overflow-wrap: anywhere; }
+
+/* ── الوضع الداكن ── */
+html.dark .round-hero-title, html.dark .rsc-unit { color: var(--c-text-main); }
+html.dark .rhs { background: var(--c-surface); border-color: var(--c-border); }
+html.dark .rhs-n { color: #F0D9A8; }
+html.dark .round-student-card { background: var(--c-card-bg); border-color: var(--c-border); }
+html.dark .elite-card { background: var(--c-card-bg); border-color: rgba(227, 167, 60, .55); }
+html.dark .elite-head { background: linear-gradient(135deg, #17101B 0%, #0F0A13 60%, #150E18 100%); }
+html.dark .elite-name { color: #F6EFE3; }
+html.dark .elite-fact { background: var(--c-surface); border-color: var(--c-border); }
+html.dark .elite-fact .v { color: var(--c-text-main); }
+html.dark .elite-section-title { color: #F0D9A8; }
+html.dark .elite-step-content { background: var(--c-surface); border-color: var(--c-border); }
+html.dark .elite-step-name { color: var(--c-text-main); }
+html.dark .elite-step-station { color: var(--c-text-main); }
+html.dark .elite-bullet { background: var(--c-card-bg); }
+
+/* ── الموبايل ── */
+@media (max-width: 480px) {
+  .elite-head { padding: 16px 14px 14px; }
+  .elite-body { padding: 14px; }
+  .round-student-card { padding: 12px 14px; }
 }
 

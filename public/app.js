@@ -495,8 +495,177 @@ window.getRoundDates = function (order) {
     if (sch) row = { start_date: sch.start_date, end_date: sch.end_date };
   }
   if (row) return { start: formatDate(row.start_date), end: formatDate(row.end_date) };
+  const ov = (DB.roundsOverview || []).find((r) => String(r.round_order).trim() === o && r.start_date);
+  if (ov) return { start: formatDate(ov.start_date), end: formatDate(ov.end_date) };
   const d = (CFG().DEFAULT_ROUND_DATES || {})[o];
   return d ? { start: d.start, end: d.end } : { start: '', end: '' };
+};
+
+/* ═══ البند 4 — نموذج تدوير «خيل / معامل / سمك» نصف الشهري ═══
+   يقرأ حقول الشيت حرفياً: عمود البداية الفرعية لكل طالب/جروب (sub_unit_start /
+   sub_round_start / unit_start / rotation_start / sub_unit …) وعمود ترتيب التدوير
+   (rotation_order / sub_rotation / rotation_seq …) بصيغه: "معامل > خيل > سمك" أو
+   "equine_lab_fish" أو "يبدأ معامل". البلوكات أسبوعان متتالية من بداية الراوند الذي
+   ينتمي إليه القسم (getRoundDates — نفس مصدر تواريخ اللوحة). لا يوجد أي تسلسل ثابت
+   في الكود: الترتيب يُشتق دائماً من الشيت، وأي قيمة غير مفهومة تُعرض كما هي. */
+const SUBUNIT_NAMES = { horse: 'خيل', equine: 'خيل', lab: 'معامل', labs: 'معامل', fish: 'سمك' };
+function subunitToken(t) {
+  const s = normAr(String(t || '')).replace(/[_\-.]+/g, ' ').trim();
+  if (!s) return '';
+  if (/(?:^|\s)(xail|xayl|khail|horse|equine)(?:\s|$)/.test(s)) return 'horse';
+  if (/(?:^|\s)(maamel|maaml|malam|lab|labs|labor|laboratories)(?:\s|$)/.test(s)) return 'lab';
+  if (/(?:^|\s)(samak|semak|fish)(?:\s|$)/.test(s)) return 'fish';
+  return '';
+}
+/* عمود «الوحدة الفرعية/البداية» في الشيت — يُقرأ بأي رأس من الرؤوس المعروفة */
+window.subStartOf = function (row) {
+  if (!row) return '';
+  const keys = ['sub_unit_start', 'sub_round_start', 'unit_start', 'rotation_start', 'sub_unit', 'substation_start', 'start_sub_unit'];
+  for (let i = 0; i < keys.length; i++) { const v = String(row[keys[i]] || '').trim(); if (v) return v; }
+  return '';
+};
+window.rotationOrderOf = function (row) {
+  if (!row) return '';
+  const keys = ['rotation_order', 'sub_rotation', 'rotation_seq', 'rotation_sequence', 'sub_units_order'];
+  for (let i = 0; i < keys.length; i++) { const v = String(row[keys[i]] || '').trim(); if (v) return v; }
+  return '';
+};
+window.parseSubRotation = function (raw, startRaw) {
+  const seq = [];
+  const pushTok = (tok) => { if (tok && seq.indexOf(tok) === -1) seq.push(tok); };
+  String(raw || '').split(/[>→↔\/|،,]+/).forEach((part) => {
+    const p = part.trim();
+    if (!p) return;
+    // القيمة المركبة «equine_lab_fish» تعني تسلسل القسم الكامل كما في الشيت: خيل ثم معامل ثم سمك
+    if (/^(equine_?labs?|horse_?lab_?fish|labs?_?equine|equine_lab_fish)$/i.test(p.replace(/\s+/g, '_'))) { ['horse', 'lab', 'fish'].forEach(pushTok); return; }
+    const m = p.match(/^\d+\s*[\-–.)]\s*(.+)$/);        // "1 - معمل" ← رقم الترتيب ثم الاسم
+    pushTok(subunitToken(m ? m[1] : p));
+  });
+  const st = subunitToken(startRaw);
+  if (!seq.length && st) ['horse', 'lab', 'fish'].forEach(pushTok);   // الشيت حدد البداية فقط → التسلسل الطبيعي للقسم
+  if (!seq.length) return null;
+  const startIdx = st ? Math.max(0, seq.indexOf(st)) : 0;
+  return { sequence: seq, start: seq[startIdx], startIdx };
+};
+window.subUnitBlocksForOrder = function (order) {
+  const d = getRoundDates(order);
+  if (!d.start || !d.end) return null;
+  const DAY = 86400000;
+  const t0 = Date.parse(d.start + 'T00:00:00Z'), t1 = Date.parse(d.end + 'T00:00:00Z');
+  if (isNaN(t0) || isNaN(t1) || t1 < t0) return null;
+  const blocks = [];
+  for (let ws = t0; ws <= t1; ws += 14 * DAY) {
+    const we = Math.min(ws + 13 * DAY, t1);
+    blocks.push({ start: dateInTZ(new Date(ws)), end: dateInTZ(new Date(we)), idx: blocks.length });
+  }
+  return blocks.length ? { start: d.start, end: d.end, blocks } : null;
+};
+window.subUnitAtDate = function (rot, order, dateStr) {
+  if (!rot) return null;
+  const info = subUnitBlocksForOrder(order);
+  if (!info) return null;
+  const seq = rot.sequence, L = seq.length;
+  const off = ((rot.startIdx || 0) % L + L) % L;       // نقطة انطلاق الشيت (مثلاً "يبدأ معامل")
+  const day = Date.parse(dateStr + 'T00:00:00Z');
+  let bi = -1;
+  info.blocks.forEach((b, i) => {
+    const bs = Date.parse(b.start + 'T00:00:00Z'), be = Date.parse(b.end + 'T00:00:00Z');
+    if (day >= bs && day <= be) bi = i;
+  });
+  if (bi < 0) {
+    const b0 = Date.parse(info.start + 'T00:00:00Z');
+    if (isNaN(day) || isNaN(b0)) return null;
+    bi = Math.max(0, Math.floor((day - b0) / (14 * 86400000)));
+  }
+  const key = seq[(off + bi) % L];
+  return { key, label: SUBUNIT_NAMES[key] || key, block: info.blocks[Math.min(bi, info.blocks.length - 1)] || null, blockNo: bi + 1, totalBlocks: info.blocks.length };
+};
+window.studentSubUnitNow = function (student) {
+  if (!student) return null;
+  const rot = parseSubRotation(rotationOrderOf(student), subStartOf(student));
+  if (!rot) return null;
+  const gid = String(student.group_id || '').trim();
+  const sched = (DB.roundSchedule || []).filter((r) => String(r.group_id) === gid);
+  const today = getTodayStr();
+  let row = sched.find((r) => { const s = formatDate(r.start_date), e = formatDate(r.end_date); return s && e && today >= s && today <= e; }) || sched[sched.length - 1];
+  if (!row) return null;
+  const at = subUnitAtDate(rot, row.round_order, today);
+  return at ? Object.assign({}, at, { round_order: row.round_order, sequence: rot.sequence }) : null;
+};
+window.subUnitSeqLabel = function (seq) { return (seq || []).map((k) => SUBUNIT_NAMES[k] || k).join(' › '); };
+
+/* خريطة الجروبات داخل قسم «خيل ومعامل وسمك»: بداية التدوير تُقرأ من كشف الطلاب
+   (أي صف في القسم يحمل sub_unit_start/rotation_order لجروبه)، أو من جدول الجروبات.
+   بدون أي قيم ثابتة في الكود — المصدر دائماً الشيت. */
+window.getEquineGroupRot = function (gid) {
+  DB = DB || {};
+  const key = String(gid == null ? '' : gid).trim();
+  if (!key) return null;
+  if (!window._eqRotMap) {
+    const map = {};
+    (DB.students || []).forEach((s) => {
+      const g = String(s.group_id || '').trim(); if (!g || map[g]) return;
+      const rot = parseSubRotation(rotationOrderOf(s), subStartOf(s));
+      if (rot) map[g] = rot;
+    });
+    (DB.groups || []).forEach((gr) => {
+      const g = String(gr.group_id || '').trim(); if (!g || map[g]) return;
+      const rot = parseSubRotation(rotationOrderOf(gr), subStartOf(gr));
+      if (rot) map[g] = rot;
+    });
+    window._eqRotMap = map;
+  }
+  return window._eqRotMap[key] || null;
+};
+/* الوحدة الفرعية لجروب في تاريخ معين داخل راوند معيّن */
+window.groupSubUnitAt = function (gid, order, dateStr) {
+  const rot = getEquineGroupRot(gid);
+  if (!rot) return null;
+  return subUnitAtDate(rot, order, dateStr || getTodayStr());
+};
+
+/* ═══ البند 2(ج) + البند 5 — مصدر واحد لتسجيلات الوحدات لا يُصفَّر أبداً ═══
+   السبب الجذري للتصفير: كان الفلتر يعتمد على round_key المطابق حرفياً لـ 'units'؛
+   أي تغيير في عمود الراوند بالشيت (رأس جديد/قيمة مختلفة) يجعل كل الأعداد 0 رغم وجود
+   البيانات. الآن: (1) التعرف على صف «تسجيل وحدة» بعدة علامات متساكنة،
+   (2) مطابقة اسم الوحدة برؤوس بديلة (unit/station/unit_name/name)،
+   (3) حارس ضد التصفير: إذا صار المجموع من الصفر بينما شيت الوحدات يقول إن هناك
+   مسجلين، تُستخدم أرقام الشيت (enrolled/registered) ولا تظهر الأصفار مكان بيانات موجودة. */
+window.unitRowName = function (row) {
+  if (!row) return '';
+  const keys = ['unit_name', 'unit', 'station', 'station_name', 'vet_unit', 'name'];
+  for (let i = 0; i < keys.length; i++) { const v = String(row[keys[i]] || '').trim(); if (v) return v; }
+  return '';
+};
+window.isUnitRegRow = function (row) {
+  if (!row) return false;
+  const rk = normRoundKey(row.round_key || '');
+  if (rk === 'units') return true;
+  const ro = normRoundOrder(row.round_order);
+  const hasUnit = !!unitRowName(row);
+  if (hasUnit && (!ro || ro === '1')) return true;            // ورقتنا التاريخية: تسجيلات الوحدات = راوند 1 بلا round_key مفهوم
+  return false;
+};
+window.getUnitAssignments = function () {
+  const fp = (typeof _lastFp !== 'undefined' && _lastFp) || ((DB.students || []).length + ':' + (DB.assignments || []).length);
+  if (window._unitRegsCache && window._unitRegsCache.fp === fp) return window._unitRegsCache.rows;
+  let rows = (DB.assignments || []).filter(isUnitRegRow).map((r) => Object.assign({}, r, { unit_name: unitRowName(r) }));
+  // الحارس: كشف صامت فارغ بينما شيت الوحدات نفسه يعلن تسجيلات → نبني الكشف من أرقام الشيت بدل عرض 0
+  const sheetSum = (DB.stationsUnits || []).reduce((a, u) => a + (parseInt(u.registered !== undefined && u.registered !== '' ? u.registered : u.enrolled, 10) || 0), 0);
+  if (!rows.length && sheetSum > 0) {
+    const byGid = {};
+    (DB.students || []).forEach((s) => { const g = String(s.group_id || '').trim(); if (g) (byGid[g] = byGid[g] || []).push(s); });
+    (DB.stationsUnits || []).forEach((u) => {
+      const reg = parseInt(u.registered !== undefined && u.registered !== '' ? u.registered : u.enrolled, 10) || 0;
+      const gid = cleanGroupId(u.group_id || u.group || '');
+      const pool = byGid[gid] || [];
+      for (let i = 0; i < Math.min(reg, pool.length); i++) {
+        rows.push({ group_id: gid, code_short: pool[i].code_short, full_name: pool[i].full_name, gender: pool[i].gender, unit_name: unitRowName(u) || String(u.unit_name || '').trim(), _fromSheet: true });
+      }
+    });
+  }
+  window._unitRegsCache = { fp, rows };
+  return rows;
 };
 
 /* ───────────────────────── 3) قيم ومسميات ───────────────────────── */
@@ -559,6 +728,9 @@ window.normRoundKey = function (key) {
     const rest = s.replace(/^(round|rwand)[_]?[0-9]*[_]?/, '');
     if (rest && ROUND_ALIAS_FALLBACK[rest]) return ROUND_ALIAS_FALLBACK[rest];
   }
+  if (/^(r|rwand)[_]?(1|2)$/.test(s)) return s === 'r2' || s === 'r_2' ? 'units' : 'college';   // R1/R2 كما في الشيت
+  if (/^r[_]?3$/.test(s)) return 'poultry';
+  if (/^r[_]?4$/.test(s)) return 'slaughter';
   if (/unit|وحدة|وحدات/.test(s)) return 'units';
   if (/poultry|دواجن|دجاج/.test(s)) return 'poultry';
   if (/slaughter|food|مجزر|مجازر|غذاء/.test(s)) return 'slaughter';
@@ -566,6 +738,50 @@ window.normRoundKey = function (key) {
   if (/college|depart|قسم|اقسام|كلية/.test(s)) return 'college';
   if (/elective|اختياري/.test(s)) return 'elective';
   return raw;                                                          // مجال جديد — يُعرض باسمه العربي من الجدول كما هو
+};
+
+/* ── مصادر التواريخ (03_rounds_overview · 09_round_dates · config) مفهرسة برقم الدورة ──
+   تُبنى داخل buildDB — وتُستخدم لحل رقم الدورة عندما يكون عمود round_order فارغاً أو نصياً. */
+window.__roundDateInfo = {};
+
+/* حسم رقم الدورة لأي صف schedule/assignments/unregistered — بلا اعتماد على مسمى المفتاح:
+   1) round_order إن كان رقمة مفهوماً  2) اسم الراوند العربي (تاني/ثالث …)  3) مفتاح راوند معروف
+   4) تطابق تام مع مصدر تواريخ (اسم/مفتاح)  — وإلا '' (غير محدد). */
+window.resolveRoundOrder = function (row) {
+  const o = normRoundOrder(row && row.round_order);
+  if (o) return o;
+  const name = normAr(String((row && row.round_name_ar) || ''));
+  if (name) {
+    const nm = name.match(/(?:راوند|دورة|round)\s*([0-9]+)/);
+    if (nm) return String(+nm[1]);
+    const words = { 'الاولى': '1', 'الثانية': '2', 'الثالثة': '3', 'الرابعة': '4', 'الخامسة': '5', 'السادسة': '6' };
+    for (const k in words) { if (name.indexOf(k) > -1) return words[k]; }
+  }
+  const rk = normRoundKey(String((row && row.round_key) || ''));
+  if (rk && ROUND_META[rk]) {
+    const idx = ROUND_ORDER.indexOf(rk);
+    if (rk === 'elective') return '0';
+    if (idx > -1 && idx < 6) return String(idx + 1);                  // units→1 · equine→2 · poultry→3 · slaughter→4 · college→5
+  }
+  const info = window.__roundDateInfo || {};
+  for (const ord in info) {
+    const it = info[ord] || {};
+    if ((it.name && name && it.name === name) || (it.key && rk && it.key === rk)) return String(ord);
+  }
+  return '';
+};
+
+/* تطبيع رقم الدورة: "R2" · "2" · "round 2" · "الدورة الثانية" → '2' (أو '0' للاختياري) */
+window.normRoundOrder = function (v) {
+  const s = normAr(String(v === null || v === undefined ? '' : v));
+  if (!s) return '';
+  const m = s.match(/(?:r(?:ound)?|دورة|راوند|rwand)\s*([0-9٠-٩]+)/);
+  if (m) return String(+m[1].replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const d = s.match(/^([0-9٠-٩]+)/);
+  if (d) return String(+d[1].replace(/[٠-٩]/g, (x) => '٠١٢٣٤٥٦٧٨٩'.indexOf(x)));
+  const words = { 'الاولى': '1', 'الثانية': '2', 'الثالثة': '3', 'الرابعة': '4', 'الخامسة': '5', 'السادسة': '6' };
+  for (const k in words) { if (s.indexOf(k) > -1) return words[k]; }
+  return '';
 };
 
 window.ROUND_META = {
@@ -717,6 +933,42 @@ function hasRequired(sheets) { return REQUIRED.every((k) => Array.isArray(sheets
 
 function buildDB(S) {
   const g = (k) => S[k] || [];
+  /* ── تطبيع رؤوس الأعمدة العربية الشائعة → أسماء الحقول التي تعتمد عليها اللوحة ──
+     (يُطبَّق على كل شيت؛ لا يمس عموداً إن لم يكن الرأس مطابقاً، فلا كسر للراسلين حالياً) */
+  const AR_COLS = {
+    'رقم_الجروب': 'group_id', 'رقم_المجموعة': 'group_id', 'المجموعة': 'group_id', 'الجروب': 'group_id',
+    'اسم_الجروب': 'group_name', 'اسم_المجموعة': 'group_name',
+    'عدد_الطلاب': 'total_students', 'اجمالي_الطلاب': 'total_students', 'إجمالي_الطلاب': 'total_students', 'القوام': 'total_students',
+    'رقم_الدورة': 'round_order', 'ترتيب_الدورة': 'round_order', 'الدورة_برقمها': 'round_order',
+    'راوند': 'round_key', 'مفتاح_الراوند': 'round_key', 'الراوند': 'round_key',
+    'اسم_الراوند': 'round_name_ar', 'اسم_الدورة': 'round_name_ar',
+    'كود_الطالب': 'code_short', 'الكود': 'code_short',
+    'اسم_الطالب': 'full_name', 'الاسم': 'full_name', 'اسم_الطالب_كاملا': 'full_name', 'اسم_الطالب_بالكامل': 'full_name',
+    'النوع': 'gender', 'الجنس': 'gender',
+    'الهاتف': 'phone', 'رقم_الهاتف': 'phone', 'موبايل': 'phone',
+    'الرقم_القومي': 'national_id',
+    'تاريخ_البداية': 'start_date', 'من': 'start_date',
+    'تاريخ_النهاية': 'end_date', 'إلى': 'end_date', 'الي': 'end_date',
+    'الوحدة': 'unit_name', 'الوحدة_البيطرية': 'unit_name', 'اسم_الوحدة': 'unit_name',
+    'المحافظة': 'governorate',
+    'المسجلون': 'registered', 'عدد_المسجلين': 'registered', 'المقيدين': 'registered', 'المقيدون': 'registered',
+    'غير_المسجلين': 'not_registered',
+    'المتوقعون': 'expected_students', 'عدد_المتوقعين': 'expected_students',
+    'الطاقة_الاستيعابية': 'capacity', 'السعة': 'capacity',
+    'الحالة': 'status', 'البند': 'metric', 'القيمة': 'value',
+    'عدد_البنات': 'females', 'عدد_البنين': 'males'
+  };
+  const canonArKey = function (k) {
+    const kk = normKey(k).replace(/[\u200b\u200c\u200d\ufeff]/g, '').replace(/\s+/g, '_');
+    if (AR_COLS[kk]) return AR_COLS[kk];
+    const bare = kk.replace(/[أإ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+    if (AR_COLS[bare]) return AR_COLS[bare];
+    for (const a in AR_COLS) {
+      const b = a.replace(/[أإ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+      if (b === bare) return AR_COLS[a];
+    }
+    return null;
+  };
   // تطبيع مفاتيح الحقول: مسافات/ZWSP/BOM/Case — حتى لا تنكسر اللوحة عند تعديل رأس العمود في الجدول
   const canonCols = {};
   (g('fields') || []).forEach((f) => {
@@ -729,6 +981,10 @@ function buildDB(S) {
     Object.keys(o).forEach((k) => {
       const c = normKey(k).toLowerCase().replace(/[\u200b\u200c\u200d\ufeff]/g, '').replace(/\s+/g, '_');
       if (canonCols[c] && canonCols[c] !== k) { if (o[canonCols[c]] === undefined) o[canonCols[c]] = o[k]; delete o[k]; }
+    });
+    Object.keys(o).forEach((k) => {
+      const mapped = canonArKey(k);
+      if (mapped && mapped !== k && o[mapped] === undefined) { o[mapped] = o[k]; delete o[k]; }
     });
     return o;
   };
@@ -745,11 +1001,47 @@ function buildDB(S) {
     return { ...r, group_id: gid, total_students: String(actual > 0 ? actual : declared), _declared_total: String(declared) };
   }).sort((a, b) => (+a.group_id || 0) - (+b.group_id || 0));
   DB.roundsOverview = g('roundsOverview').map(fixRow);
-  DB.roundSchedule = g('roundSchedule').map((r) => { r = fixRow(r); return { ...r, round_key: normRoundKey(r.round_key), group_id: cleanGroupId(r.group_id) }; });
+  /* ── فهرسة مصادر التواريخ برقم الدورة (03 + 09 + config) — تُبنى أولاً لأن حسم
+     رقم صفّ الجدول قد يعتمد على مطابقة الاسم/المفتاح مع مصدر التواريخ ── */
+  const dateInfo = {};
+  const putDateInfo = (ord, key, nameAr) => {
+    ord = normRoundOrder(ord);
+    if (!ord) return;
+    const it = dateInfo[ord] || (dateInfo[ord] = { key: '', name: '' });
+    if (key) it.key = normRoundKey(key);
+    if (nameAr) it.name = normAr(nameAr);
+  };
+  DB.roundsOverview.forEach((r) => putDateInfo(r.round_order, r.round_key, r.round_name_ar));
+  g('roundDates').forEach((r) => { r = fixRow(r); putDateInfo(r.round_order, r.round_key, r.round_name_ar); });
+  Object.keys(CFG().DEFAULT_ROUND_DATES || {}).forEach((ord) => putDateInfo(ord, '', ''));
+  window.__roundDateInfo = dateInfo;
+
+  /* تطبيع جداول الدورة: round_key مرِنّ، رقم الدورة يُحسم من أي مسميات في الشيت
+     ('' · 'R1' · 'راوند ٢' · 'الدورة الثانية')، واسم الراوند لا يضيع */
+  const normRoundRow = (r) => {
+    r = fixRow(r);
+    const o = { ...r, round_key: normRoundKey(r.round_key), group_id: cleanGroupId(r.group_id) };
+    const ord = resolveRoundOrder(o);
+    if (ord) o.round_order = ord;
+    if (!o.round_name_ar && o.round_key) o.round_name_ar = window.ROUND_LABELS[o.round_key] || '';
+    return o;
+  };
+  DB.roundSchedule = g('roundSchedule').map(normRoundRow);
   DB.stationsUnits = g('stationsUnits').map(fixRow);
-  DB.assignments = g('assignments').map((r) => { r = fixRow(r); return { ...r, round_key: normRoundKey(r.round_key), group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }; });
-  DB.unregistered = g('unregistered').map((r) => { r = fixRow(r); return { ...r, round_key: normRoundKey(r.round_key), group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }; });
+  DB.assignments = g('assignments').map((r) => { r = normRoundRow(r); r.gender = normGender(r.gender); return r; });
+  DB.unregistered = g('unregistered').map((r) => { r = normRoundRow(r); r.gender = normGender(r.gender); return r; });
   DB.round2Summary = g('round2Summary').map((r) => { r = fixRow(r); return { ...r, round_key: normRoundKey(r.round_key) }; });
+  /* ملخص الدورة الثانية: شيت بمقاييس صفّية (metric/value) أو جدول راوندات — كلاهما مدعوم */
+  if (!DB.round2Summary.some((r) => r.registered || r.not_registered)) {
+    const m = {};
+    DB.round2Summary.forEach((r) => {
+      const k = normKey(r.metric).replace(/\s+/g, '_').toLowerCase();
+      m[k] = parseInt(normCell(r.value), 10) || 0;
+    });
+    if ('registered' in m || 'not_registered' in m) {
+      DB.round2Summary = [{ round_key: '', registered: String(m.registered || 0), not_registered: String(m.not_registered || 0) }];
+    }
+  }
   DB.roundDates = g('roundDates').map(fixRow);
   DB.fields = g('fields').map(fixRow);
   DB.issues = g('issues').map(fixRow);
@@ -1206,6 +1498,10 @@ function registerSW() {
 const PAGE_RENDERERS = {
   'overview': () => renderOverview(document.getElementById('page-overview')),
   'schedule': () => renderSchedule(document.getElementById('page-schedule')),
+  'round-1': () => renderRoundPage('1'),
+  'round-2': () => renderRoundPage('2'),
+  'round-3': () => renderRoundPage('3'),
+  'round-4': () => renderRoundPage('4'),
   'units': () => renderUnits(document.getElementById('page-units')),
   'not-registered': () => renderNotRegistered(document.getElementById('page-not-registered'))
 };
@@ -1270,6 +1566,9 @@ window.showPage = function (pageId) {
 };
 
 function rerenderAll() {
+  // إسقاط كاشات المشتقات (تسجيلات الوحدات / خريطة تدوير الخيل) قبل إعادة البناء —
+  // وإلا قد تُقرأ نسخة قديمة من DB بعد التحديث (البند 2ج + البند 4)
+  window._unitRegsCache = null; window._eqRotMap = null;
   document.querySelectorAll('.page').forEach((p) => { delete p.dataset.rendered; p.innerHTML = ''; });
   const cur = _activePage || 'overview'; _activePage = null; showPage(cur);
   window.updateNavBadges && window.updateNavBadges();
@@ -1405,7 +1704,11 @@ window.AppBoot = function () { init(); };
 const ACTIONS = {
   'page': (el) => { Overlays.closeAll(); showPage(el.dataset.page); },
   'goto-page': (el) => { Overlays.closeAll(); showPage(el.dataset.page); },
-  'student': (el) => openStudentProfile(el.dataset.sid, { replace: !!el.dataset.replace }),
+  'student': (el) => {
+    // البند 5: كروت الراوندات تفتح البروفايل المصقول «elite» عند توفره
+    if (el.dataset.elite === '1' && window.openEliteStudentProfile) { openEliteStudentProfile(el.dataset.sid); return; }
+    openStudentProfile(el.dataset.sid, { replace: !!el.dataset.replace });
+  },
   'raw-student': (el) => openUnknownStudent(window._rawRows[+el.dataset.ri] || {}),
   'group-roster': (el) => openGroupRosterModal(el.dataset.gid, { replace: !!el.dataset.replace }),
   'directory': () => openStudentDirectoryModal(),

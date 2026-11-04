@@ -16,7 +16,7 @@ function renderNotRegistered(container) {
   const lotusSvg = `<svg class="title-ornament" viewBox="0 0 24 14" aria-hidden="true"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
 
   container.innerHTML = `
-    <div class="card card-sm" style="margin-bottom: calc(var(--gap)*1.5); background:#FFFFFF; border-right:4px solid var(--c-amber)">
+    <div class="card card-sm units-intro-card" style="margin-bottom: calc(var(--gap)*1.5); border-right:4px solid var(--c-amber)">
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <div style="display:flex; align-items:center; gap:10px;">
           <span class="empty-ico">${ico('warning')}</span>

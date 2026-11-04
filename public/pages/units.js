@@ -1,9 +1,10 @@
 'use strict';
 
 function renderUnits(container) {
+  // بند2(ج): المصدر الآن getUnitAssignments() — يتعرف على صفوف تسجيل الوحدة بعدة علامات
+  // ويحمي من التصفير الصامت حين تكون بيانات الشيت موجودة (كان الفلتر الحرفي round_key==='units' ينكسر).
   const byUnit = {};
-  DB.assignments.forEach(row => {
-    if (row.round_key !== 'units') return;
+  (window.getUnitAssignments ? getUnitAssignments() : (DB.assignments || []).filter(r => r.round_key === 'units')).forEach(row => {
     const unitName = (row.unit_name || '').trim();
     if (!unitName) return;
     if (!byUnit[unitName]) byUnit[unitName] = [];
@@ -37,7 +38,7 @@ function renderUnits(container) {
   const lotusSvg = `<svg class="title-ornament" viewBox="0 0 24 14" aria-hidden="true"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
 
 container.innerHTML = `
-    <div class="card card-sm" style="margin-bottom: var(--gap); background:#FFFFFF; border-right:4px solid var(--c-gold)">
+    <div class="card card-sm units-intro-card" style="margin-bottom: var(--gap); border-right:4px solid var(--c-gold)">
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <div style="display:flex; align-items:center; gap:10px;">
           <span style="font-size:1.4rem">${ico('hospital')}</span>

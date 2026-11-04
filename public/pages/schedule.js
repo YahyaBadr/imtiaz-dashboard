@@ -99,6 +99,15 @@ function renderSchedule(container) {
       const unregHere = (DB.unregistered || []).some((u) => normRoundKey(u.round_key) === 'units' && String(u.group_id) === gid);
       capDot = unregHere ? 'amber' : 'green';
     }
+    /* البند 4: كارت قسم «خيل ومعامل وسمك» يعرض الوحدة الفرعية الحالية + تسلسل الشيت نصف الشهري */
+    if (rKey === 'equine_lab_fish' && window.groupSubUnitAt) {
+      const now = groupSubUnitAt(gid, c.order, getTodayStr());
+      if (now) {
+        const rot = getEquineGroupRot(gid);
+        chips.push([`الآن: ${esc(now.label)} · بلوك ${now.blockNo}/${now.totalBlocks}`, false]);
+        if (rot && rot.sequence) chips.push([subUnitSeqLabel(rot.sequence), false]);
+      }
+    }
     return `<td class="gantt-cell"${wrapAttr}${act('round-detail', { round: rKey, title: row.round_name_ar || roundLabel(rKey), gid, count, matrix: matrixKey })}>
       ${(opts && opts.stack) ? stackHead(row.round_name_ar || c.title, c.dates) : ''}
       ${rotCard({ rKey, meta, title: row.round_name_ar || roundLabel(rKey), status: rStatus, chips, foot: (c.order === '1' ? 'total' : 'status'), total: count, dot: capDot })}

@@ -20,16 +20,17 @@ window.getRosterForRoundOrder = function (order) {
     // لأن group_id في students قد يختلف عن group_id في تسجيلات الرايوند ٢ (مثل نعمة عادل: 1.0 في assignments و 2 في students).
     const gid = cleanGroupId(row.group_id || '');
     if (!gid && !code) return;
-    const key = gid + '_' + code + '_' + (s.student_code || '');
+    const key = (s && s._identityKey) || (gid + '_' + code + '_' + (s.student_code || ''));
     if (seen[key]) return;
     seen[key] = true;
     list.push({
       sid: s ? studentKey(s) : '',
-      name: s.full_name || row.full_name || 'غير محدد',
+      name: rowName(row, s),
       gid, code: code || (s.code_short || ''),
       studentCode: s.student_code || '',
       gender: s.gender || row.gender || '',
-      station: stationName || roundLabel(row.round_key || '') || ''
+      station: stationName || roundLabel(row.round_key || '') || '',
+      conflict: window.ImtiazIdentity.groupConflict(gid, s.group_id)
     });
   };
 
@@ -63,6 +64,34 @@ function genderBadge(g) {
   return g === 'F' ? '<span class="badge badge-rose">أنثى</span>'
        : g === 'M' ? '<span class="badge badge-plum">ذكر</span>'
        : '<span class="badge badge-grey">غير محدد</span>';
+}
+
+/* الاسم العربي من كشف التسجيل أولاً، ثم اسم السجل — والجروب المخالف يظهر كوسم لا يُخفى */
+function rowName(row, student) { return window.ImtiazIdentity.displayName(row, student); }
+function conflictChip(conflict) {
+  if (!conflict) return '';
+  return `<span class="badge badge-amber conflict-badge" title="الجروب في كشف التسجيل: ${esc(conflict.sourceGroup)} — في سجل الطلاب: ${esc(conflict.masterGroup)}">جروب ${esc(conflict.sourceGroup)} ≠ السجل ${esc(conflict.masterGroup)}</span>`;
+}
+function conflictBadge(row, student) {
+  return conflictChip(window.ImtiazIdentity.groupConflict(row && row.group_id, student && student.group_id));
+}
+function unregisteredRow(u) {
+  const s = resolveStudent(u);
+  const name = rowName(u, s);
+  const gid = cleanGroupId(u.group_id || '');
+  const code = String(u.code_short || (s && s.code_short) || '').trim();
+  const sid = s ? studentKey(s) : '';
+  const nameHtml = sid
+    ? `<span class="clickable-student-name"${act('student', { sid })} title="اضغط لفتح الملف الكامل للطالب">${esc(name)}</span>`
+    : esc(name);
+  return `
+    <li class="slist-row">
+      <span class="initials-avatar">${esc(getInitials(name))}</span>
+      <span class="slist-main">
+        <div class="slist-name">${nameHtml} ${conflictBadge(u, s)}</div>
+        <div class="slist-sub">جروب ${esc(gid || '—')} · كود ${esc(code || '—')}</div>
+      </span>
+    </li>`;
 }
 
 /* ═══ خريطة: group_id → round_key للرايوند ٢ من جدول الجولات ═══ */
@@ -107,17 +136,19 @@ function r2StudentsForKey(key) {
     if (field !== key) return;
     if (!(a.full_name || a.code_short)) return;
     const code = String(a.code_short || '').trim();
-    const k = gid + '_' + code + '_' + (a.student_code || '');
+    const s = resolveStudent(a) || a;
+    const k = (s && s._identityKey) || (gid + '_' + code + '_' + (a.student_code || ''));
     if (seen[k]) return;
     seen[k] = true;
-    const s = resolveStudent(a) || a;
+    const conflict = window.ImtiazIdentity.groupConflict(gid, s.group_id);
     result.push({
       sid: s ? studentKey(s) : '',
-      name: s.full_name || a.full_name || 'غير محدد',
+      name: rowName(a, s),
       gid, code: code || (s.code_short || ''),
       studentCode: s.student_code || a.student_code || '',
       gender: s.gender || a.gender || '',
       station: a.unit_name || domainLabel(key) || roundLabel(a.round_key || '') || '',
+      conflict,
       // تمرير بيانات التناوب من جدول التسجيلات لـ studentSubUnitNow
       group_id: cleanGroupId(a.group_id || ''),
       code_short: a.code_short,
@@ -181,11 +212,14 @@ window.renderRound2Hub = function (container) {
     <div class="r2-domains-grid">
       ${R2_DOMAINS.map((domain) => {
         const students = r2StudentsForKey(domain.key);
+        const unregList = r2UnregisteredForKey(domain.key);
         const s = r2SummaryForKey(domain.key);
-        const reg = parseInt(s.registered, 10) || students.length;
-        const exp = parseInt(s.expected_students, 10) || 0;
-        const miss = parseInt(s.not_registered, 10) || 0;
-        const pct = exp > 0 ? Math.round((reg / exp) * 100) : (reg > 0 ? 100 : 0);
+        const reg = students.length;
+        const miss = unregList.length;
+        const exp = reg + miss;
+        const declaredExp = parseInt(s.expected_students, 10) || 0;
+        const pct = exp > 0 ? Math.round((reg / exp) * 100) : 0;
+        const groupCount = new Set(students.map((st) => st.gid).filter(Boolean)).size;
         const pageId = domain.key === 'equine_lab_fish' ? 'round-2-equine' : `round-2-${domain.key}`;
         return `
           <div class="r2-domain-card" data-action="goto-page" data-page="${pageId}" style="cursor:pointer;">
@@ -194,12 +228,12 @@ window.renderRound2Hub = function (container) {
               <span class="r2-domain-label">${esc(domain.label)}</span>
             </div>
             <div class="r2-domain-body">
-              <div class="r2-domain-num"><span class="num">${reg}</span> <span>${exp > 0 ? '/' + exp : ''}</span></div>
+              <div class="r2-domain-num"><span class="num">${reg}</span> <span>/ ${exp}</span></div>
               <div class="r2-domain-progress">
                 <div class="progress-bar"><div class="progress-fill ${domainTone(domain.key)}" style="width:${Math.min(pct, 100)}%"></div></div>
                 <span class="num">${pct}%</span>
               </div>
-              <div class="r2-domain-meta">${esc(s.groups || students.length > 0 ? 'مجموعات متعددة' : '—')}</div>
+              <div class="r2-domain-meta">${groupCount} مجموعات · ${reg} مسجل${declaredExp && declaredExp !== exp ? ` · المعلن ${declaredExp}` : ''}</div>
             </div>
             ${miss > 0 ? `<div class="r2-domain-alert"><span class="badge badge-amber num">${miss} غير مسجل</span></div>` : ''}
           </div>`;
@@ -215,17 +249,7 @@ window.renderRound2Hub = function (container) {
             <span class="elite-unreg-label">طالب/ة غير مسجل في مواقع التدريب بالدورة الثانية</span>
           </div>
           <ul class="slist elite-slist">
-            ${unregR2.map((u) => {
-              const s = resolveStudent(u) || u;
-              return `
-              <li class="slist-row">
-                <span class="initials-avatar">${esc(getInitials(s.full_name || ''))}</span>
-                <span class="slist-main">
-                  <div class="slist-name">${esc(s.full_name || 'غير محدد')}</div>
-                  <div class="slist-sub">جروب ${esc(cleanGroupId(s.group_id || u.group_id || '')) || '—'} · كود ${esc(s.code_short || u.code_short || '—')}</div>
-                </span>
-              </li>`;
-            }).join('')}
+            ${unregR2.map(unregisteredRow).join('')}
           </ul>
         </div>
       </div>` : ''}
@@ -239,9 +263,10 @@ window.renderRound2Domain = function (container, domainKey) {
   const students = r2StudentsForKey(domainKey);
   const unreg = r2UnregisteredForKey(domainKey);
   const s = r2SummaryForKey(domainKey);
-  const reg = parseInt(s.registered, 10) || students.length;
-  const exp = parseInt(s.expected_students, 10) || 0;
-  const miss = parseInt(s.not_registered, 10) || 0;
+  const reg = students.length;
+  const miss = unreg.length;
+  const exp = reg + miss;
+  const declaredExp = parseInt(s.expected_students, 10) || 0;
 
   let contentHtml = '';
   if (domainKey === 'units') {
@@ -269,10 +294,10 @@ window.renderRound2Domain = function (container, domainKey) {
             <div class="unit-card-body">
               <ul class="unit-student-list">
                 ${unitStudents.map((st) => `
-                  <li data-action="student" data-sid="${esc(studentKey(st))}">
+                  <li data-action="student" data-sid="${esc(st.sid)}">
                     <span class="initials-avatar">${esc(getInitials(st.name || ''))}</span>
                     <div class="unit-student-info">
-                      <div class="unit-student-name">${esc(st.name || 'غير محدد')}</div>
+                      <div class="unit-student-name">${esc(st.name || 'غير محدد')} ${conflictChip(st.conflict)}</div>
                       <div class="unit-student-sub">جروب ${esc(st.gid || '—')} · كود ${esc(st.code || '—')}</div>
                     </div>
                   </li>
@@ -293,17 +318,7 @@ window.renderRound2Domain = function (container, domainKey) {
               <span class="elite-unreg-label">طالب/ة غير مسجل في وحدات بيطرية (الدورة الثانية)</span>
             </div>
             <ul class="slist elite-slist">
-              ${unreg.map((u) => {
-                const s2 = resolveStudent(u) || u;
-                return `
-                <li class="slist-row">
-                  <span class="initials-avatar">${esc(getInitials(s2.full_name || ''))}</span>
-                  <span class="slist-main">
-                    <div class="slist-name">${esc(s2.full_name || 'غير محدد')}</div>
-                    <div class="slist-sub">جروب ${esc(cleanGroupId(s2.group_id || u.group_id || '')) || '—'} · كود ${esc(s2.code_short || u.code_short || '—')}</div>
-                  </span>
-                </li>`;
-              }).join('')}
+              ${unreg.map(unregisteredRow).join('')}
             </ul>
           </div>
         </div>`;
@@ -334,7 +349,7 @@ window.renderRound2Domain = function (container, domainKey) {
                         <span class="initials-avatar">${esc(getInitials(s.name || ''))}</span>
                         <strong>${esc(s.name || 'غير محدد')}</strong>
                       </td>
-                      <td><span class="cartouche-badge">جروب ${esc(s.gid || '—')}</span></td>
+                      <td><span class="cartouche-badge">جروب ${esc(s.gid || '—')}</span> ${conflictChip(s.conflict)}</td>
                       <td class="num">${esc(s.code || '—')}</td>
                       <td>${genderBadge(s.gender)}</td>
                       <td>${esc(s.station || '—')}</td>
@@ -356,17 +371,7 @@ window.renderRound2Domain = function (container, domainKey) {
                   <span class="elite-unreg-label">طالب/ة غير مسجل في مواقع التدريب بالدورة الثانية</span>
                 </div>
                 <ul class="slist elite-slist">
-                  ${unreg.map((u) => {
-                    const s2 = resolveStudent(u) || u;
-                    return `
-                    <li class="slist-row">
-                      <span class="initials-avatar">${esc(getInitials(s2.full_name || ''))}</span>
-                      <span class="slist-main">
-                        <div class="slist-name">${esc(s2.full_name || 'غير محدد')}</div>
-                        <div class="slist-sub">جروب ${esc(cleanGroupId(s2.group_id || u.group_id || '')) || '—'} · كود ${esc(s2.code_short || u.code_short || '—')}</div>
-                      </span>
-                    </li>`;
-                  }).join('')}
+                  ${unreg.map(unregisteredRow).join('')}
                 </ul>
               </div>
             </div>
@@ -400,7 +405,7 @@ window.renderRound2Domain = function (container, domainKey) {
                         <span class="initials-avatar">${esc(getInitials(s.name || ''))}</span>
                         <strong>${esc(s.name || 'غير محدد')}</strong>
                       </td>
-                      <td><span class="cartouche-badge">جروب ${esc(s.gid || '—')}</span></td>
+                      <td><span class="cartouche-badge">جروب ${esc(s.gid || '—')}</span> ${conflictChip(s.conflict)}</td>
                       <td class="num">${esc(s.code || '—')}</td>
                       <td>${genderBadge(s.gender)}</td>
                       <td>${esc(s.station || '—')}</td>
@@ -420,17 +425,7 @@ window.renderRound2Domain = function (container, domainKey) {
                   <span class="elite-unreg-label">طالب/ة غير مسجل في مواقع التدريب بالدورة الثانية</span>
                 </div>
                 <ul class="slist elite-slist">
-                  ${unreg.map((u) => {
-                    const s2 = resolveStudent(u) || u;
-                    return `
-                    <li class="slist-row">
-                      <span class="initials-avatar">${esc(getInitials(s2.full_name || ''))}</span>
-                      <span class="slist-main">
-                        <div class="slist-name">${esc(s2.full_name || 'غير محدد')}</div>
-                        <div class="slist-sub">جروب ${esc(cleanGroupId(s2.group_id || u.group_id || '')) || '—'} · كود ${esc(s2.code_short || u.code_short || '—')}</div>
-                      </span>
-                    </li>`;
-                  }).join('')}
+                  ${unreg.map(unregisteredRow).join('')}
                 </ul>
               </div>
             </div>
@@ -453,7 +448,7 @@ window.renderRound2Domain = function (container, domainKey) {
           <span class="r2-domain-ico ${domainTone(domain.key)}" aria-hidden="true" style="font-size:1.5rem;">${iconSvg(domainIcon(domain.key))}</span>
           <div>
             <div style="font-size:1.25rem; font-weight:700; color:var(--c-plum);">${esc(domain.label)} — الدورة الثانية (R2)</div>
-            <div style="font-size:0.86rem; color:var(--c-text-muted); margin-top:2px">${reg} من ${exp} طالب/ة مسجلين${miss > 0 ? ' · ' + miss + ' غير مسجل' : ''}</div>
+            <div style="font-size:0.86rem; color:var(--c-text-muted); margin-top:2px">${reg} من ${exp} طالب/ة مسجلين${miss > 0 ? ' · ' + miss + ' غير مسجل' : ''}${declaredExp && declaredExp !== exp ? ' · العدد المعلن في الشيت: ' + declaredExp : ''}</div>
           </div>
         </div>
       </div>
@@ -502,12 +497,13 @@ window.renderRoundPage = function (order) {
 
 /* ═══ بروفايل الطالب «elite» ═══ */
 window.openEliteStudentProfile = function (rawKey) {
-  const student = (DB.studentLookup || {})[String(rawKey).replace(/\s+/g, '')];
+  const student = window.ImtiazIdentity.findByKey(DB.identity, rawKey);
   if (!student) { toast('لم يتم العثور على سجل الطالب'); return; }
   closeProfileOnly();
 
+  const displayName = window.displayNameForStudent ? window.displayNameForStudent(student) : student.full_name;
   const journey = buildStudentJourney(student);
-  const mine = (DB.assignments || []).filter((a) => (student.student_code && a.student_code === student.student_code) || (String(a.group_id) === String(student.group_id) && String(a.code_short).trim() === String(student.code_short).trim()));
+  const mine = (DB.assignments || []).filter((a) => resolveStudent(a) === student);
   const unitsTxt = [...new Set(mine.map((a) => a.unit_name).filter(Boolean))].join(' + ') || '—';
   const subNow = window.studentSubUnitNow ? window.studentSubUnitNow(student) : null;
   const rotSeq = window.parseSubRotation ? window.parseSubRotation(window.rotationOrderOf(student), window.subStartOf(student)) : null;
@@ -520,9 +516,9 @@ window.openEliteStudentProfile = function (rawKey) {
     <div class="elite-card" role="dialog" aria-modal="true" aria-label="الملف الكامل للطالب">
       <div class="elite-head">
         <div class="elite-head-inner">
-          <div class="initials-avatar lg elite-avatar">${esc(getInitials(student.full_name))}</div>
+          <div class="initials-avatar lg elite-avatar">${esc(getInitials(displayName))}</div>
           <div class="elite-id">
-            <h2 class="elite-name">${esc(student.full_name || 'غير محدد')}</h2>
+            <h2 class="elite-name">${esc(displayName || 'غير محدد')}</h2>
             <div class="elite-code-row">
               <span class="elite-code num">${esc(student.student_code || student.code_short || '—')}</span>
               <span class="cartouche-badge-dark">جروب ${esc(student.group_id || '—')}</span>

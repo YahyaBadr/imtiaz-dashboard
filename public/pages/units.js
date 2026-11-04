@@ -116,8 +116,10 @@ function buildUnitCard(u, byUnit) {
             const gIcon = s.gender === 'M' ? `<span class="gender-m" title="ذكر">${ico('male')}</span>` : s.gender === 'F' ? `<span class="gender-f" title="أنثى">${ico('female')}</span>` : '';
             const grpLabel = s.group_id ? `<span class="cartouche-badge" style="font-size:0.74rem">جروب ${s.group_id}</span>` : `<span style="color:var(--c-rose)">بدون جروب</span>`;
             const issueNote = s.issue ? `<span title="${s.issue}" style="cursor:help; font-size:0.8rem">${ico('warning')}</span>` : '';
-            const sKey = `${s.group_id}_${s.code_short}`.replace(/\s+/g, '');
-            return `<li>${gIcon}<span class="clickable-student-name"${act('student', { sid: sKey })} title="اضغط لفتح الملف الكامل للطالب">${esc(s.full_name || 'غير محدد')}</span><span class="student-code">${s.code_short || '—'}</span>${grpLabel}${issueNote}</li>`;
+            const person = resolveStudent(s);
+            const sKey = person ? studentKey(person) : '';
+            const attrs = sKey ? act('student', { sid: sKey }) : '';
+            return `<li>${gIcon}<span class="clickable-student-name"${attrs} title="اضغط لفتح الملف الكامل للطالب">${esc(s.full_name || 'غير محدد')}</span><span class="student-code">${s.code_short || '—'}</span>${grpLabel}${issueNote}</li>`;
           }).join('')}
         </ul>
       </div>
@@ -132,7 +134,7 @@ window.printUnitSheet = function(unitName) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) return alert('يرجى السماح بالنوافذ المنبثقة');
   const rowsHtml = students.map((s, idx) => {
-    const fullStudent = DB.studentLookup[`${s.group_id}_${s.code_short}`.replace(/\s+/g, '')] || {};
+    const fullStudent = resolveStudent(s) || {};
     return `<tr><td style="text-align:center; padding:6px; border:1px solid #333">${idx + 1}</td><td style="padding:6px; border:1px solid #333"><b>${s.full_name}</b></td><td style="text-align:center; padding:6px; border:1px solid #333">${s.code_short || '—'}</td><td style="text-align:center; padding:6px; border:1px solid #333">جروب ${s.group_id || '—'}</td><td style="text-align:center; padding:6px; border:1px solid #333">${fullStudent.phone || '—'}</td></tr>`;
   }).join('');
   printWindow.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>كشف ${unitName}</title><style>body { font-family: 'Cairo', sans-serif; margin: 20mm; direction: rtl; } .sheet-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; } .sheet-logo { max-width: 70px; } .sheet-title { text-align: center; } table { width: 100%; border-collapse: collapse; } th { background: #f0f0f0; border: 1px solid #333; padding: 8px; }</style></head><body><div class="sheet-header"><img src="assets/university_logo.png" class="sheet-logo"><div class="sheet-title"><h1>كلية الطب البيطري — جامعة القاهرة</h1><p>كشف توزيع الدورة الثانية — ${unitName}</p></div><img src="assets/college_logo.png" class="sheet-logo"></div><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الكود</th><th>الجروب</th><th>الهاتف</th></tr></thead><tbody>${rowsHtml}</tbody></table><script>window.onload = function() { window.print(); };<\/script></body></html>`);
@@ -141,7 +143,7 @@ window.printUnitSheet = function(unitName) {
 
 window.copyUnitListWithPhones = function(unitName, listId) {
   const students = DB.assignments.filter(a => a.round_key === 'units' && (a.unit_name || '').trim() === unitName.trim());
-  const lines = students.map(s => { const full = DB.studentLookup[`${s.group_id}_${s.code_short}`.replace(/\s+/g, '')] || {}; return `${s.full_name}\t${s.code_short}\tجروب ${s.group_id}\t${full.phone || ''}`; });
+  const lines = students.map(s => { const full = resolveStudent(s) || {}; return `${s.full_name}\t${s.code_short}\tجروب ${s.group_id}\t${full.phone || ''}`; });
   navigator.clipboard.writeText(`كشف وحدة: ${unitName} (${lines.length} طالب)\n` + lines.join('\n')).then(() => alert(`تم النسخ ${ico("check")}`)).catch(() => { openModal(`قائمة طلاب ${unitName}`, `<pre style="white-space:pre-wrap; direction:rtl">${lines.join('\n')}</pre>`); });
 };
 

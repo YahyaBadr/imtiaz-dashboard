@@ -49,8 +49,15 @@ function buildGroupBlock(groupId, students, roundKey) {
   const blockId = 'nr-block-' + roundKey + '-g' + groupId;
   const rows = students.map(s => {
     const gIcon = s.gender === 'M' ? `<span class="gender-m">${ico('male')}</span>` : s.gender === 'F' ? `<span class="gender-f">${ico('female')}</span>` : '';
-    const sKey = `${groupId}_${s.code_short}`.replace(/\s+/g, ''); 
-    return `<div class="copyable-name" data-name="${esc(s.full_name)}" data-code="${esc(s.code_short || '')}" data-group="${esc(groupId)}">${gIcon}<span class="clickable-student-name"${act('student', { sid: sKey })} title="اضغط لفتح الملف الكامل للطالب">${esc(s.full_name || 'غير محدد')}</span><span class="student-code">${esc(s.code_short || '—')}</span></div>`;
+    const person = resolveStudent(s);
+    const name = window.ImtiazIdentity.displayName(s, person);
+    const sid = person ? studentKey(person) : '';
+    const attrs = sid ? act('student', { sid }) : '';
+    const conflict = window.ImtiazIdentity.groupConflict(groupId, person && person.group_id);
+    const conflictHtml = conflict
+      ? `<span class="badge badge-amber conflict-badge" title="الجروب في كشف غير المسجلين: ${esc(conflict.sourceGroup)} — في سجل الطلاب: ${esc(conflict.masterGroup)}">جروب ${esc(conflict.sourceGroup)} ≠ السجل ${esc(conflict.masterGroup)}</span>`
+      : '';
+    return `<div class="copyable-name" data-name="${esc(name)}" data-code="${esc(s.code_short || '')}" data-group="${esc(groupId)}">${gIcon}<span class="clickable-student-name"${attrs} title="اضغط لفتح الملف الكامل للطالب">${esc(name || 'غير محدد')}</span><span class="student-code">${esc(s.code_short || '—')}</span>${conflictHtml}</div>`;
   }).join('');
 
   return `

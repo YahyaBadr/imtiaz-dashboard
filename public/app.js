@@ -1040,17 +1040,46 @@ function buildDB(S) {
     return o;
   };
   // قوام الجروب من كشف الطلاب نفسه (أدق من عمود إجمالي قد يكون قديماً في جدول الجروبات)
-  const rosterCount = {};
-  g('students').map(fixRow).forEach((r) => { const gid = cleanGroupId(r.group_id); if (gid) rosterCount[gid] = (rosterCount[gid] || 0) + 1; });
+  // نحسب أيضاً توزيع النوع من نفس الكشف حتى لا تتناقض أعمدة الجنس مع القوام.
+  const roster = {};
+  g('students').map(fixRow).forEach((r) => {
+    const gid = cleanGroupId(r.group_id);
+    if (!gid) return;
+    const st = roster[gid] || (roster[gid] = { total: 0, F: 0, M: 0, U: 0 });
+    st.total++;
+    const gender = normGender(r.gender);
+    if (gender === 'F') st.F++;
+    else if (gender === 'M') st.M++;
+    else st.U++;
+  });
 
   DB.students = g('students').map((r) => { r = fixRow(r); return { ...r, group_id: cleanGroupId(r.group_id), gender: normGender(r.gender), birth_date: r.birth_date || extractBirthFromNID(r.national_id) }; });
-  DB.groups = g('groups').map((r) => {
-    r = fixRow(r);
+  const declaredGroups = g('groups').map(fixRow);
+  const declaredIds = Object.create(null);
+  DB.groups = declaredGroups.map((r) => {
     const gid = cleanGroupId(r.group_id);
+    if (gid) declaredIds[gid] = true;
     const declared = parseInt(r.total_students, 10) || 0;
-    const actual = rosterCount[gid] || 0;
-    return { ...r, group_id: gid, total_students: String(actual > 0 ? actual : declared), _declared_total: String(declared) };
-  }).sort((a, b) => (+a.group_id || 0) - (+b.group_id || 0));
+    const st = roster[gid] || { total: 0, F: 0, M: 0, U: 0 };
+    return {
+      ...r, group_id: gid,
+      total_students: String(st.total),
+      female_count: String(st.F), male_count: String(st.M), unknown: String(st.U),
+      _declared_total: String(declared),
+      _count_mismatch: declared > 0 && declared !== st.total
+    };
+  });
+  // جروب موجود في كشف الطلاب بلا صف في جدول الجروبات (مثل جروب 9) — نضيفه بدل إسقاط طلابه.
+  Object.keys(roster).forEach((gid) => {
+    if (declaredIds[gid]) return;
+    const st = roster[gid];
+    DB.groups.push({
+      group_id: gid, group_name: 'جروب ' + gid, total_students: String(st.total),
+      female_count: String(st.F), male_count: String(st.M), unknown: String(st.U),
+      _declared_total: '', _count_mismatch: false, _synthetic: true, type: '', notes: ''
+    });
+  });
+  DB.groups.sort((a, b) => (+a.group_id || 0) - (+b.group_id || 0));
   DB.roundsOverview = g('roundsOverview').map(fixRow);
   /* ── فهرسة مصادر التواريخ برقم الدورة (03 + 09 + config) — تُبنى أولاً لأن حسم
      رقم صفّ الجدول قد يعتمد على مطابقة الاسم/المفتاح مع مصدر التواريخ ── */
@@ -1110,10 +1139,47 @@ function buildDB(S) {
   DB.roundNames = {};
   [DB.roundsOverview, DB.roundSchedule, DB.round2Summary].forEach((list) => list.forEach((r) => { if (r.round_key && r.round_name_ar) DB.roundNames[normRoundKey(r.round_key)] = r.round_name_ar; }));
 
-  DB.studentLookup = {};
-  DB.students.forEach((s) => {
-    if (s.student_code) DB.studentLookup[s.student_code] = s;
-    if (s.group_id && s.code_short) DB.studentLookup[s.group_id + '_' + s.code_short] = s;
+  /* فهرس هوية موحّد: الكود الكامل + القصير + الجروب + الاسم.
+     الفهرس القديم كان يستبدل الأكواد المتكررة بصمت؛ الجديد يتجاهل المفتاح غير الفريد. */
+  DB.identity = window.ImtiazIdentity.buildIndex(DB.students);
+  DB.studentLookup = window.ImtiazIdentity.aliases(DB.identity);
+
+  /* مطابقة أعداد ملخص الراوند ٢ مع الكشوف الفعلية (طلاب فريدون، لا صفوف مكررة) */
+  const r2GroupField = {};
+  DB.roundSchedule.forEach((r) => {
+    if (String(r.round_order) !== '2') return;
+    const gid = cleanGroupId(r.group_id);
+    if (gid) r2GroupField[gid] = normRoundKey(r.round_key);
+  });
+  const rowIdentity = (row) => {
+    const s = window.resolveStudent(row);
+    if (s && s._identityKey) return s._identityKey;
+    return 'row:' + cleanGroupId(row.group_id) + ':' + String(row.code_short || row.student_code || row.full_name || '').trim();
+  };
+  const fieldSet = (rows, key) => {
+    const set = new Set();
+    rows.forEach((row) => {
+      const gid = cleanGroupId(row.group_id);
+      const field = r2GroupField[gid] || normRoundKey(row.round_key);
+      if (field !== key) return;
+      set.add(rowIdentity(row));
+    });
+    return set;
+  };
+  DB.round2Summary = DB.round2Summary.map((r) => {
+    const key = normRoundKey(r.round_key);
+    if (!key || !Object.values(r2GroupField).includes(key)) return r;
+    const reg = fieldSet(DB.assignments, key);
+    const miss = fieldSet(DB.unregistered, key);
+    return {
+      ...r,
+      _declared_expected: String(parseInt(r.expected_students, 10) || 0),
+      _declared_registered: String(parseInt(r.registered, 10) || 0),
+      _declared_not_registered: String(parseInt(r.not_registered, 10) || 0),
+      registered: String(reg.size),
+      not_registered: String(miss.size),
+      expected_students: String(reg.size + miss.size)
+    };
   });
 
   DB.roundMatrix = {};
@@ -1125,24 +1191,26 @@ function buildDB(S) {
     DB.roundMatrix[key].groups.push({ group_id: item.group_id, count });
     DB.roundMatrix[key].total_students += count;
   });
+
+  /* تدقيق الاتساق: كل الأرقام المعروضة مشتقة من كشف الطلاب نفسه */
+  VERIFY.add('قوام الجروبات', DB.students.length, () => DB.groups.reduce((a, x) => a + (parseInt(x.total_students, 10) || 0), 0));
+  VERIFY.add('مجموع الطالبات', DB.students.filter((s) => s.gender === 'F').length, () => DB.groups.reduce((a, x) => a + (parseInt(x.female_count, 10) || 0), 0));
+  VERIFY.add('مجموع الطلاب', DB.students.filter((s) => s.gender === 'M').length, () => DB.groups.reduce((a, x) => a + (parseInt(x.male_count, 10) || 0), 0));
 }
 
 window.resolveStudent = function (row) {
-  if (!row) return null;
-  // 1) مطابقة بالـ student_code (الأكثر موثوقية)
-  if (row.student_code && DB.studentLookup[row.student_code]) return DB.studentLookup[row.student_code];
-  // 2) مطابقة بـ group_id + code_short
-  const g = cleanGroupId(row.group_id), c = String(row.code_short || '').trim();
-  if (g && c && DB.studentLookup[g + '_' + c]) return DB.studentLookup[g + '_' + c];
-  // 3) بديل أخير: مطابقة بالاسم الكامل (لتوحيد الأسماء عبر الشيتات المختلفة)
-  const name = normAr(String(row.full_name || '')).trim();
-  if (name) {
-    const found = DB.students.find((s) => normAr(String(s.full_name || '')).trim() === name);
-    if (found) return found;
-  }
-  return null;
+  return window.ImtiazIdentity.resolve(row, DB.identity);
 };
-window.studentKey = function (s) { return s.student_code || (s.group_id + '_' + s.code_short); };
+window.studentKey = function (s) {
+  return (s && s._identityKey) || '';
+};
+/* اسم العرض: العربي من كشف التسجيل/غير المسجلين إن وُجد، وإلا اسم السجل */
+window.displayNameForStudent = function (student) {
+  if (!student) return '';
+  const row = (DB.unregistered || []).find((u) => resolveStudent(u) === student)
+    || (DB.assignments || []).find((a) => resolveStudent(a) === student);
+  return window.ImtiazIdentity.displayName(row, student);
+};
 
 /* ───────────────────────── 5) النوافذ (مع زر الرجوع في الهاتف) ───────────────────────── */
 
@@ -1213,8 +1281,10 @@ window.renderStudentListModal = function (title, rows, opts) {
     let attrs;
     if (s) attrs = act('student', { sid: studentKey(s) });
     else { window._rawRows.push(row); attrs = act('raw-student', { ri: window._rawRows.length - 1 }); }
-    const sub = [src.group_id ? 'جروب ' + src.group_id : 'بدون جروب', src.code_short ? 'كود ' + src.code_short : '', row.unit_name || ''].filter(Boolean).join(' · ');
-    return { attrs, name: src.full_name || row.full_name || 'غير محدد', sub, g, search: normAr((src.full_name || '') + ' ' + (src.code_short || '') + ' ' + (src.student_code || '') + ' ' + (src.group_id ? 'جروب ' + src.group_id : '')) };
+    const name = window.ImtiazIdentity.displayName(row, s);
+    const groupId = row.group_id || src.group_id;
+    const sub = [groupId ? 'جروب ' + groupId : 'بدون جروب', src.code_short ? 'كود ' + src.code_short : '', row.unit_name || ''].filter(Boolean).join(' · ');
+    return { attrs, name: name || 'غير محدد', sub, g, search: normAr((name || '') + ' ' + (src.full_name || '') + ' ' + (src.code_short || '') + ' ' + (src.student_code || '') + ' ' + (groupId ? 'جروب ' + groupId : '')) };
   });
 
   const html = `
@@ -1264,8 +1334,8 @@ function buildStudentJourney(student) {
   const gid = student.group_id;
   const sched = DB.roundSchedule.filter((r) => String(r.group_id) === String(gid));
   const find = (o) => sched.find((r) => String(r.round_order) === String(o)) || {};
-  const mine = DB.assignments.filter((a) => (student.student_code && a.student_code === student.student_code) || (gid && String(a.group_id) === String(gid) && String(a.code_short).trim() === String(student.code_short).trim()));
-  const isMissing = DB.unregistered.some((u) => (gid && String(u.group_id) === String(gid) && String(u.code_short).trim() === String(student.code_short).trim()));
+  const mine = DB.assignments.filter((a) => resolveStudent(a) === student);
+  const isMissing = DB.unregistered.some((u) => resolveStudent(u) === student);
 
   const step = (order, title, fallbackName, station) => {
     const r = find(order); const d = getRoundDates(order);
@@ -1304,7 +1374,7 @@ function buildStudentJourney(student) {
 
 window.openStudentProfile = function (rawKey, opts) {
   try {
-    const student = DB.studentLookup[String(rawKey).replace(/\s+/g, '')];
+    const student = window.ImtiazIdentity.findByKey(DB.identity, rawKey);
     if (!student) { toast('لم يتم العثور على سجل الطالب'); return; }
     closeProfileOnly();
 
@@ -1317,6 +1387,7 @@ window.openStudentProfile = function (rawKey, opts) {
     const prefs = DB.prefColumns.map((key) => ({ arabicName: DB.fieldsMap[key] || key, rank: parseInt(student[key], 10) || 99 })).sort((a, b) => a.rank - b.rank);
     const journey = buildStudentJourney(student);
     const sid = studentKey(student);
+    const displayName = displayNameForStudent(student);
 
     const panel = document.createElement('div');
     panel.id = 'profile-panel-overlay';
@@ -1331,8 +1402,8 @@ window.openStudentProfile = function (rawKey, opts) {
               <span class="student-code">${esc(student.code_short || '—')}</span>
             </div>
             <div class="profile-who">
-              <div class="initials-avatar lg">${esc(getInitials(student.full_name))}</div>
-              <div><h2>${esc(student.full_name || 'غير محدد')}</h2><div class="profile-sub">الكود الأكاديمي: <span class="num">${esc(student.student_code || '—')}</span></div></div>
+              <div class="initials-avatar lg">${esc(getInitials(displayName))}</div>
+              <div><h2>${esc(displayName || 'غير محدد')}</h2><div class="profile-sub">الكود الأكاديمي: <span class="num">${esc(student.student_code || '—')}</span></div></div>
             </div>
           </div>
           <button type="button" class="modal-close" data-action="close-overlay" aria-label="إغلاق">${ico('x')}</button>
@@ -1784,7 +1855,7 @@ const ACTIONS = {
   'hide-verify': () => document.getElementById('verify-badge').classList.add('hidden'),
   'copy': (el) => copyText(el.dataset.text || '', el.dataset.msg),
   'toggle-nid': (el) => {
-    const s = DB.studentLookup[el.dataset.sid]; const out = document.getElementById('nid-display'); if (!s || !out) return;
+    const s = window.ImtiazIdentity.findByKey(DB.identity, el.dataset.sid); const out = document.getElementById('nid-display'); if (!s || !out) return;
     const nid = String(s.national_id || ''); const masked = '••••••••••' + nid.slice(-4);
     const wasMasked = out.dataset.masked === '1';
     out.textContent = wasMasked ? nid : masked; out.dataset.masked = wasMasked ? '0' : '1'; el.textContent = wasMasked ? '' : '';

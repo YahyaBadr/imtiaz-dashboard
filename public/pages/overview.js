@@ -88,6 +88,7 @@ function renderOverview(container) {
         <div class="round-summary-grid">
           ${DB.round2Summary.map((r) => {
             const reg = parseInt(r.registered, 10) || 0, exp = parseInt(r.expected_students, 10) || 0, miss = parseInt(r.not_registered, 10) || 0;
+            const declaredExp = parseInt(r._declared_expected, 10) || 0;
             const pct = exp > 0 ? Math.round((reg / exp) * 100) : 0, rk = r.round_key, meta = ROUND_META[rk] || {};
             return `
               <div class="round-card">
@@ -95,6 +96,7 @@ function renderOverview(container) {
                   <span>${roundIcon(rk)} ${esc(r.round_name_ar || roundLabel(rk))}</span>
                   ${miss > 0 ? `<span class="badge badge-amber num tap"${act('r2-unregistered', { round: rk })}>${miss} غير مسجل ${ico("external")}</span>` : '<span class="badge badge-emerald">مكتمل</span>'}
                 </div>
+                ${declaredExp && declaredExp !== exp ? `<div class="round-declared-note">العدد المعلن في الشيت: <span class="num">${declaredExp}</span> — المعروض من الكشوف: <span class="num">${exp}</span></div>` : ''}
                 <div class="round-reg-numbers num">
                   <button type="button" class="num-link"${act('r2-registered', { round: rk })} aria-label="المسجلون">${reg}</button>
                   <span class="sep">/</span>
@@ -151,11 +153,11 @@ function renderOverview(container) {
               return `<tr class="clickable-row"${act('group-roster', { gid: g.group_id })}>
                 <td class="num" data-col="group_id" data-label="الجروب" data-sort="${esc(g.group_id)}"><span class="cartouche-badge">جروب ${esc(g.group_id)}</span></td>
                 <td data-col="group_name" data-label="الاسم"><strong>${esc(g.group_name || '—')} ${ico('external')}</strong></td>
-                <td class="num" data-col="total_students" data-label="الإجمالي"><b>${tot}</b></td>
+                <td class="num" data-col="total_students" data-label="الإجمالي"><b>${tot}</b>${g._count_mismatch ? `<span class="badge badge-amber num" title="العدد المعلن في جدول الجروبات ${esc(g._declared_total)} — المعروض من كشف الطلاب ${tot}">المعلن ${esc(g._declared_total)}</span>` : ''}</td>
                 <td class="num gender-f" data-col="female_count" data-label="طالبات">${f}</td>
                 <td class="num gender-m" data-col="male_count" data-label="طلاب">${m}</td>
                 <td data-col="unknown" data-label="غير محدد" data-sort="${unk}">${unk > 0 ? `<span class="badge badge-amber num">غير محدد: ${unk}</span>` : '<span class="muted">0</span>'}</td>
-                <td data-col="type" data-label="التصنيف"><span class="badge badge-grey">${esc(g.type || '—')}</span></td></tr>`;
+                <td data-col="type" data-label="التصنيف"><span class="badge badge-grey">${esc(g._synthetic ? 'غير معرّف في الجروبات' : (g.type || '—'))}</span></td></tr>`;
             }).join('')}
           </tbody>
         </table>
@@ -202,7 +204,7 @@ window.openUnregisteredR2Modal = function (roundKey, opts) {
 window.openExpectedR2Modal = function (roundKey, opts) {
   const all = [...DB.assignments.filter((a) => a.round_key === roundKey), ...DB.unregistered.filter((u) => u.round_key === roundKey)];
   const seen = new Set(), unique = [];
-  all.forEach((it) => { const k = it.student_code || (it.group_id + '_' + it.code_short); if (!seen.has(k)) { seen.add(k); unique.push(it); } });
+  all.forEach((it) => { const s = resolveStudent(it); const k = s ? studentKey(s) : (it.student_code || (it.group_id + '_' + it.code_short)); if (!seen.has(k)) { seen.add(k); unique.push(it); } });
   return renderStudentListModal(`الطلاب المتوقعون في ${roundLabel(roundKey)}`, unique, opts);
 };
 window.openFieldPreferencesModal = function (fieldKey) {

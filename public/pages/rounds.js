@@ -74,6 +74,7 @@ window.buildR2GroupFieldMap = function () {
       map[String(r.group_id)] = String(r.round_key || 'units');
     }
   });
+  console.log('[R2 DEBUG] buildR2GroupFieldMap=', map, 'roundSchedule.length=', (DB.roundSchedule || []).length);
   return map;
 };
 
@@ -98,6 +99,7 @@ function r2StudentsForKey(key) {
   const groupFieldMap = window.buildR2GroupFieldMap ? window.buildR2GroupFieldMap() : {};
   const result = [];
   const seen = {};
+  console.log('[R2 DEBUG] r2StudentsForKey key=', key, 'assignments.length=', (DB.assignments || []).length, 'groupFieldMap=', groupFieldMap);
   (DB.assignments || []).forEach((a) => {
     // group_id يُؤخذ من جدول التسجيلات (assignments) لأنه المصدر الموثوق للرايوند ٢
     const gid = cleanGroupId(a.group_id || '');
@@ -124,6 +126,7 @@ function r2StudentsForKey(key) {
       sub_unit_start: a.sub_unit_start || ''
     });
   });
+  console.log('[R2 DEBUG] r2StudentsForKey result count=', result.length, 'for key=', key);
   result.sort((a, b) => (+a.gid || 0) - (+b.gid || 0) || String(a.code).localeCompare(String(b.code), 'ar', { numeric: true }));
   return result;
 }
@@ -238,6 +241,7 @@ window.renderRound2Domain = function (container, domainKey) {
   const reg = parseInt(s.registered, 10) || students.length;
   const exp = parseInt(s.expected_students, 10) || 0;
   const miss = parseInt(s.not_registered, 10) || 0;
+  console.log('[R2 DEBUG] renderRound2Domain domainKey=', domainKey, 'students.count=', students.length, 'reg=', reg, 'exp=', exp, 'miss=', miss);
 
   container.innerHTML = `
     <div class="card card-sm domain-header-card" style="margin-bottom: var(--gap); border-right:4px solid var(--c-${domainTone(domain.key).replace('tone-','')})">

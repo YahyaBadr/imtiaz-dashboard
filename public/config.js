@@ -10,7 +10,7 @@ window.APP_CONFIG = {
   /* ── 1) Google Apps Script Web App URL (the API that reads your Sheet) ──
      Must be published as: Execute as "Me" + Who has access "Anyone".
      Leave "" to load local CSV files from ./data/ instead (offline testing). */
-  API_URL: "https://script.google.com/macros/s/AKfycbySvILv0ZwJStPAGHABLCoV09ebK1iMSqZsIc8ZeiQ9qqL69_ONFuBplEZY3oOqxSlf2Q/exec",
+  API_URL: "",
 
   /* ── 2) Data / cache behaviour ── */
   OFFLINE_CACHE: true,          // يحفظ آخر بيانات في المتصفح لتعمل اللوحة بدون إنترنت

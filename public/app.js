@@ -1214,6 +1214,32 @@ function buildDB(S) {
     DB.roundMatrix[key].total_students += count;
   });
 
+  /* ── بند ب: تدقيق كشوف راوند ٢ — كل رقم معروض يتحقق من الكشوف نفسها ولا يبقى صامت ──
+     لكل مجال: المعلن في شيت الملخص (المتوقع/المسجل/المعلن) مقابل المحسوب من كاشفي التسجيل وغير المسجلين.
+     وطلاب جروبات R2 الذين لا صف لهم في أي كشف يظهر كقائمة أكواد داخل ملاحظة الفحص. */
+  const r2Gids = Object.keys(r2GroupField);
+  const seenIds = new Set();
+  DB.assignments.concat(DB.unregistered).forEach((row) => {
+    const s = resolveStudent(row);
+    seenIds.add(s ? s._identityKey : rowIdentity(row));
+  });
+  const r2Missing = DB.students
+    .filter((st) => r2Gids.indexOf(String(st.group_id)) > -1)
+    .filter((st) => !seenIds.has(st._identityKey))
+    .map((st) => ({ gid: st.group_id, code: (String(st.raw_code || '').replace(/\D/g, '').slice(-4) || '—') }));
+  const R2_FIELD_NAMES = { units: 'الوحدات', college: 'أقسام الكلية', equine_lab_fish: 'خيل/معامل/سمك', slaughter: 'مجازر/سلامة غذاء', poultry: 'دواجن' };
+  DB.round2Summary.forEach((r) => {
+    const key = normRoundKey(r.round_key);
+    if (!R2_FIELD_NAMES[key]) return;
+    const decExp = parseInt(r._declared_expected, 10) || 0;
+    if (decExp) VERIFY.add('راوند ٢ · ' + R2_FIELD_NAMES[key] + ' — المتوقع المعلن', decExp, () => (Number(r.registered) || 0) + (Number(r.not_registered) || 0));
+    const decReg = parseInt(r._declared_registered, 10) || 0;
+    if (decReg) VERIFY.add('راوند ٢ · ' + R2_FIELD_NAMES[key] + ' — المسجلون المعلنون', decReg, () => Number(r.registered) || 0);
+    const decMiss = parseInt(r._declared_not_registered, 10) || 0;
+    if (decMiss) VERIFY.add('راوند ٢ · ' + R2_FIELD_NAMES[key] + ' — غير المسجلين المعلنون', decMiss, () => Number(r.not_registered) || 0);
+  });
+  VERIFY.add('راوند ٢ — طلاب جروبات R2 غائبون عن الكاشفين', r2Missing.length, () => 0, () => 'أكواد: ' + r2Missing.map((m) => m.code).join('، '));
+
   /* تدقيق الاتساق: كل الأرقام المعروضة مشتقة من كشف الطلاب نفسه */
   VERIFY.add('قوام الجروبات', DB.students.length, () => DB.groups.reduce((a, x) => a + (parseInt(x.total_students, 10) || 0), 0));
   VERIFY.add('مجموع الطالبات', DB.students.filter((s) => s.gender === 'F').length, () => DB.groups.reduce((a, x) => a + (parseInt(x.female_count, 10) || 0), 0));
@@ -1574,13 +1600,15 @@ window.togglePresentationMode = function () {
 
 window.VERIFY = {
   checks: [],
-  add(label, countValue, getLen) { this.checks.push({ label, countValue, getLen }); },
+  add(label, countValue, getLen, getNote) { this.checks.push({ label, countValue, getLen, getNote }); },
   run() {
     if (!this.checks.length) return;
-    const results = this.checks.map((c) => { const len = c.getLen(); return { label: c.label, countValue: c.countValue, listLen: len, ok: Number(c.countValue) === Number(len) }; });
+    const results = this.checks.map((c) => { const len = c.getLen(); return { label: c.label, countValue: c.countValue, listLen: len, ok: Number(c.countValue) === Number(len), note: c.getNote ? String(c.getNote() || '') : '' }; });
     this.checks = [];
-    const badge = document.getElementById('verify-badge'); if (!badge) return;
+    /* بند ب: كل عدم تطابق يُطبع في الكونسول أيضاً — لا فشل صامت حتى لو أُغلق الشريط */
     const failed = results.filter((r) => !r.ok);
+    failed.forEach((f) => console.warn('[VERIFY] عدم تطابق — ' + f.label + ': المعروض ' + f.countValue + ' ≠ القائمة ' + f.listLen + (f.note ? ' — ' + f.note : '')));
+    const badge = document.getElementById('verify-badge'); if (!badge) return;
     badge.classList.remove('hidden');
     clearTimeout(this._t);
     if (!failed.length) {
@@ -1588,7 +1616,7 @@ window.VERIFY = {
       this._t = setTimeout(() => badge.classList.add('hidden'), 3500);
     } else {
       badge.className = 'verify-badge verify-fail';
-      badge.innerHTML = `<button type="button" class="verify-x" data-action="hide-verify" aria-label="إغلاق">${ico('x')}</button>${ico("warning")} عدم تطابق في ${failed.length} رقم:<br>` + failed.map((f) => `<small>${esc(f.label)}: المعروض <b>${f.countValue}</b> ≠ القائمة <b>${f.listLen}</b></small>`).join('<br>');
+      badge.innerHTML = `<button type="button" class="verify-x" data-action="hide-verify" aria-label="إغلاق">${ico('x')}</button>${ico("warning")} عدم تطابق في ${failed.length} رقم:<br>` + failed.map((f) => `<small>${esc(f.label)}: المعروض <b>${f.countValue}</b> ≠ القائمة <b>${f.listLen}</b>${f.note ? ' — ' + esc(f.note) : ''}</small>`).join('<br>');
     }
   }
 };

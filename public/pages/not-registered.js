@@ -31,6 +31,9 @@ function renderNotRegistered(container) {
 
     ${totalMissing === 0 ? `<div class="card" style="text-align:center; padding:48px; color:var(--c-green)"><p style="font-size:2.5rem; margin-bottom:12px">${ico('check')}</p><p style="font-weight:700; font-size:1.1rem">جميع الطلاب مسجلون في الدورة الثانية بالكامل</p></div>` : sortedRounds.map(rk => buildRoundSection(rk, byRound[rk])).join('')}
   `;
+
+  /* بند ب: شارة الإجمالي في هذه الصفحة يجب أن تساوي طول كشف غير المسجلين في البيانات */
+  VERIFY.add('إجمالي غير المسجلين', DB.unregistered.length, () => document.querySelectorAll('#page-not-registered .copyable-name').length);
 }
 
 function buildRoundSection(roundKey, groupsMap) {

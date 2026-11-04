@@ -28,7 +28,7 @@ function renderOverview(container) {
   let activeDomain = 'horse';
   let rotationInfo = '';
   if (blocks && blocks.blocks) {
-    const todayBlockIdx = Math.max(0, Math.floor((Date.parse(today + 'T00:00:00Z') - Date.parse(blocks.start + 'T00:00:00Z')) / (14 * 86400000));
+    const todayBlockIdx = Math.max(0, Math.floor((Date.parse(today + 'T00:00:00Z') - Date.parse(blocks.start + 'T00:00:00Z')) / (14 * 86400000)));
     const domOrder = domCfg.order || ['horse', 'lab', 'fish'];
     activeDomain = domOrder[todayBlockIdx % domOrder.length] || 'horse';
     const d = domCfg[activeDomain] || {};

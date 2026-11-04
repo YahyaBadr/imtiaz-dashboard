@@ -34,7 +34,7 @@ Read this first instead of re-scanning the whole tree.
 |---|---|
 | `index.html` | RTL Arabic app shell. Header, nav tabs (`data-action="page"`), `<main>` with one `<div id="page-*">` per page, loading/error screens, gate overlay, export menu, toast. Loads `config.js` first, then `icons.js`, `app.js`, `export-*.js`, `pages/*.js`; calls `window.AppBoot()`. |
 | `config.js` | **Single source of settings** → `window.APP_CONFIG`: `API_URL`, `OFFLINE_CACHE`, `REQUEST_TIMEOUT_MS`, `TIMEZONE`, `LAST_DATA_UPDATE`, `GATE{...}`, feature flags, `DEFAULT_ROUND_DATES`. Edit here only; never duplicate. |
-| `sw.js` | Service worker (PWA). Precaches app shell only. **Never caches Apps Script data** (network-only for `script.google.com`). `CACHE_VERSION = 'imtiaz-v16'` — bump on redeploy. |
+| `sw.js` | Service worker (PWA). Precaches app shell only. **Never caches Apps Script data** (network-only for `script.google.com`). `CACHE_VERSION = 'imtiaz-v21'` — bump on redeploy. |
 | `manifest.json`, `assets/*`, `*.css` | PWA manifest, logos, Cairo font, main/print styles. |
 
 ### Core JS
@@ -97,21 +97,21 @@ else       → fetch(base + '?sheet=' + name + '&key=' + API_TOKEN)  → JSON.pa
   The live branch is unreachable (unconditional `return` in the `!base` branch);
   no `XHR`/`WebSocket`/`sendBeacon` anywhere. Only external URL in code is
   the generated `wa.me` link (`waLink()`), never fetched.
-- **Sheet map** (`SHEETS`, app.js:839) — key → sheet/CSV basename:
+- **Sheet map** (`SHEETS`, app.js:862) — key → sheet/CSV basename:
 
 | DB key | Sheet / CSV | Required |
 |---|---|---|
-| `students` | `01_students` | ✅ |
-| `groups` | `02_groups` | ✅ |
-| `roundsOverview` | `03_rounds_overview` | |
-| `roundSchedule` | `04_round_schedule` | ✅ |
-| `stationsUnits` | `05_stations_units_draft` | ✅ |
-| `assignments` | `06_assignments_round2` | ✅ |
-| `unregistered` | `07_unregistered_round2` | ✅ |
-| `round2Summary` | `08_round2_summary` | ✅ |
-| `roundDates` | `09_round_dates` | |
-| `fields` | `10_fields` | ✅ |
-| `issues` / `issuesR2` | `00_data_issues` / `00_data_issues_round2` | |
+| `students` | `master_students` | ✅ |
+| `groups` | `02_groups_r2` | ✅ |
+| `roundsOverview` | `03_rounds_overview_r2` | |
+| `roundSchedule` | `04_round_schedule_r2` | ✅ |
+| `stationsUnits` | `05_stations_units_draft_r2` | ✅ |
+| `assignments` | `06_assignments_round2_r2` | ✅ |
+| `unregistered` | `07_unregistered_round2_r2` | ✅ |
+| `round2Summary` | `08_round2_summary_r2` | ✅ |
+| `roundDates` | `09_round_dates_r2` | |
+| `fields` | `10_fields_r2` | ✅ |
+| `issues` / `issuesR2` | `00_data_issues_r2` / `00_data_issues_round2_r2` | |
 | *(auth)* | `Accounts` (via `GATE.USERS_SHEET_NAME`) | gate |
 
 ### 3.2 Gate (before any data)
@@ -120,7 +120,7 @@ else       → fetch(base + '?sheet=' + name + '&key=' + API_TOKEN)  → JSON.pa
 `Accounts` tab through the **same** `fetchSheetRaw` → `./data/Accounts.csv`
 in local mode. Password hashed in-browser (FNV-1a for sheet mode, SHA-256
 for local passphrase), session in `localStorage`. `lock()` wipes
-`imtiaz_data_cache_v2`. Rate limit: 5 attempts → 30s lockout.
+`imtiaz_data_cache_v3_r2`. Rate limit: 5 attempts → 30s lockout.
 
 ### 3.3 Cache
 
@@ -144,7 +144,7 @@ for local passphrase), session in `localStorage`. `lock()` wipes
 3. `round_key` normalized via `ROUND_META` (`units`, `college`, `poultry`,
    `slaughter`, `equine_lab_fish`, `elective`); `round_order` resolved from
    `round_key` / Arabic names (`الراوند ٢`) / date index.
-4. Group `total_students` **recomputed from the `01_students` roster**, not
+4. Group `total_students` **recomputed from the `master_students` roster**, not
    the sheet's declared total. `DB.studentLookup`, `DB.roundMatrix`,
    `DB.fieldsMap`/`DB.prefColumns`, `DB.roundNames` built here.
 5. Dates: `formatDate()`/`getTodayStr()` in `Africa/Cairo`; Apps Script
@@ -169,26 +169,20 @@ for local passphrase), session in `localStorage`. `lock()` wipes
 
 ## 4. Round 2 migration — current state & plan
 
-**State (pre-migration, committed):** all current CSVs are already
-Round-2-flavoured (`06_assignments_round2`, `07_unregistered_round2`,
-`08_round2_summary`, `00_data_issues_round2`) but sheets still use mixed
-names (`01_students` … `10_fields`). Overview already labels most sections
-"الدورة الثانية"; other pages are round-neutral.
+**State (current):** the Round-2 migration is applied in code and local CSVs use
+the `*_r2` basenames (`master_students`, `06_assignments_round2_r2`,
+`07_unregistered_round2_r2`, `08_round2_summary_r2`, …). Overview labels most
+sections **«الدورة الثانية (R2)»**; other pages are round-neutral.
 
-**Planned refactor:**
-1. Rename every `SHEETS` value to a `*_r2` sheet (e.g. `01_students_r2`,
-   `04_round_schedule_r2`); canonicalize the already-suffixed ones
-   (`06_assignments_round2` → `06_assignments_r2`, etc.).
-2. Copy local CSVs to the new `*_r2.csv` basenames so local mode keeps working.
-3. `normalizeRows(raw, {round:'2'})` tags every data row (`round/_round`,
-   default `round_order:'2'`); auth (`Accounts`) untagged.
-4. `buildDB` applies R2 defaults: missing `round_order` → `'2'`,
-   missing `round_key` on assignments → `'units'`; R2 is the default context
-   (`DB.currentRound = '2'`), units/slaughterhouse logic untouched.
-5. Cache key bumped `v2 → v3_r2` to invalidate pre-migration snapshots.
-6. Page headers: matrix title, units intro, round pages and overview
-   sections explicitly labelled **«الدورة الثانية (R2)»**; `config.js`
-   gains `CURRENT_ROUND: '2'` / `CURRENT_ROUND_LABEL`.
+**Applied changes (historical plan → done):**
+1. Every `SHEETS` value renamed to the `*_r2` sheet (e.g. `master_students`,
+   `06_assignments_round2_r2`); local CSV basenames follow the same `*_r2` suffix.
+2. Local CSVs renamed to the new `*_r2.csv` basenames so local mode keeps working.
+3. Data rows tagged via `round_order` / `round_key` in `normalizeRows`;
+   `buildDB` applies R2 defaults (missing `round_order` → `'2'`,
+   assignments fallback `round_key` → `'units'`); R2 is the default context
+   (`DB.currentRound = '2'`), units logic untouched.
+4. Cache key bumped `imtiaz_data_cache_v3_r2` to invalidate pre-migration snapshots.
 
 ## 5. Editing conventions
 

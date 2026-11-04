@@ -6,7 +6,7 @@ Data is sourced live from a Google Spreadsheet via a Google Apps Script Web App 
 
 ## Features
 
-- 📊 **Four pages**: Overview (الملخص), Rotation Matrix (المصفوفة), Units (الوحدات), Unregistered Students (غير المسجلين)
+- 📊 **Pages**: Overview (الملخص), Rotation Matrix (المصفوفة), Rounds (الراوند ١–٤), Units (الوحدات), Unregistered Students (غير المسجلين)
 - 📱 **PWA / installable** — service worker caches the app shell; works offline with the last-known data
 - 🌐 **Arabic RTL UI** with the self-hosted Cairo font, fully responsive (desktop & mobile)
 - 🔍 **Arabic-aware search** (normalizes أ/إ/آ, ى/ي, ة/ه, diacritics, Arabic numerals)
@@ -20,7 +20,7 @@ Data is sourced live from a Google Spreadsheet via a Google Apps Script Web App 
 - **Frontend:** vanilla JavaScript (no framework, no build step), plain CSS
 - **Server:** zero-dependency Node.js static file server (`server.js`)
 - **Data:** Google Sheets → Google Apps Script Web App (JSON), parsed client-side
-- **Libraries (vendored):** [SheetJS xlsx mini](https://github.com/SheetJS/sheetjs) and [PapaParse](https://www.papaparse.com/) in `public/lib/`
+- **Libraries (vendored):** SheetJS (xlsx.full + xlsx-js-style) and pdfmake (PDF) / docx (Word) / jszip (ZIP) in `public/vendor/` — fully offline, no CDN.
 
 ## Project Structure
 
@@ -42,7 +42,7 @@ Data is sourced live from a Google Spreadsheet via a Google Apps Script Web App 
     │   ├── schedule.js
     │   ├── units.js
     │   └── not-registered.js
-    ├── lib/               # Vendored libs (xlsx.mini.min.js, papaparse.min.js)
+    ├── vendor/           # Vendored libs (xlsx.full.min.js, xlsx-js-style.min.js, pdfmake, docx, jszip, vfs_fonts)
     └── assets/            # Logos + Cairo font files (woff2)
 ```
 
@@ -84,19 +84,20 @@ All settings live in a single file: `public/config.js` → `window.APP_CONFIG`. 
 
 The app fetches these sheets in parallel from `API_URL` (each as `?sheet=<name>`):
 
-| Key | Sheet name | Required |
+| Key | Sheet / CSV | Required |
 |---|---|---|
-| `students` | `01_students` | ✅ |
-| `groups` | `02_groups` | ✅ |
-| `roundsOverview` | `03_rounds_overview` | |
-| `roundSchedule` | `04_round_schedule` | ✅ |
-| `stationsUnits` | `05_stations_units_draft` | ✅ |
-| `assignments` | `06_assignments_round2` | ✅ |
-| `unregistered` | `07_unregistered_round2` | ✅ |
-| `round2Summary` | `08_round2_summary` | ✅ |
-| `roundDates` | `09_round_dates` | |
-| `fields` | `10_fields` | ✅ |
-| `issues` / `issuesR2` | `00_data_issues` / `00_data_issues_round2` | |
+| `students` | `master_students` | ✅ |
+| `groups` | `02_groups_r2` | ✅ |
+| `roundsOverview` | `03_rounds_overview_r2` | |
+| `roundSchedule` | `04_round_schedule_r2` | ✅ |
+| `stationsUnits` | `05_stations_units_draft_r2` | ✅ |
+| `assignments` | `06_assignments_round2_r2` | ✅ |
+| `unregistered` | `07_unregistered_round2_r2` | ✅ |
+| `round2Summary` | `08_round2_summary_r2` | ✅ |
+| `roundDates` | `09_round_dates_r2` | |
+| `fields` | `10_fields_r2` | ✅ |
+| `issues` / `issuesR2` | `00_data_issues_r2` / `00_data_issues_round2_r2` | |
+| *(auth)* | `Accounts` (via `GATE.USERS_SHEET_NAME`) | gate |
 
 If some sheets fail to fetch, the last cached copy is used as a fallback; the Apps Script must be published as *Execute as “Me”* + *Access: Anyone*.
 
@@ -104,7 +105,7 @@ If some sheets fail to fetch, the last cached copy is used as a fallback; the Ap
 
 The site is designed to deploy from GitHub via **Cloudflare Pages/Workers** (push → auto-redeploy). Any static host that serves the `public/` folder works too.
 
-**After each redeploy:** bump `CACHE_VERSION` in `public/sw.js` (e.g. `imtiaz-v4`) so clients pick up the new app shell.
+**After each redeploy:** bump `CACHE_VERSION` in `public/sw.js` (e.g. `imtiaz-v21`) so clients pick up the new app shell.
 
 ## Development Notes
 

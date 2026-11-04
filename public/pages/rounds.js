@@ -186,8 +186,9 @@ window.renderRound2Hub = function (container) {
         const exp = parseInt(s.expected_students, 10) || 0;
         const miss = parseInt(s.not_registered, 10) || 0;
         const pct = exp > 0 ? Math.round((reg / exp) * 100) : (reg > 0 ? 100 : 0);
+        const pageId = domain.key === 'equine_lab_fish' ? 'round-2-equine' : `round-2-${domain.key}`;
         return `
-          <div class="r2-domain-card" data-action="goto-page" data-page="round-2-${domain.key}" style="cursor:pointer;">
+          <div class="r2-domain-card" data-action="goto-page" data-page="${pageId}" style="cursor:pointer;">
             <div class="r2-domain-head">
               <span class="r2-domain-ico ${domainTone(domain.key)}" aria-hidden="true">${iconSvg(domainIcon(domain.key))}</span>
               <span class="r2-domain-label">${esc(domain.label)}</span>

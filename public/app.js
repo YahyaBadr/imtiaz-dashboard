@@ -1498,6 +1498,10 @@ function registerSW() {
 const PAGE_RENDERERS = {
   'overview': () => renderOverview(document.getElementById('page-overview')),
   'schedule': () => renderSchedule(document.getElementById('page-schedule')),
+  'round-1': () => renderRoundPage('1'),
+  'round-2': () => renderRoundPage('2'),
+  'round-3': () => renderRoundPage('3'),
+  'round-4': () => renderRoundPage('4'),
   'units': () => renderUnits(document.getElementById('page-units')),
   'not-registered': () => renderNotRegistered(document.getElementById('page-not-registered'))
 };
@@ -1562,6 +1566,9 @@ window.showPage = function (pageId) {
 };
 
 function rerenderAll() {
+  // إسقاط كاشات المشتقات (تسجيلات الوحدات / خريطة تدوير الخيل) قبل إعادة البناء —
+  // وإلا قد تُقرأ نسخة قديمة من DB بعد التحديث (البند 2ج + البند 4)
+  window._unitRegsCache = null; window._eqRotMap = null;
   document.querySelectorAll('.page').forEach((p) => { delete p.dataset.rendered; p.innerHTML = ''; });
   const cur = _activePage || 'overview'; _activePage = null; showPage(cur);
   window.updateNavBadges && window.updateNavBadges();

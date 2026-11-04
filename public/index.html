@@ -20,10 +20,10 @@
 
   <link rel="preload" href="assets/fonts/cairo-400-arabic-0.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/cairo-700-arabic-6.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="cairo.css?v=313">
-  <link rel="stylesheet" href="style.css?v=313">
-  <link rel="stylesheet" href="print.css?v=313" media="print">
-  <script src="config.js?v=313"></script>
+  <link rel="stylesheet" href="cairo.css?v=315">
+  <link rel="stylesheet" href="style.css?v=315">
+  <link rel="stylesheet" href="print.css?v=315" media="print">
+  <script src="config.js?v=315"></script>
 </head>
 <body>
 
@@ -76,6 +76,10 @@
     <div class="nav-inner"><span class="nav-indicator" aria-hidden="true"></span>
       <button type="button" class="nav-btn active" data-action="page" data-page="overview"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" x2="6" y1="20" y2="14"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="18" x2="18" y1="20" y2="10"/></svg></span><span class="nav-txt">الملخص</span></button>
       <button type="button" class="nav-btn" data-action="page" data-page="schedule"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></span><span class="nav-txt">المصفوفة</span></button>
+      <button type="button" class="nav-btn" data-action="page" data-page="round-1"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-txt">الراوند ١</span></button>
+      <button type="button" class="nav-btn" data-action="page" data-page="round-2"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-txt">الراوند ٢</span></button>
+      <button type="button" class="nav-btn" data-action="page" data-page="round-3"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-txt">الراوند ٣</span></button>
+      <button type="button" class="nav-btn" data-action="page" data-page="round-4"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-txt">الراوند ٤</span></button>
       <button type="button" class="nav-btn" data-action="page" data-page="units"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6v4"/><path d="M14 8h-4"/><path d="M3 22V8l9-6 9 6v14"/><path d="M9 22v-4h6v4"/></svg></span><span class="nav-txt">الوحدات</span></button>
       <button type="button" class="nav-btn" data-action="page" data-page="not-registered"><span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span><span class="nav-txt">غير المسجلين</span></button>
     </div>
@@ -86,6 +90,10 @@
     <div id="error-screen" class="error-screen hidden"></div>
     <div id="page-overview" class="page hidden"></div>
     <div id="page-schedule" class="page hidden"></div>
+    <div id="page-round-1" class="page hidden"></div>
+    <div id="page-round-2" class="page hidden"></div>
+    <div id="page-round-3" class="page hidden"></div>
+    <div id="page-round-4" class="page hidden"></div>
     <div id="page-units" class="page hidden"></div>
     <div id="page-not-registered" class="page hidden"></div>
   </main>
@@ -200,15 +208,16 @@
     </button>
   </div>
 
-  <script src="icons.js?v=313"></script>
-  <script src="app.js?v=313"></script>
-  <script src="export-core.js?v=313"></script>
-  <script src="export-assets.js?v=313"></script>
-  <script src="export.js?v=313"></script>
-  <script src="pages/overview.js?v=313"></script>
-  <script src="pages/schedule.js?v=313"></script>
-  <script src="pages/units.js?v=313"></script>
-  <script src="pages/not-registered.js?v=313"></script>
+  <script src="icons.js?v=315"></script>
+  <script src="app.js?v=315"></script>
+  <script src="export-core.js?v=315"></script>
+  <script src="export-assets.js?v=315"></script>
+  <script src="export.js?v=315"></script>
+  <script src="pages/overview.js?v=315"></script>
+  <script src="pages/schedule.js?v=315"></script>
+  <script src="pages/rounds.js?v=315"></script>
+  <script src="pages/units.js?v=315"></script>
+  <script src="pages/not-registered.js?v=315"></script>
   <script>
     (function () {
       // شاشة الاستقبال تظهر فوراً (حتى قبل تحميل بقية السكربتات) وتختفي تلقائياً

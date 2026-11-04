@@ -166,6 +166,21 @@
       <button type="button" class="export-scope active" role="menuitemradio" aria-checked="true" data-action="export-scope" data-scope="page">تصدير الصفحة الحالية</button>
       <button type="button" class="export-scope" role="menuitemradio" aria-checked="false" data-action="export-scope" data-scope="full">تصدير الملف الشامل (كل البيانات)</button>
     </div>
+    <!-- بند 3: تصدير مفصّل — لكل جروب على حدة (بياناته عبر كل الراوندات) ولكل راوند على حدة (كل المسجلين فيه) -->
+    <div class="export-scope-label" role="presentation">تفصيلي حسب الجروب</div>
+    <select id="export-group-select" class="export-pick" data-action="export-scope-pick" aria-label="اختيار جروب للتصدير">
+      <option value="">— اختر جروبًا —</option>
+    </select>
+    <div class="export-scope-label" role="presentation">تفصيلي حسب الراوند</div>
+    <select id="export-round-select" class="export-pick" data-action="export-scope-pick" aria-label="اختيار راوند للتصدير">
+      <option value="">— اختر راوندًا —</option>
+    </select>
+    <div class="export-scope-label" role="presentation">حزم جاهزة</div>
+    <div class="export-scopes" role="group" aria-label="حزم التصدير الجاهزة">
+      <button type="button" class="export-scope" role="menuitemradio" aria-checked="false" data-action="export-scope" data-scope="matrix">المصفوفة</button>
+      <button type="button" class="export-scope" role="menuitemradio" aria-checked="false" data-action="export-scope" data-scope="students">دليل الطلاب</button>
+      <button type="button" class="export-scope" role="menuitemradio" aria-checked="false" data-action="export-scope" data-scope="unreg">غير المسجلين</button>
+    </div>
     <div class="export-scope-label" role="presentation">الصيغة</div>
     <button type="button" class="export-item" role="menuitem" data-action="export-file" data-format="xlsx">
       <span class="export-ico ex-xlsx" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9.5 12.5 5 5"/><path d="m14.5 12.5-5 5"/></svg></span>

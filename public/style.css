@@ -807,6 +807,15 @@ html.dark .site-nav { background: #1E121E; }
 .export-scope::before { content: "○ "; color: var(--c-text-muted); }
 .export-scope.active::before { content: "◉ "; color: var(--c-gold); }
 
+/* بند 3 — قائمتا الجروب/الراوند داخل قائمة التصدير (تعمل في الثيمَين، بلا تجاوز عرض) */
+.export-pick {
+  display: block; width: 100%; box-sizing: border-box; min-width: 0;
+  margin: 0 0 6px; padding: 8px 10px; border-radius: 10px;
+  border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text-main);
+  font-family: inherit; font-size: .82rem; font-weight: 700; cursor: pointer;
+}
+html.dark .export-pick { background: #241C2A; color: var(--c-text-main); border-color: var(--c-border); }
+
 /* حالة الزر أثناء التوليد: spinner + تعطيل */
 #export-btn[disabled] { cursor: progress; opacity: .75; }
 #export-btn.spinning .btn-ico:first-child { animation: exportSpin 0.9s linear infinite; transform-origin: center; }

@@ -333,13 +333,42 @@
   // النطاق المحدد في القائمة (افتراضي: الصفحة الحالية)
   let chosenScope = 'page';
   function setScope(el) {
-    chosenScope = el.dataset.scope === 'full' ? 'full' : 'page';
+    // البند 3: نطاقات مفصلة group:<gid> / round:<N> / matrix / students / unreg — غير ذلك page/full
+    const s = String(el.dataset.scope || 'page');
+    chosenScope = /^(group[:\-_]\d+|round[:\-_]\d+|matrix|students|unreg|units|full)$/i.test(s) ? s : 'page';
     const menu = menuEl(); if (!menu) return;
     menu.querySelectorAll('.export-scope').forEach((b) => {
       const on = b === el;
       b.classList.toggle('active', on);
       b.setAttribute('aria-checked', String(on));
     });
+  }
+
+  /* البند 3 — تعبئة ديناميكية لقائمتي «الجروبات» و«الراوندات» داخل قائمة التصدير
+     من نفس مصدر البيانات (DB.groups / roundMatrix)، بلا أي قيم ثابتة. */
+  function refreshExportPickers() {
+    const menu = menuEl(); if (!menu || typeof window.DB === 'undefined' || !window.DB) return;
+    const gSel = menu.querySelector('#export-group-select');
+    const rSel = menu.querySelector('#export-round-select');
+    if (gSel && gSel.options.length <= 1) {
+      (DB.groups || []).slice().sort((a, b) => (parseInt(a.group_id, 10) || 0) - (parseInt(b.group_id, 10) || 0)).forEach((g) => {
+        const o = document.createElement('option');
+        o.value = 'group:' + String(g.group_id).trim();
+        o.textContent = 'جروب ' + g.group_id + (g.group_name ? ' — ' + g.group_name : '');
+        gSel.appendChild(o);
+      });
+    }
+    if (rSel && rSel.options.length <= 1) {
+      ['1', '2', '3', '4'].forEach((ord) => {
+        const key = ord + '_';
+        let label = 'راوند ' + ord;
+        const mk = Object.keys(DB.roundMatrix || {}).find((k) => k.startsWith(ord + '_'));
+        if (mk && DB.roundMatrix[mk].round_name_ar) label = DB.roundMatrix[mk].round_name_ar;
+        const o = document.createElement('option');
+        o.value = 'round:' + ord; o.textContent = label;
+        rSel.appendChild(o);
+      });
+    }
   }
 
   function toggleMenu(force) {
@@ -351,6 +380,7 @@
     const caret = btn.querySelector('.export-caret');
     if (caret) caret.classList.toggle('open', show);
     if (show) {
+      refreshExportPickers();   // البند 3: تعبئة قائمتي الجروبات/الراوندات قبل إظهار القائمة
       const first = menu.querySelector('.export-item:not([disabled])');
       if (first) try { first.focus(); } catch (e) {}
     }
@@ -398,6 +428,21 @@
     registerAction('export-file', (el) => handleExport(el));
     registerAction('export-scope', (el) => setScope(el));
   }
+
+  /* البند 3 — قائمتا الجروب/الراوند: اختيار النطاق المفصل عبر حدث change
+     (select ليس زرًا فلا يمر عبر نظام data-action بالنقر). */
+  document.addEventListener('change', (e) => {
+    const sel = e.target && e.target.closest ? e.target.closest('.export-pick') : null;
+    if (!sel) return;
+    const v = String(sel.value || '');
+    if (!v) return;
+    chosenScope = v;
+    const menu = menuEl();
+    if (menu) menu.querySelectorAll('.export-scope').forEach((b) => {
+      b.classList.remove('active'); b.setAttribute('aria-checked', 'false');
+    });
+    toast('نطاق التصدير: ' + (sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : v));
+  });
 
   document.addEventListener('click', (e) => {
     const menu = menuEl();

@@ -641,7 +641,7 @@ window.isUnitRegRow = function (row) {
   if (!row) return false;
   const rk = normRoundKey(row.round_key || '');
   if (rk === 'units') return true;
-  const ro = String(row.round_order || '').trim();
+  const ro = normRoundOrder(row.round_order);
   const hasUnit = !!unitRowName(row);
   if (hasUnit && (!ro || ro === '1')) return true;            // ورقتنا التاريخية: تسجيلات الوحدات = راوند 1 بلا round_key مفهوم
   return false;
@@ -728,6 +728,9 @@ window.normRoundKey = function (key) {
     const rest = s.replace(/^(round|rwand)[_]?[0-9]*[_]?/, '');
     if (rest && ROUND_ALIAS_FALLBACK[rest]) return ROUND_ALIAS_FALLBACK[rest];
   }
+  if (/^(r|rwand)[_]?(1|2)$/.test(s)) return s === 'r2' || s === 'r_2' ? 'units' : 'college';   // R1/R2 كما في الشيت
+  if (/^r[_]?3$/.test(s)) return 'poultry';
+  if (/^r[_]?4$/.test(s)) return 'slaughter';
   if (/unit|وحدة|وحدات/.test(s)) return 'units';
   if (/poultry|دواجن|دجاج/.test(s)) return 'poultry';
   if (/slaughter|food|مجزر|مجازر|غذاء/.test(s)) return 'slaughter';
@@ -735,6 +738,50 @@ window.normRoundKey = function (key) {
   if (/college|depart|قسم|اقسام|كلية/.test(s)) return 'college';
   if (/elective|اختياري/.test(s)) return 'elective';
   return raw;                                                          // مجال جديد — يُعرض باسمه العربي من الجدول كما هو
+};
+
+/* ── مصادر التواريخ (03_rounds_overview · 09_round_dates · config) مفهرسة برقم الدورة ──
+   تُبنى داخل buildDB — وتُستخدم لحل رقم الدورة عندما يكون عمود round_order فارغاً أو نصياً. */
+window.__roundDateInfo = {};
+
+/* حسم رقم الدورة لأي صف schedule/assignments/unregistered — بلا اعتماد على مسمى المفتاح:
+   1) round_order إن كان رقمة مفهوماً  2) اسم الراوند العربي (تاني/ثالث …)  3) مفتاح راوند معروف
+   4) تطابق تام مع مصدر تواريخ (اسم/مفتاح)  — وإلا '' (غير محدد). */
+window.resolveRoundOrder = function (row) {
+  const o = normRoundOrder(row && row.round_order);
+  if (o) return o;
+  const name = normAr(String((row && row.round_name_ar) || ''));
+  if (name) {
+    const nm = name.match(/(?:راوند|دورة|round)\s*([0-9]+)/);
+    if (nm) return String(+nm[1]);
+    const words = { 'الاولى': '1', 'الثانية': '2', 'الثالثة': '3', 'الرابعة': '4', 'الخامسة': '5', 'السادسة': '6' };
+    for (const k in words) { if (name.indexOf(k) > -1) return words[k]; }
+  }
+  const rk = normRoundKey(String((row && row.round_key) || ''));
+  if (rk && ROUND_META[rk]) {
+    const idx = ROUND_ORDER.indexOf(rk);
+    if (rk === 'elective') return '0';
+    if (idx > -1 && idx < 6) return String(idx + 1);                  // units→1 · equine→2 · poultry→3 · slaughter→4 · college→5
+  }
+  const info = window.__roundDateInfo || {};
+  for (const ord in info) {
+    const it = info[ord] || {};
+    if ((it.name && name && it.name === name) || (it.key && rk && it.key === rk)) return String(ord);
+  }
+  return '';
+};
+
+/* تطبيع رقم الدورة: "R2" · "2" · "round 2" · "الدورة الثانية" → '2' (أو '0' للاختياري) */
+window.normRoundOrder = function (v) {
+  const s = normAr(String(v === null || v === undefined ? '' : v));
+  if (!s) return '';
+  const m = s.match(/(?:r(?:ound)?|دورة|راوند|rwand)\s*([0-9٠-٩]+)/);
+  if (m) return String(+m[1].replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const d = s.match(/^([0-9٠-٩]+)/);
+  if (d) return String(+d[1].replace(/[٠-٩]/g, (x) => '٠١٢٣٤٥٦٧٨٩'.indexOf(x)));
+  const words = { 'الاولى': '1', 'الثانية': '2', 'الثالثة': '3', 'الرابعة': '4', 'الخامسة': '5', 'السادسة': '6' };
+  for (const k in words) { if (s.indexOf(k) > -1) return words[k]; }
+  return '';
 };
 
 window.ROUND_META = {
@@ -886,6 +933,42 @@ function hasRequired(sheets) { return REQUIRED.every((k) => Array.isArray(sheets
 
 function buildDB(S) {
   const g = (k) => S[k] || [];
+  /* ── تطبيع رؤوس الأعمدة العربية الشائعة → أسماء الحقول التي تعتمد عليها اللوحة ──
+     (يُطبَّق على كل شيت؛ لا يمس عموداً إن لم يكن الرأس مطابقاً، فلا كسر للراسلين حالياً) */
+  const AR_COLS = {
+    'رقم_الجروب': 'group_id', 'رقم_المجموعة': 'group_id', 'المجموعة': 'group_id', 'الجروب': 'group_id',
+    'اسم_الجروب': 'group_name', 'اسم_المجموعة': 'group_name',
+    'عدد_الطلاب': 'total_students', 'اجمالي_الطلاب': 'total_students', 'إجمالي_الطلاب': 'total_students', 'القوام': 'total_students',
+    'رقم_الدورة': 'round_order', 'ترتيب_الدورة': 'round_order', 'الدورة_برقمها': 'round_order',
+    'راوند': 'round_key', 'مفتاح_الراوند': 'round_key', 'الراوند': 'round_key',
+    'اسم_الراوند': 'round_name_ar', 'اسم_الدورة': 'round_name_ar',
+    'كود_الطالب': 'code_short', 'الكود': 'code_short',
+    'اسم_الطالب': 'full_name', 'الاسم': 'full_name', 'اسم_الطالب_كاملا': 'full_name', 'اسم_الطالب_بالكامل': 'full_name',
+    'النوع': 'gender', 'الجنس': 'gender',
+    'الهاتف': 'phone', 'رقم_الهاتف': 'phone', 'موبايل': 'phone',
+    'الرقم_القومي': 'national_id',
+    'تاريخ_البداية': 'start_date', 'من': 'start_date',
+    'تاريخ_النهاية': 'end_date', 'إلى': 'end_date', 'الي': 'end_date',
+    'الوحدة': 'unit_name', 'الوحدة_البيطرية': 'unit_name', 'اسم_الوحدة': 'unit_name',
+    'المحافظة': 'governorate',
+    'المسجلون': 'registered', 'عدد_المسجلين': 'registered', 'المقيدين': 'registered', 'المقيدون': 'registered',
+    'غير_المسجلين': 'not_registered',
+    'المتوقعون': 'expected_students', 'عدد_المتوقعين': 'expected_students',
+    'الطاقة_الاستيعابية': 'capacity', 'السعة': 'capacity',
+    'الحالة': 'status', 'البند': 'metric', 'القيمة': 'value',
+    'عدد_البنات': 'females', 'عدد_البنين': 'males'
+  };
+  const canonArKey = function (k) {
+    const kk = normKey(k).replace(/[\u200b\u200c\u200d\ufeff]/g, '').replace(/\s+/g, '_');
+    if (AR_COLS[kk]) return AR_COLS[kk];
+    const bare = kk.replace(/[أإ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+    if (AR_COLS[bare]) return AR_COLS[bare];
+    for (const a in AR_COLS) {
+      const b = a.replace(/[أإ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+      if (b === bare) return AR_COLS[a];
+    }
+    return null;
+  };
   // تطبيع مفاتيح الحقول: مسافات/ZWSP/BOM/Case — حتى لا تنكسر اللوحة عند تعديل رأس العمود في الجدول
   const canonCols = {};
   (g('fields') || []).forEach((f) => {
@@ -898,6 +981,10 @@ function buildDB(S) {
     Object.keys(o).forEach((k) => {
       const c = normKey(k).toLowerCase().replace(/[\u200b\u200c\u200d\ufeff]/g, '').replace(/\s+/g, '_');
       if (canonCols[c] && canonCols[c] !== k) { if (o[canonCols[c]] === undefined) o[canonCols[c]] = o[k]; delete o[k]; }
+    });
+    Object.keys(o).forEach((k) => {
+      const mapped = canonArKey(k);
+      if (mapped && mapped !== k && o[mapped] === undefined) { o[mapped] = o[k]; delete o[k]; }
     });
     return o;
   };
@@ -914,11 +1001,47 @@ function buildDB(S) {
     return { ...r, group_id: gid, total_students: String(actual > 0 ? actual : declared), _declared_total: String(declared) };
   }).sort((a, b) => (+a.group_id || 0) - (+b.group_id || 0));
   DB.roundsOverview = g('roundsOverview').map(fixRow);
-  DB.roundSchedule = g('roundSchedule').map((r) => { r = fixRow(r); return { ...r, round_key: normRoundKey(r.round_key), group_id: cleanGroupId(r.group_id) }; });
+  /* ── فهرسة مصادر التواريخ برقم الدورة (03 + 09 + config) — تُبنى أولاً لأن حسم
+     رقم صفّ الجدول قد يعتمد على مطابقة الاسم/المفتاح مع مصدر التواريخ ── */
+  const dateInfo = {};
+  const putDateInfo = (ord, key, nameAr) => {
+    ord = normRoundOrder(ord);
+    if (!ord) return;
+    const it = dateInfo[ord] || (dateInfo[ord] = { key: '', name: '' });
+    if (key) it.key = normRoundKey(key);
+    if (nameAr) it.name = normAr(nameAr);
+  };
+  DB.roundsOverview.forEach((r) => putDateInfo(r.round_order, r.round_key, r.round_name_ar));
+  g('roundDates').forEach((r) => { r = fixRow(r); putDateInfo(r.round_order, r.round_key, r.round_name_ar); });
+  Object.keys(CFG().DEFAULT_ROUND_DATES || {}).forEach((ord) => putDateInfo(ord, '', ''));
+  window.__roundDateInfo = dateInfo;
+
+  /* تطبيع جداول الدورة: round_key مرِنّ، رقم الدورة يُحسم من أي مسميات في الشيت
+     ('' · 'R1' · 'راوند ٢' · 'الدورة الثانية')، واسم الراوند لا يضيع */
+  const normRoundRow = (r) => {
+    r = fixRow(r);
+    const o = { ...r, round_key: normRoundKey(r.round_key), group_id: cleanGroupId(r.group_id) };
+    const ord = resolveRoundOrder(o);
+    if (ord) o.round_order = ord;
+    if (!o.round_name_ar && o.round_key) o.round_name_ar = window.ROUND_LABELS[o.round_key] || '';
+    return o;
+  };
+  DB.roundSchedule = g('roundSchedule').map(normRoundRow);
   DB.stationsUnits = g('stationsUnits').map(fixRow);
-  DB.assignments = g('assignments').map((r) => { r = fixRow(r); return { ...r, round_key: normRoundKey(r.round_key), group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }; });
-  DB.unregistered = g('unregistered').map((r) => { r = fixRow(r); return { ...r, round_key: normRoundKey(r.round_key), group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) }; });
+  DB.assignments = g('assignments').map((r) => { r = normRoundRow(r); r.gender = normGender(r.gender); return r; });
+  DB.unregistered = g('unregistered').map((r) => { r = normRoundRow(r); r.gender = normGender(r.gender); return r; });
   DB.round2Summary = g('round2Summary').map((r) => { r = fixRow(r); return { ...r, round_key: normRoundKey(r.round_key) }; });
+  /* ملخص الدورة الثانية: شيت بمقاييس صفّية (metric/value) أو جدول راوندات — كلاهما مدعوم */
+  if (!DB.round2Summary.some((r) => r.registered || r.not_registered)) {
+    const m = {};
+    DB.round2Summary.forEach((r) => {
+      const k = normKey(r.metric).replace(/\s+/g, '_').toLowerCase();
+      m[k] = parseInt(normCell(r.value), 10) || 0;
+    });
+    if ('registered' in m || 'not_registered' in m) {
+      DB.round2Summary = [{ round_key: '', registered: String(m.registered || 0), not_registered: String(m.not_registered || 0) }];
+    }
+  }
   DB.roundDates = g('roundDates').map(fixRow);
   DB.fields = g('fields').map(fixRow);
   DB.issues = g('issues').map(fixRow);

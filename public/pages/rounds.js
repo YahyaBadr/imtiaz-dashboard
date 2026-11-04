@@ -91,7 +91,7 @@ window.renderRoundPage = function (order) {
   const cardsHtml = rows.length ? `
     <div class="round-roster-grid">
       ${rows.map((r) => `
-        <button type="button" class="round-student-card" data-action="student" data-sid="${esc(r.sid)}" data-replace="1" aria-label="ملف ${esc(r.name)}">
+        <button type="button" class="round-student-card" data-action="student" data-elite="1" data-sid="${esc(r.sid)}" data-replace="1" aria-label="ملف ${esc(r.name)}">
           <div class="rsc-top">
             <span class="initials-avatar">${esc(getInitials(r.name))}</span>
             <div class="rsc-id">

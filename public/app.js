@@ -1704,7 +1704,11 @@ window.AppBoot = function () { init(); };
 const ACTIONS = {
   'page': (el) => { Overlays.closeAll(); showPage(el.dataset.page); },
   'goto-page': (el) => { Overlays.closeAll(); showPage(el.dataset.page); },
-  'student': (el) => openStudentProfile(el.dataset.sid, { replace: !!el.dataset.replace }),
+  'student': (el) => {
+    // البند 5: كروت الراوندات تفتح البروفايل المصقول «elite» عند توفره
+    if (el.dataset.elite === '1' && window.openEliteStudentProfile) { openEliteStudentProfile(el.dataset.sid); return; }
+    openStudentProfile(el.dataset.sid, { replace: !!el.dataset.replace });
+  },
   'raw-student': (el) => openUnknownStudent(window._rawRows[+el.dataset.ri] || {}),
   'group-roster': (el) => openGroupRosterModal(el.dataset.gid, { replace: !!el.dataset.replace }),
   'directory': () => openStudentDirectoryModal(),

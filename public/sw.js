@@ -5,7 +5,7 @@
    Bump CACHE_VERSION whenever you redeploy so clients get the new files.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const CACHE_VERSION = 'imtiaz-v15';
+const CACHE_VERSION = 'imtiaz-v16';
 const APP_SHELL = [
   './',
   './index.html',

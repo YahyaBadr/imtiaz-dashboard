@@ -1235,3 +1235,83 @@ html.dark .g-chip { background: color-mix(in srgb, var(--c-card-bg) 70%, transpa
   .toast, .verify-badge { bottom: calc(12px + env(safe-area-inset-bottom)); }
 }
 
+
+/* ═══════════ البند 5 — صفحة كل راوند + بروفايل الطالب «elite» ═══════════ */
+
+/* ── هيرو الراوند ── */
+.round-hero-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; min-width: 0; }
+.round-hero-main { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 260px; }
+.round-hero-title { font-weight: 800; font-size: 1.06rem; color: var(--c-plum); line-height: 1.3; }
+.round-hero-sub { font-size: 0.85rem; color: var(--c-text-muted); overflow-wrap: anywhere; }
+.round-hero-stats { display: flex; align-items: stretch; gap: 10px; flex-wrap: wrap; }
+.rhs { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 12px; padding: 8px 14px; text-align: center; min-width: 92px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.rhs-n { display: block; font-weight: 800; font-size: 1.15rem; color: var(--c-plum); line-height: 1.2; }
+.rhs > span:last-child { font-size: 0.74rem; color: var(--c-text-muted); }
+
+/* ── شبكة كروت الطلاب ── */
+.round-roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 12px; }
+.round-student-card { text-align: right; background: var(--c-card-bg); border: 1px solid var(--c-border); border-radius: var(--radius-card); box-shadow: var(--shadow-xs); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; font: inherit; color: inherit; min-width: 0; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease; }
+.round-student-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); border-color: var(--c-gold); }
+.round-student-card:focus-visible { outline: 2px solid var(--c-gold); outline-offset: 2px; }
+.rsc-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.rsc-id { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.rsc-name { font-weight: 700; font-size: 0.94rem; color: var(--c-text-main); overflow-wrap: anywhere; }
+.rsc-sub { font-size: 0.78rem; color: var(--c-text-muted); }
+.rsc-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.rsc-unit { font-size: 0.76rem; color: var(--c-plum); background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius-badge); padding: 1px 8px; overflow-wrap: anywhere; }
+
+/* ── بروفايل elite ── */
+.elite-profile-overlay { z-index: 70; }
+.elite-card { background: var(--c-card-bg); border: 1.5px solid var(--c-gold-border); border-radius: 18px; box-shadow: 0 26px 60px rgba(20, 10, 20, .45); width: min(100% - 20px, 560px); max-height: min(88vh, 780px); display: flex; flex-direction: column; overflow: hidden; animation: pageFadeIn .18s ease; min-width: 0; }
+.elite-head { position: relative; background: linear-gradient(135deg, #2B1A2B 0%, #1E121E 60%, #241726 100%); border-bottom: 2px solid var(--c-gold); padding: 20px 20px 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; }
+.elite-head-inner { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1; }
+.elite-avatar { background: rgba(227, 167, 60, .18); color: var(--c-gold); border: 1.5px solid var(--c-gold); flex: 0 0 auto; }
+.elite-id { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.elite-name { margin: 0; font-weight: 800; font-size: clamp(1.06rem, 4.5vw, 1.35rem); color: #F6EFE3; line-height: 1.35; overflow-wrap: anywhere; }
+.elite-code-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.elite-code { font-weight: 800; font-size: .92rem; letter-spacing: .3px; color: var(--c-gold); background: rgba(227, 167, 60, .12); border: 1px solid rgba(227, 167, 60, .45); border-radius: var(--radius-pill); padding: 2px 12px; direction: ltr; }
+.elite-body { padding: 16px 20px 20px; overflow-y: auto; overflow-x: hidden; min-width: 0; }
+.elite-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 10px; margin-bottom: 6px; }
+.elite-fact { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.elite-fact .k { font-size: .74rem; color: var(--c-text-muted); }
+.elite-fact .v { font-size: .9rem; color: var(--c-text-main); font-weight: 600; overflow-wrap: anywhere; }
+.elite-section-title { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: .95rem; color: var(--c-plum); margin: 16px 0 10px; }
+.elite-section-title .ico { width: 18px; height: 18px; }
+
+/* ── timeline الرحلة ── */
+.elite-timeline { position: relative; display: flex; flex-direction: column; gap: 12px; padding-inline-start: 6px; min-width: 0; }
+.elite-timeline::before { content: ""; position: absolute; inset-block: 8px; inset-inline-start: 12px; width: 2px; background: linear-gradient(180deg, var(--c-gold), var(--c-border)); border-radius: 2px; }
+.elite-step { position: relative; display: flex; gap: 14px; min-width: 0; }
+.elite-bullet { flex: 0 0 auto; width: 14px; height: 14px; margin-top: 4px; border-radius: 50%; background: var(--c-card-bg); border: 2.5px solid var(--c-gold); box-shadow: 0 0 0 3px var(--c-card-bg); z-index: 1; }
+.elite-step.done .elite-bullet { background: var(--c-gold); }
+.elite-step.upcoming .elite-bullet { border-color: var(--c-border); }
+.elite-step-content { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 12px; padding: 10px 14px; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.elite-step.current .elite-step-content { border-color: var(--c-gold-border); box-shadow: var(--shadow-xs); }
+.elite-step-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.elite-step-name { font-weight: 700; font-size: .9rem; color: var(--c-text-main); overflow-wrap: anywhere; }
+.elite-step-dates { font-size: .78rem; color: var(--c-text-muted); direction: ltr; text-align: right; }
+.elite-step-station { font-size: .82rem; color: var(--c-plum); overflow-wrap: anywhere; }
+
+/* ── الوضع الداكن ── */
+html.dark .round-hero-title, html.dark .rsc-unit { color: var(--c-text-main); }
+html.dark .rhs { background: var(--c-surface); border-color: var(--c-border); }
+html.dark .rhs-n { color: #F0D9A8; }
+html.dark .round-student-card { background: var(--c-card-bg); border-color: var(--c-border); }
+html.dark .elite-card { background: var(--c-card-bg); border-color: rgba(227, 167, 60, .55); }
+html.dark .elite-head { background: linear-gradient(135deg, #17101B 0%, #0F0A13 60%, #150E18 100%); }
+html.dark .elite-name { color: #F6EFE3; }
+html.dark .elite-fact { background: var(--c-surface); border-color: var(--c-border); }
+html.dark .elite-fact .v { color: var(--c-text-main); }
+html.dark .elite-section-title { color: #F0D9A8; }
+html.dark .elite-step-content { background: var(--c-surface); border-color: var(--c-border); }
+html.dark .elite-step-name { color: var(--c-text-main); }
+html.dark .elite-step-station { color: var(--c-text-main); }
+html.dark .elite-bullet { background: var(--c-card-bg); }
+
+/* ── الموبايل ── */
+@media (max-width: 480px) {
+  .elite-head { padding: 16px 14px 14px; }
+  .elite-body { padding: 14px; }
+  .round-student-card { padding: 12px 14px; }
+}
+

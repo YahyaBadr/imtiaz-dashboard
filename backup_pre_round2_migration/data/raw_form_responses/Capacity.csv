@@ -1,0 +1,11 @@
+﻿Group,Total,Males,Females,M Remaining,F Remaining,,
+Group 1,61,23,38,9,7,17,🟢 Open
+Group 2,59,0,59,0,21,19,🟡 Males Full
+Group 3,69,26,43,7,1,9,🟢 Open
+Group 4,78,38,40,0,0,0,🔴 Full
+Group 5,71,21,50,8,-1,7,🟡 Females Full
+Group 6,74,28,46,4,0,4,🟡 Females Full
+Group 7,79,31,48,-1,0,-1,🔴 Full
+Group 8,76,28,48,2,0,2,🟡 Females Full
+Group 9,1,0,1,0,∞,∞,🟡 Males Full
+Total,568,195,373,,,,

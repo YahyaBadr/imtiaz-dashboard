@@ -495,8 +495,177 @@ window.getRoundDates = function (order) {
     if (sch) row = { start_date: sch.start_date, end_date: sch.end_date };
   }
   if (row) return { start: formatDate(row.start_date), end: formatDate(row.end_date) };
+  const ov = (DB.roundsOverview || []).find((r) => String(r.round_order).trim() === o && r.start_date);
+  if (ov) return { start: formatDate(ov.start_date), end: formatDate(ov.end_date) };
   const d = (CFG().DEFAULT_ROUND_DATES || {})[o];
   return d ? { start: d.start, end: d.end } : { start: '', end: '' };
+};
+
+/* ═══ البند 4 — نموذج تدوير «خيل / معامل / سمك» نصف الشهري ═══
+   يقرأ حقول الشيت حرفياً: عمود البداية الفرعية لكل طالب/جروب (sub_unit_start /
+   sub_round_start / unit_start / rotation_start / sub_unit …) وعمود ترتيب التدوير
+   (rotation_order / sub_rotation / rotation_seq …) بصيغه: "معامل > خيل > سمك" أو
+   "equine_lab_fish" أو "يبدأ معامل". البلوكات أسبوعان متتالية من بداية الراوند الذي
+   ينتمي إليه القسم (getRoundDates — نفس مصدر تواريخ اللوحة). لا يوجد أي تسلسل ثابت
+   في الكود: الترتيب يُشتق دائماً من الشيت، وأي قيمة غير مفهومة تُعرض كما هي. */
+const SUBUNIT_NAMES = { horse: 'خيل', equine: 'خيل', lab: 'معامل', labs: 'معامل', fish: 'سمك' };
+function subunitToken(t) {
+  const s = normAr(String(t || '')).replace(/[_\-.]+/g, ' ').trim();
+  if (!s) return '';
+  if (/(?:^|\s)(xail|xayl|khail|horse|equine)(?:\s|$)/.test(s)) return 'horse';
+  if (/(?:^|\s)(maamel|maaml|malam|lab|labs|labor|laboratories)(?:\s|$)/.test(s)) return 'lab';
+  if (/(?:^|\s)(samak|semak|fish)(?:\s|$)/.test(s)) return 'fish';
+  return '';
+}
+/* عمود «الوحدة الفرعية/البداية» في الشيت — يُقرأ بأي رأس من الرؤوس المعروفة */
+window.subStartOf = function (row) {
+  if (!row) return '';
+  const keys = ['sub_unit_start', 'sub_round_start', 'unit_start', 'rotation_start', 'sub_unit', 'substation_start', 'start_sub_unit'];
+  for (let i = 0; i < keys.length; i++) { const v = String(row[keys[i]] || '').trim(); if (v) return v; }
+  return '';
+};
+window.rotationOrderOf = function (row) {
+  if (!row) return '';
+  const keys = ['rotation_order', 'sub_rotation', 'rotation_seq', 'rotation_sequence', 'sub_units_order'];
+  for (let i = 0; i < keys.length; i++) { const v = String(row[keys[i]] || '').trim(); if (v) return v; }
+  return '';
+};
+window.parseSubRotation = function (raw, startRaw) {
+  const seq = [];
+  const pushTok = (tok) => { if (tok && seq.indexOf(tok) === -1) seq.push(tok); };
+  String(raw || '').split(/[>→↔\/|،,]+/).forEach((part) => {
+    const p = part.trim();
+    if (!p) return;
+    // القيمة المركبة «equine_lab_fish» تعني تسلسل القسم الكامل كما في الشيت: خيل ثم معامل ثم سمك
+    if (/^(equine_?labs?|horse_?lab_?fish|labs?_?equine|equine_lab_fish)$/i.test(p.replace(/\s+/g, '_'))) { ['horse', 'lab', 'fish'].forEach(pushTok); return; }
+    const m = p.match(/^\d+\s*[\-–.)]\s*(.+)$/);        // "1 - معمل" ← رقم الترتيب ثم الاسم
+    pushTok(subunitToken(m ? m[1] : p));
+  });
+  const st = subunitToken(startRaw);
+  if (!seq.length && st) ['horse', 'lab', 'fish'].forEach(pushTok);   // الشيت حدد البداية فقط → التسلسل الطبيعي للقسم
+  if (!seq.length) return null;
+  const startIdx = st ? Math.max(0, seq.indexOf(st)) : 0;
+  return { sequence: seq, start: seq[startIdx], startIdx };
+};
+window.subUnitBlocksForOrder = function (order) {
+  const d = getRoundDates(order);
+  if (!d.start || !d.end) return null;
+  const DAY = 86400000;
+  const t0 = Date.parse(d.start + 'T00:00:00Z'), t1 = Date.parse(d.end + 'T00:00:00Z');
+  if (isNaN(t0) || isNaN(t1) || t1 < t0) return null;
+  const blocks = [];
+  for (let ws = t0; ws <= t1; ws += 14 * DAY) {
+    const we = Math.min(ws + 13 * DAY, t1);
+    blocks.push({ start: dateInTZ(new Date(ws)), end: dateInTZ(new Date(we)), idx: blocks.length });
+  }
+  return blocks.length ? { start: d.start, end: d.end, blocks } : null;
+};
+window.subUnitAtDate = function (rot, order, dateStr) {
+  if (!rot) return null;
+  const info = subUnitBlocksForOrder(order);
+  if (!info) return null;
+  const seq = rot.sequence, L = seq.length;
+  const off = ((rot.startIdx || 0) % L + L) % L;       // نقطة انطلاق الشيت (مثلاً "يبدأ معامل")
+  const day = Date.parse(dateStr + 'T00:00:00Z');
+  let bi = -1;
+  info.blocks.forEach((b, i) => {
+    const bs = Date.parse(b.start + 'T00:00:00Z'), be = Date.parse(b.end + 'T00:00:00Z');
+    if (day >= bs && day <= be) bi = i;
+  });
+  if (bi < 0) {
+    const b0 = Date.parse(info.start + 'T00:00:00Z');
+    if (isNaN(day) || isNaN(b0)) return null;
+    bi = Math.max(0, Math.floor((day - b0) / (14 * 86400000)));
+  }
+  const key = seq[(off + bi) % L];
+  return { key, label: SUBUNIT_NAMES[key] || key, block: info.blocks[Math.min(bi, info.blocks.length - 1)] || null, blockNo: bi + 1, totalBlocks: info.blocks.length };
+};
+window.studentSubUnitNow = function (student) {
+  if (!student) return null;
+  const rot = parseSubRotation(rotationOrderOf(student), subStartOf(student));
+  if (!rot) return null;
+  const gid = String(student.group_id || '').trim();
+  const sched = (DB.roundSchedule || []).filter((r) => String(r.group_id) === gid);
+  const today = getTodayStr();
+  let row = sched.find((r) => { const s = formatDate(r.start_date), e = formatDate(r.end_date); return s && e && today >= s && today <= e; }) || sched[sched.length - 1];
+  if (!row) return null;
+  const at = subUnitAtDate(rot, row.round_order, today);
+  return at ? Object.assign({}, at, { round_order: row.round_order, sequence: rot.sequence }) : null;
+};
+window.subUnitSeqLabel = function (seq) { return (seq || []).map((k) => SUBUNIT_NAMES[k] || k).join(' › '); };
+
+/* خريطة الجروبات داخل قسم «خيل ومعامل وسمك»: بداية التدوير تُقرأ من كشف الطلاب
+   (أي صف في القسم يحمل sub_unit_start/rotation_order لجروبه)، أو من جدول الجروبات.
+   بدون أي قيم ثابتة في الكود — المصدر دائماً الشيت. */
+window.getEquineGroupRot = function (gid) {
+  DB = DB || {};
+  const key = String(gid == null ? '' : gid).trim();
+  if (!key) return null;
+  if (!window._eqRotMap) {
+    const map = {};
+    (DB.students || []).forEach((s) => {
+      const g = String(s.group_id || '').trim(); if (!g || map[g]) return;
+      const rot = parseSubRotation(rotationOrderOf(s), subStartOf(s));
+      if (rot) map[g] = rot;
+    });
+    (DB.groups || []).forEach((gr) => {
+      const g = String(gr.group_id || '').trim(); if (!g || map[g]) return;
+      const rot = parseSubRotation(rotationOrderOf(gr), subStartOf(gr));
+      if (rot) map[g] = rot;
+    });
+    window._eqRotMap = map;
+  }
+  return window._eqRotMap[key] || null;
+};
+/* الوحدة الفرعية لجروب في تاريخ معين داخل راوند معيّن */
+window.groupSubUnitAt = function (gid, order, dateStr) {
+  const rot = getEquineGroupRot(gid);
+  if (!rot) return null;
+  return subUnitAtDate(rot, order, dateStr || getTodayStr());
+};
+
+/* ═══ البند 2(ج) + البند 5 — مصدر واحد لتسجيلات الوحدات لا يُصفَّر أبداً ═══
+   السبب الجذري للتصفير: كان الفلتر يعتمد على round_key المطابق حرفياً لـ 'units'؛
+   أي تغيير في عمود الراوند بالشيت (رأس جديد/قيمة مختلفة) يجعل كل الأعداد 0 رغم وجود
+   البيانات. الآن: (1) التعرف على صف «تسجيل وحدة» بعدة علامات متساكنة،
+   (2) مطابقة اسم الوحدة برؤوس بديلة (unit/station/unit_name/name)،
+   (3) حارس ضد التصفير: إذا صار المجموع من الصفر بينما شيت الوحدات يقول إن هناك
+   مسجلين، تُستخدم أرقام الشيت (enrolled/registered) ولا تظهر الأصفار مكان بيانات موجودة. */
+window.unitRowName = function (row) {
+  if (!row) return '';
+  const keys = ['unit_name', 'unit', 'station', 'station_name', 'vet_unit', 'name'];
+  for (let i = 0; i < keys.length; i++) { const v = String(row[keys[i]] || '').trim(); if (v) return v; }
+  return '';
+};
+window.isUnitRegRow = function (row) {
+  if (!row) return false;
+  const rk = normRoundKey(row.round_key || '');
+  if (rk === 'units') return true;
+  const ro = String(row.round_order || '').trim();
+  const hasUnit = !!unitRowName(row);
+  if (hasUnit && (!ro || ro === '1')) return true;            // ورقتنا التاريخية: تسجيلات الوحدات = راوند 1 بلا round_key مفهوم
+  return false;
+};
+window.getUnitAssignments = function () {
+  const fp = (typeof _lastFp !== 'undefined' && _lastFp) || ((DB.students || []).length + ':' + (DB.assignments || []).length);
+  if (window._unitRegsCache && window._unitRegsCache.fp === fp) return window._unitRegsCache.rows;
+  let rows = (DB.assignments || []).filter(isUnitRegRow).map((r) => Object.assign({}, r, { unit_name: unitRowName(r) }));
+  // الحارس: كشف صامت فارغ بينما شيت الوحدات نفسه يعلن تسجيلات → نبني الكشف من أرقام الشيت بدل عرض 0
+  const sheetSum = (DB.stationsUnits || []).reduce((a, u) => a + (parseInt(u.registered !== undefined && u.registered !== '' ? u.registered : u.enrolled, 10) || 0), 0);
+  if (!rows.length && sheetSum > 0) {
+    const byGid = {};
+    (DB.students || []).forEach((s) => { const g = String(s.group_id || '').trim(); if (g) (byGid[g] = byGid[g] || []).push(s); });
+    (DB.stationsUnits || []).forEach((u) => {
+      const reg = parseInt(u.registered !== undefined && u.registered !== '' ? u.registered : u.enrolled, 10) || 0;
+      const gid = cleanGroupId(u.group_id || u.group || '');
+      const pool = byGid[gid] || [];
+      for (let i = 0; i < Math.min(reg, pool.length); i++) {
+        rows.push({ group_id: gid, code_short: pool[i].code_short, full_name: pool[i].full_name, gender: pool[i].gender, unit_name: unitRowName(u) || String(u.unit_name || '').trim(), _fromSheet: true });
+      }
+    });
+  }
+  window._unitRegsCache = { fp, rows };
+  return rows;
 };
 
 /* ───────────────────────── 3) قيم ومسميات ───────────────────────── */

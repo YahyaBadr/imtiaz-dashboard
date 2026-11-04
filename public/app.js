@@ -426,7 +426,7 @@ window.toast = function (msg, ms) {
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(window._toastT);
-  window._toastT = setTimeout(() => el.classList.remove('show'), ms || 2600);
+  window._toastT = setTimeout(() => el.classList.remove('show'), ms || 3000);
 };
 
 window.copyText = function (text, okMsg) {
@@ -612,7 +612,6 @@ window.subUnitAtDate = function (rot, order, dateStr) {
 window.studentSubUnitNow = function (student) {
   if (!student) return null;
   const rot = parseSubRotation(rotationOrderOf(student), subStartOf(student));
-  console.log('[EQ DEBUG] studentSubUnitNow:', { gid: student.group_id, rotation_order: student.rotation_order, sub_unit_start: student.sub_unit_start, rot });
   if (!rot) return null;
   const gid = String(student.group_id || '').trim();
   const sched = (DB.roundSchedule || []).filter((r) => String(r.group_id) === gid);
@@ -620,7 +619,6 @@ window.studentSubUnitNow = function (student) {
   let row = sched.find((r) => { const s = formatDate(r.start_date), e = formatDate(r.end_date); return s && e && today >= s && today <= e; }) || sched[sched.length - 1];
   if (!row) return null;
   const at = subUnitAtDate(rot, row.round_order, today);
-  console.log('[EQ DEBUG] subUnitAtDate result:', at);
   return at ? Object.assign({}, at, { round_order: row.round_order, sequence: rot.sequence }) : null;
 };
 window.subUnitSeqLabel = function (seq) { return (seq || []).map((k) => SUBUNIT_NAMES[k] || k).join(' › '); };
@@ -1747,9 +1745,8 @@ window.addEventListener('resize', () => { window.moveNavIndicator && window.move
 })();
 
 window.showPage = function (pageId) {
-  console.log('[SHOW PAGE DEBUG] pageId=', pageId);
   const pageEl = document.getElementById('page-' + pageId);
-  if (!pageEl) { console.error('[SHOW PAGE DEBUG] element not found: page-' + pageId); return; }
+  if (!pageEl) { console.error('[showPage] element not found: page-' + pageId); return; }
   if (_activePage === pageId && pageEl.dataset.rendered) return;
   document.querySelectorAll('.page').forEach((p) => p.classList.add('hidden'));
   pageEl.classList.remove('hidden');
@@ -1758,7 +1755,7 @@ window.showPage = function (pageId) {
   window.updateNavBadges && window.updateNavBadges();
   if (!pageEl.dataset.rendered) {
     try { PAGE_RENDERERS[pageId](); pageEl.dataset.rendered = 'true'; }
-    catch (err) { console.error('[SHOW PAGE DEBUG] render error:', err); pageEl.innerHTML = `<div class="card error-card"><h3>تعذّر عرض هذه الصفحة</h3><p class="muted">${esc(err.message)}</p><button type="button" class="btn btn-plum" data-action="retry">إعادة تحميل البيانات</button></div>`; }
+    catch (err) { console.error('[showPage] render error:', err); pageEl.innerHTML = `<div class="card error-card"><h3>تعذّر عرض هذه الصفحة</h3><p class="muted">${esc(err.message)}</p><button type="button" class="btn btn-plum" data-action="retry">إعادة تحميل البيانات</button></div>`; }
     setTimeout(() => VERIFY.run(), 60);
   }
   _activePage = pageId;
@@ -1913,6 +1910,13 @@ const ACTIONS = {
   'group-roster': (el) => openGroupRosterModal(el.dataset.gid, { replace: !!el.dataset.replace }),
   'directory': () => openStudentDirectoryModal(),
   'search-open': () => openGlobalSearch(),
+  'header-more': (el) => {
+    const menu = document.getElementById('header-more-menu');
+    if (!menu) return;
+    const show = menu.classList.contains('hidden');
+    menu.classList.toggle('hidden', !show);
+    el.setAttribute('aria-expanded', String(show));
+  },
   'retry': () => { document.getElementById('error-screen').classList.add('hidden'); const ld = document.getElementById('loading-screen'); ld.classList.remove('hidden'); refreshData({ firstPaint: true }).catch((e) => { console.error(e); showError({ students: e.message }); }); },
   'install': () => installApp(),
   'dismiss-install': () => dismissInstall(),
@@ -2013,11 +2017,23 @@ registerAction('toggle-unit', (el) => {
 document.addEventListener('click', (e) => {
   const ov = e.target;
   if (ov.classList && ov.classList.contains('modal-overlay')) { Overlays.closeEl(ov); return; }
+  const more = document.getElementById('header-more-menu');
+  const moreBtn = document.getElementById('more-btn');
+  if (more && moreBtn && !more.classList.contains('hidden') && !e.target.closest('#header-more-menu') && !e.target.closest('#more-btn')) {
+    more.classList.add('hidden');
+    moreBtn.setAttribute('aria-expanded', 'false');
+  }
   const el = e.target.closest ? e.target.closest('[data-action]') : null;
   if (!el) return;
   const fn = ACTIONS[el.dataset.action];
-  console.log('[CLICK DEBUG] action=', el.dataset.action, 'page=', el.dataset.page, 'fn=', !!fn, 'tag=', el.tagName);
-  if (fn) { if (el.tagName === 'A') return; fn(el, e); }
+  if (fn) {
+    if (el.tagName === 'A') return;
+    fn(el, e);
+    if (more && el.closest('#header-more-menu')) {
+      more.classList.add('hidden');
+      if (moreBtn) moreBtn.setAttribute('aria-expanded', 'false');
+    }
+  }
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && Overlays.count()) { Overlays.closeTop(false); return; }

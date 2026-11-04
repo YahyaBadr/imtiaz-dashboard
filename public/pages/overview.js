@@ -85,6 +85,7 @@ function renderOverview(container) {
     <div class="two-col">
       <section>
         <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('bar-chart')} توزيع التدريب بالدورة الثانية (R2)</h2>
+        <div class="ratio-legend" aria-hidden="true"><span><b>المسجلون</b> / <b>المتوقع</b></span><span>الشريط = نسبة التسجيل</span></div>
         <div class="round-summary-grid">
           ${DB.round2Summary.map((r) => {
             const reg = parseInt(r.registered, 10) || 0, exp = parseInt(r.expected_students, 10) || 0, miss = parseInt(r.not_registered, 10) || 0;
@@ -97,12 +98,15 @@ function renderOverview(container) {
                   ${miss > 0 ? `<span class="badge badge-amber num tap"${act('r2-unregistered', { round: rk })}>${miss} غير مسجل ${ico("external")}</span>` : '<span class="badge badge-emerald">مكتمل</span>'}
                 </div>
                 ${declaredExp && declaredExp !== exp ? `<div class="round-declared-note">العدد المعلن في الشيت: <span class="num">${declaredExp}</span> — المعروض من الكشوف: <span class="num">${exp}</span></div>` : ''}
-                <div class="round-reg-numbers num">
-                  <button type="button" class="num-link"${act('r2-registered', { round: rk })} aria-label="المسجلون">${reg}</button>
-                  <span class="sep">/</span>
-                  <button type="button" class="num-link muted"${act('r2-expected', { round: rk })} aria-label="المتوقعون">${exp} ${ico('external')}</button>
+                <div class="round-ratio">
+                  <div class="round-reg-numbers num">
+                    <button type="button" class="num-link"${act('r2-registered', { round: rk })} aria-label="المسجلون">${reg}</button>
+                    <span class="sep">/</span>
+                    <button type="button" class="num-link muted"${act('r2-expected', { round: rk })} aria-label="المتوقعون">${exp} ${ico('external')}</button>
+                  </div>
+                  <span class="round-ratio-label">المسجلون / المتوقع</span>
                 </div>
-                <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill ${miss > 0 ? 'warn' : ''}" style="width:${Math.min(pct, 100)}%"></div></div><span class="num">${pct}%</span></div>
+                <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill ${miss > 0 ? 'warn' : ''}" style="width:${Math.min(Math.max(pct, 0), 100)}%"></div></div><span class="num">${pct}%</span></div>
                 <div class="round-groups-label"${act('goto-page', { page: 'schedule' })}>الجروبات المعنية: <strong>${esc(r.groups || '—')}</strong> ${ico('external')}</div>
               </div>`;
           }).join('') || '<div class="empty-note">لا توجد بيانات توزيع.</div>'}

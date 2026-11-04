@@ -20,10 +20,10 @@
 
   <link rel="preload" href="assets/fonts/cairo-400-arabic-0.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/cairo-700-arabic-6.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="cairo.css?v=1005">
-  <link rel="stylesheet" href="style.css?v=1005">
-  <link rel="stylesheet" href="print.css?v=1005" media="print">
-  <script src="config.js?v=1005"></script>
+  <link rel="stylesheet" href="cairo.css?v=1006">
+  <link rel="stylesheet" href="style.css?v=1006">
+  <link rel="stylesheet" href="print.css?v=1006" media="print">
+  <script src="config.js?v=1006"></script>
 </head>
 <body>
 
@@ -65,6 +65,14 @@
           </button>
           </div>
           <span class="who-chip hidden" id="who-chip" title="المستخدم الحالي"></span>
+          <button type="button" class="header-btn header-btn-icon header-more-btn" id="more-btn" data-action="header-more" aria-haspopup="true" aria-expanded="false" aria-label="المزيد من الأدوات" title="المزيد من الأدوات">
+            <span class="btn-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></span>
+          </button>
+          <div id="header-more-menu" class="header-more-menu hidden" role="menu" aria-label="أدوات إضافية">
+            <button type="button" class="header-more-item" role="menuitem" data-action="toggle-presentation"><span class="btn-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></span>وضع العرض على الشاشة</button>
+            <button type="button" class="header-more-item" role="menuitem" data-action="toggle-theme"><span class="btn-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>تبديل الوضع الداكن / الفاتح</button>
+            <button type="button" class="header-more-item" role="menuitem" data-action="search-open"><span class="btn-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>بحث</button>
+          </div>
         </div>
 
         <div class="logo-wrapper area-logo-l"><img src="assets/college_logo.png" alt="كلية الطب البيطري" class="header-logo" onerror="this.style.display='none'"></div>
@@ -213,17 +221,17 @@
     </button>
   </div>
 
-  <script src="icons.js?v=1005"></script>
-  <script src="identity.js?v=1005"></script>
-  <script src="app.js?v=1005"></script>
-  <script src="export-core.js?v=1005"></script>
-  <script src="export-assets.js?v=1005"></script>
-  <script src="export.js?v=1005"></script>
-  <script src="pages/overview.js?v=1005"></script>
-  <script src="pages/schedule.js?v=1005"></script>
-  <script src="pages/rounds.js?v=1005"></script>
-  <script src="pages/units.js?v=1005"></script>
-  <script src="pages/not-registered.js?v=1005"></script>
+  <script src="icons.js?v=1006"></script>
+  <script src="identity.js?v=1006"></script>
+  <script src="app.js?v=1006"></script>
+  <script src="export-core.js?v=1006"></script>
+  <script src="export-assets.js?v=1006"></script>
+  <script src="export.js?v=1006"></script>
+  <script src="pages/overview.js?v=1006"></script>
+  <script src="pages/schedule.js?v=1006"></script>
+  <script src="pages/rounds.js?v=1006"></script>
+  <script src="pages/units.js?v=1006"></script>
+  <script src="pages/not-registered.js?v=1006"></script>
   <script>
     (function () {
       // شاشة الاستقبال تظهر فوراً (حتى قبل تحميل بقية السكربتات) وتختفي تلقائياً

@@ -107,7 +107,6 @@ window.buildR2GroupFieldMap = function () {
       map[String(r.group_id)] = String(r.round_key || 'units');
     }
   });
-  console.log('[R2 DEBUG] buildR2GroupFieldMap=', map, 'roundSchedule.length=', (DB.roundSchedule || []).length);
   return map;
 };
 
@@ -132,7 +131,6 @@ function r2StudentsForKey(key) {
   const groupFieldMap = window.buildR2GroupFieldMap ? window.buildR2GroupFieldMap() : {};
   const result = [];
   const seen = {};
-  console.log('[R2 DEBUG] r2StudentsForKey key=', key, 'assignments.length=', (DB.assignments || []).length, 'groupFieldMap=', groupFieldMap);
   (DB.assignments || []).forEach((a) => {
     // group_id يُؤخذ من جدول التسجيلات (assignments) لأنه المصدر الموثوق للرايوند ٢
     const gid = cleanGroupId(a.group_id || '');
@@ -164,7 +162,6 @@ function r2StudentsForKey(key) {
       sub_unit_start: a.sub_unit_start || ''
     });
   });
-  console.log('[R2 DEBUG] r2StudentsForKey result count=', result.length, 'for key=', key);
   result.sort((a, b) => (+a.gid || 0) - (+b.gid || 0) || String(a.code).localeCompare(String(b.code), 'ar', { numeric: true }));
   return result;
 }
@@ -235,14 +232,17 @@ window.renderRound2Hub = function (container) {
               <span class="r2-domain-label">${esc(domain.label)}</span>
             </div>
             <div class="r2-domain-body">
-              <div class="r2-domain-num"><span class="num">${reg}</span> <span>/ ${exp}</span></div>
+              <div class="r2-domain-ratio-line">
+                <div class="r2-domain-num" aria-label="المسجلون / المتوقع"><span class="num">${reg}</span><span class="sep"> / </span><span class="num muted">${exp}</span></div>
+                ${miss > 0 ? `<span class="badge badge-amber num r2-domain-alert">${miss} غير مسجل</span>` : '<span class="badge badge-emerald">مكتمل</span>'}
+              </div>
+              <div class="r2-domain-ratio-label">المسجلون / المتوقع</div>
               <div class="r2-domain-progress">
-                <div class="progress-bar"><div class="progress-fill ${domainTone(domain.key)}" style="width:${Math.min(pct, 100)}%"></div></div>
+                <div class="progress-bar"><div class="progress-fill ${domainTone(domain.key)}" style="width:${Math.min(Math.max(pct, 0), 100)}%"></div></div>
                 <span class="num">${pct}%</span>
               </div>
               <div class="r2-domain-meta">${groupCount} مجموعات · ${reg} مسجل${declaredExp && declaredExp !== exp ? ` · المعلن ${declaredExp}` : ''}</div>
             </div>
-            ${miss > 0 ? `<div class="r2-domain-alert"><span class="badge badge-amber num">${miss} غير مسجل</span></div>` : ''}
           </div>`;
       }).join('')}
     </div>

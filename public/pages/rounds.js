@@ -92,15 +92,33 @@ function domainTone(key) { const d = R2_DOMAINS.find((x) => x.key === key); retu
 
 /* الطلاب المسجلين في مجال معين للرايوند ٢ — يُربط عبر group_id من جدول الجولات */
 /* عند وجود student_code موحد (مثل نعمة عادل 11012021100676)، يُستخدم group_id من سجل الطالب
-   وليس group_id غير المتسق في جدول التسجيلات. */
+   وليس group_id غير المتسق في جدول التسجيلات. تُعيد كائنات معالجة بنفس بنية مخرجات
+   getRosterForRoundOrder حتى تظهر بيانات الطلبة (اسم، كود، نوع، وحدة) بشكل صحيح. */
 function r2StudentsForKey(key) {
   const groupFieldMap = window.buildR2GroupFieldMap ? window.buildR2GroupFieldMap() : {};
-  return (DB.assignments || []).filter((a) => {
-    const s = resolveStudent(a);
-    const gid = s ? String(cleanGroupId(s.group_id || '')) : String(cleanGroupId(a.group_id || ''));
+  const result = [];
+  const seen = {};
+  (DB.assignments || []).forEach((a) => {
+    const s = resolveStudent(a) || a;
+    const gid = cleanGroupId((s && s.student_code ? s.group_id : a.group_id) || '');
     const field = groupFieldMap[gid] || 'units';
-    return field === key && (a.full_name || a.code_short);
+    if (field !== key) return;
+    if (!(a.full_name || a.code_short)) return;
+    const code = String(a.code_short || '').trim();
+    const k = gid + '_' + code + '_' + (s.student_code || '');
+    if (seen[k]) return;
+    seen[k] = true;
+    result.push({
+      sid: s ? studentKey(s) : '',
+      name: s.full_name || a.full_name || 'غير محدد',
+      gid, code: code || (s.code_short || ''),
+      studentCode: s.student_code || '',
+      gender: s.gender || a.gender || '',
+      station: a.unit_name || roundLabel(a.round_key || '') || ''
+    });
   });
+  result.sort((a, b) => (+a.gid || 0) - (+b.gid || 0) || String(a.code).localeCompare(String(b.code), 'ar', { numeric: true }));
+  return result;
 }
 
 /* غير المسجلين في مجال معين للرايوند ٢ */

@@ -469,19 +469,26 @@ body.no-scroll { overflow: hidden; }
 /* ═══════════════════════════════════════════════════════════════════════════
    15) ACCESS GATE — بوابة الدخول
    ═══════════════════════════════════════════════════════════════════════════ */
-.gate-overlay { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; padding: calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom)); background: linear-gradient(135deg, var(--c-plum) 0%, #40253F 55%, #1E121E 100%); overflow-y: auto; }
+/* بند1: صفر تمرير أفقي في صفحة الدخول عند أي عرض (320→1900).
+   السببان الجذريان: (1) .gate-overlay تدفّقها flex بدون min-width:0 → الكارت
+   لا ينكمش تحت حجمه الأدنى ويتجاوز الـviewport؛ (2) .gate-row-2 input+زر بلا
+   min-width:0 لنفس السبب؛ (3) شريط التمرير الرأسي للطبقة الثابتة كان يخصم من
+   العرض المتاح. الحل: clip على المحور الأفقي + انكماش مرن لكل العناصر الحرجة. */
+html { overflow-x: clip; }
+.gate-overlay { position: fixed; inset: 0; z-index: 900; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: calc(18px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-left)) calc(18px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right)); background: linear-gradient(135deg, var(--c-plum) 0%, #40253F 55%, #1E121E 100%); overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; }
+.gate-overlay > * { max-width: 100%; min-width: 0; }
 .gate-overlay.hidden { display: none !important; }
-.gate-card { background: var(--c-card-bg); border: 1.5px solid var(--c-gold-border); border-radius: var(--radius-card); box-shadow: 0 26px 60px rgba(20, 10, 20, 0.45); width: 100%; max-width: 430px; padding: 26px 22px 18px; animation: pageFadeIn 0.2s ease; }
+.gate-card { background: var(--c-card-bg); border: 1.5px solid var(--c-gold-border); border-radius: var(--radius-card); box-shadow: 0 26px 60px rgba(20, 10, 20, 0.45); width: min(100%, 430px); max-width: 430px; margin-inline: auto; padding: 26px 22px 18px; animation: pageFadeIn 0.2s ease; }
 .gate-brand { text-align: center; margin-bottom: 14px; }
 .gate-logo { width: 62px; height: 62px; object-fit: contain; margin-bottom: 8px; }
 .gate-brand h2 { color: var(--c-plum); font-size: 1.12rem; font-weight: 800; line-height: 1.4; }
 .gate-sub { color: var(--c-text-muted); font-size: 0.8rem; margin-top: 4px; }
 .gate-note { color: var(--c-text-muted); font-size: 0.86rem; text-align: center; margin: 8px 0 16px; line-height: 1.7; }
-.gate-form { display: flex; flex-direction: column; gap: 10px; }
+.gate-form { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.gate-input { width: 100%; min-width: 0; box-sizing: border-box; padding: 13px 14px; font-size: 1.05rem; font-family: inherit; letter-spacing: 2px; text-align: center; color: var(--c-text-main); background: var(--c-surface); border: 1.5px solid var(--c-border); border-radius: 12px; -webkit-appearance: none; appearance: none; }
 .gate-extra { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--c-border); }
 .gate-extra.hidden { display: none !important; }
 .gate-label { font-size: 0.8rem; font-weight: 700; color: var(--c-plum); }
-.gate-input { width: 100%; padding: 13px 14px; font-size: 1.05rem; font-family: inherit; letter-spacing: 2px; text-align: center; color: var(--c-text-main); background: var(--c-surface); border: 1.5px solid var(--c-border); border-radius: 12px; -webkit-appearance: none; appearance: none; }
 .gate-input:focus { outline: none; border-color: var(--c-gold); background: #FFFFFF; box-shadow: 0 0 0 3px rgba(227, 167, 60, 0.22); }
 .gate-submit { width: 100%; justify-content: center; padding: 13px 16px; font-size: 1rem; font-weight: 800; min-height: 48px; }
 .gate-err { color: var(--c-rose); background: var(--c-rose-bg); border: 1px solid var(--c-rose-border); border-radius: 10px; padding: 9px 12px; font-size: 0.84rem; font-weight: 700; text-align: center; }
@@ -678,13 +685,14 @@ html.dark .site-nav { background: #1E121E; }
 .gate-input { border-radius: 14px; background: #FCFAF4; transition: border-color .2s, box-shadow .2s, background .2s; }
 .gate-input:focus { border-color: var(--c-gold); box-shadow: 0 0 0 4px rgba(227,167,60,.22); background: #fff; }
 .gate-submit { border-radius: 14px; letter-spacing: .2px; }
-.gate-row-2 { display: flex; gap: 10px; align-items: stretch; margin-top: 10px; }
-.gate-row-2 .gate-input { flex: 1; }
+.gate-row-2 { display: flex; gap: 10px; align-items: stretch; margin-top: 10px; min-width: 0; }
+.gate-row-2 .gate-input { flex: 1 1 0; min-width: 0; width: auto; }
 .gate-eye { flex: 0 0 48px; min-height: 48px; border-radius: 14px; border: 1.5px solid var(--c-border); background: var(--c-surface); font-size: 1.05rem; cursor: pointer; }
 .gate-eye:hover { border-color: var(--c-gold); }
-.gate-chip { display: inline-flex; align-items: center; gap: 6px; justify-content: center; margin: 2px auto 0;
+.gate-chip { display: inline-flex; align-items: center; gap: 6px; justify-content: center; margin: 2px auto 0; max-width: 100%; min-width: 0;
   padding: 5px 12px; border-radius: 999px; font-size: .72rem; font-weight: 800; letter-spacing: .2px;
   color: #6d5a1f; background: linear-gradient(180deg, #FBF2DC, #F3E4BC); border: 1px solid rgba(227,167,60,.45); }
+.gate-chip > span:not(.chip-ico) { min-width: 0; overflow-wrap: anywhere; }
 .gate-foot { gap: 6px 16px; }
 .gate-link { font-size: .8rem; }
 
@@ -895,6 +903,17 @@ html.dark .btn-surface,
 html.dark .breadcrumb-bar a,
 html.dark .breadcrumb-bar button,
 html.dark th:hover { color: var(--c-text-main); }
+
+/* بند2(ب): btn-surface كان يرسم بخلفية بيضاء ثابتة في الداكن (قاعدة السطر 231)
+   بينما قاعدته هنا تعالج النص فقط → نص فاتح فوق أبيض = غير مرئي.
+   الآن الخلفية والنص معاً: #EDE6F0 فوق #2A2130 ≈ تباين 9.6:1 (≥4.5). */
+html.dark .btn-surface { background: var(--c-surface); border-color: var(--c-border); }
+html.dark .btn-surface:hover { background: #332A3B; border-color: var(--c-border-gold); }
+
+/* بند2(أ): الكروت المعلوماتية العلوية كانت تحمل inline style بخلفية بيضاء
+   تتجاوز html.dark .card — صارت كلاسات، فتطابق أرضية سطح الثيم الداكن. */
+html.dark .units-intro-card,
+html.dark .nreg-intro-card { background: var(--c-card-bg); border-color: var(--c-border); }
 
 /* أزرار ذهبية: النص البلاّوم الداكن مقروء فوق الذهبي في الوضعين — لا تغيير */
 

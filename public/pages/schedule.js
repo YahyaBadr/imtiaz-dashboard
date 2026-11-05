@@ -17,7 +17,7 @@ const ROUND_META = (window.ROUND_META && Object.keys(window.ROUND_META).length) 
 
 /* شريحة نصية صغيرة غير قابلة للكسر منتصفها (tnum للأرقام) — تُستخدم كوحدة واحدة في سطر الـ meta */
 function gChip(txt, isNum) {
-  return `<span class="g-chip${isNum ? ' num' : ''}">${txt}</span>`;
+  return `<span class="g-chip${isNum ? ' num' : ''}">${esc(txt)}</span>`;
 }
 
 function renderSchedule(container) {
@@ -199,7 +199,7 @@ function renderSchedule(container) {
                 return `<div style="display:flex; align-items:center; gap:8px; font-size:0.82rem;">
                   <span style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:6px; background:${st === 'current' ? 'var(--c-gold)' : st === 'finished' ? 'var(--c-green)' : 'var(--c-surface)'}; color:${st === 'current' ? '#2B1A2B' : st === 'finished' ? '#FFFFFF' : 'var(--c-text-muted)'}; font-weight:700; font-size:0.75rem;">${c.order === '0' ? '0' : c.order}</span>
                   <span style="flex:1; min-width:0;">${esc(r.round_name_ar || roundLabel(rKey) || c.title)}</span>
-                  <span style="font-size:0.72rem; color:var(--c-text-muted); white-space:nowrap;">${dates}</span>
+                  <span style="font-size:0.72rem; color:var(--c-text-muted); white-space:nowrap;">${esc(dates)}</span>
                   <span class="badge ${st === 'current' ? 'badge-emerald' : st === 'finished' ? 'badge-grey' : 'badge-amber'}" style="font-size:0.68rem;">${statusMap[st]}</span>
                 </div>`;
               }).join('')}

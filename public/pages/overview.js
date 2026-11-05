@@ -213,7 +213,7 @@ function renderOverview(container) {
         if (!sched || !sched.length) {
           return `<div class="compact-status-card"${act('group-roster', { gid: g.group_id })}>
             <div class="compact-status-head"><span class="compact-status-group">جروب ${esc(g.group_id)}</span><span class="badge badge-grey">لا يوجد جدول</span></div>
-            <div class="compact-status-meta"><span>총</span> ${g.total_students || 0} طالب/ة</div>
+            <div class="compact-status-meta"><span>إجمالي</span> ${g.total_students || 0} طالب/ة</div>
           </div>`;
         }
         const curMeta = ROUND_META[cur.round_key] || {};
@@ -263,7 +263,8 @@ function renderOverview(container) {
 }
 
 function computeFieldPreferences() {
-  const prefs = DB.prefColumns, sums = {}, counts = {}, first = {};
+  const prefs = Array.isArray(DB.prefColumns) ? DB.prefColumns : [];
+  const sums = {}, counts = {}, first = {};
   prefs.forEach((p) => { sums[p] = 0; counts[p] = 0; first[p] = 0; });
   DB.students.forEach((s) => prefs.forEach((p) => { const v = parseFloat(s[p]); if (!isNaN(v) && v > 0) { sums[p] += v; counts[p]++; if (v === 1) first[p]++; } }));
   return prefs.map((p) => ({ field: p, arabicName: DB.fieldsMap[p] || p, avg: counts[p] ? (sums[p] / counts[p]).toFixed(2) : '0.00', first: first[p] }))

@@ -57,8 +57,10 @@ const server = http.createServer((req, res) => {
 
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'no-cache'
+      'Access-Control-Allow-Origin': 'http://localhost:' + PORT,
+      'Cache-Control': 'no-cache',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'SAMEORIGIN'
     });
 
     const stream = fs.createReadStream(filePath);
@@ -71,6 +73,6 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`Imtiaz Dashboard server running at http://localhost:${PORT}`);
 });

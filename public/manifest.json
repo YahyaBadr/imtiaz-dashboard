@@ -4,10 +4,12 @@
   "description": "لوحة متابعة الإمتياز البيطري — كلية الطب البيطري، جامعة القاهرة",
   "lang": "ar",
   "dir": "rtl",
+  "id": "./",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
+  "categories": ["education", "productivity"],
   "background_color": "#2B1A2B",
   "theme_color": "#2B1A2B",
   "icons": [

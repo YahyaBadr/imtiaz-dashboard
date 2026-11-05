@@ -69,7 +69,8 @@
     const sheetProps = [];
 
     sets.forEach((ds) => {
-      const aoa = [ds.header].concat(ds.rows);
+      const safeCell = (v) => { let s = (v == null ? '' : v); if (typeof s === 'string' && /^[=+\-@]/.test(s)) s = "'" + s; return s; };
+      const aoa = [ds.header.map(safeCell)].concat(ds.rows.map((r) => r.map(safeCell)));
       const ws = XLSX.utils.aoa_to_sheet(aoa); // الأرقام تبقى خلايا رقمية (t:'n') تلقائياً
 
       // البند 7: رأس branded (خلفية هوية + نص أبيض عريض) + حدود خفيفة + صفوف متناوبة — فقط مع النسخة المدعومة
@@ -166,7 +167,8 @@
   async function exportCSV(scope) {
     const sets = window.ExportCore.datasets(scope);
     const esc = (v) => {
-      const s = String(v == null ? '' : v);
+      let s = String(v == null ? '' : v);
+      if (/^[=+\-@]/.test(s)) s = "'" + s; // منع حقن الصيغ (CSV injection)
       return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
     };
     let out = '\uFEFF';
@@ -184,6 +186,7 @@
   /* ─────────── PDF (.pdf): pdfmake — خط Cairo مضمّن + RTL + ترويسة branded ─────────── */
   async function exportPDF(scope) {
     await loadLibs('pdf');
+    if (!window.__IMTIAZ_EXPORT_ASSETS) { try { await loadScript('./export-assets.js'); } catch (e) { /* ignore */ } }
     const pdfMake = libs.pdfmake;
     const assets = window.__IMTIAZ_EXPORT_ASSETS;
     if (!assets || !assets.Cairo400) throw new Error('أصول التصدير (export-assets.js) غير محمّلة');
@@ -225,6 +228,7 @@
     const dd = {
       pageSize: 'A4',
       pageOrientation: 'landscape',
+      direction: 'rtl',
       pageMargins: [24, 46, 24, 44],
       info: { title: 'لوحة متابعة الإمتياز البيطري', subject: scope === 'full' ? 'الملف الشامل' : 'تصدير الصفحة الحالية' },
       content: [
@@ -235,7 +239,7 @@
         blocks
       ],
       footer: (page, total) => ({ text: 'صفحة ' + page + ' من ' + total + ' · مكتب السيد الأستاذ الدكتور وكيل الكلية', style: 'foot', alignment: 'center', margin: [0, 6, 0, 0] }),
-      defaultStyle: { font: 'Cairo', fontSize: 9 },
+      defaultStyle: { font: 'Cairo', fontSize: 9, alignment: 'right' },
       styles: {
         org: { fontSize: 10, color: '#685764' },
         title: { fontSize: 17, bold: true, color: '#2B1A2B' },
@@ -478,6 +482,8 @@
     if (btn) btn.setAttribute('aria-pressed', String(dark));
     const meta = document.getElementById('meta-theme-color');
     if (meta) meta.setAttribute('content', dark ? '#14101A' : '#2B1A2B');
+    const cs = document.querySelector('meta[name="color-scheme"]');
+    if (cs) cs.setAttribute('content', dark ? 'dark' : 'light');
     try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (err) {}
   }
 

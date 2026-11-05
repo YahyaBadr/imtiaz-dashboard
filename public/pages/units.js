@@ -45,7 +45,7 @@ function renderUnits(container) {
     : '';
 
   // زخرفة اللوتس: أبعادها مضبوطة عبر CSS (svg.title-ornament) — لا !important هنا
-  const lotusSvg = `<svg class="title-ornament" viewBox="0 0 24 14" aria-hidden="true"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
+  const lotusSvg = window.lotusSvg || '';
 
 container.innerHTML = `
     <div class="card card-sm units-intro-card" style="margin-bottom: var(--gap); border-right:4px solid var(--c-gold)">
@@ -120,8 +120,8 @@ function buildUnitCard(u, byUnit) {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px">
           <span style="font-size:0.84rem; color:var(--c-text-muted)">كشف الطلاب (<strong class="num">${students.length}</strong> طالب/ة — انقر لفتح الملف):</span>
           <div class="unit-actions">
-            <button type="button" class="btn-icon" data-action="print-unit" data-unit="${esc(unitName)}" title="طباعة كشف الوحدة">${ico('print')}</button>
-            <button type="button" class="btn-icon" data-action="copy-unit" data-unit="${esc(unitName)}" title="نسخ الأسماء والهواتف">${ico('copy')}</button>
+            <button type="button" class="btn-icon" data-action="print-unit" data-unit="${esc(unitName)}" title="طباعة كشف الوحدة" aria-label="طباعة كشف الوحدة">${ico('print')}</button>
+            <button type="button" class="btn-icon" data-action="copy-unit" data-unit="${esc(unitName)}" title="نسخ الأسماء وال هواتف" aria-label="نسخ الأسماء وال هواتف">${ico('copy')}</button>
           </div>
         </div>
         <ul class="unit-student-list" id="${listId}">
@@ -142,20 +142,23 @@ function buildUnitCard(u, byUnit) {
 function slugify(str) { return (str || '').replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '-').replace(/-+/g, '-'); }
 
 window.printUnitSheet = function(unitName) {
-  const students = DB.assignments.filter(a => a.round_key === 'units' && (a.unit_name || '').trim() === unitName.trim());
+  const unitRows = (window.getUnitAssignments ? getUnitAssignments() : (DB.assignments || []).filter(a => a.round_key === 'units'));
+  const students = unitRows.filter(a => (a.unit_name || '').trim() === unitName.trim());
   const uInfo = DB.stationsUnits.find(u => u.unit_name.trim() === unitName.trim()) || {};
+  const safeUnit = esc(unitName || '');
   const printWindow = window.open('', '_blank');
   if (!printWindow) return alert('يرجى السماح بالنوافذ المنبثقة');
   const rowsHtml = students.map((s, idx) => {
     const fullStudent = resolveStudent(s) || {};
-    return `<tr><td style="text-align:center; padding:6px; border:1px solid #333">${idx + 1}</td><td style="padding:6px; border:1px solid #333"><b>${s.full_name}</b></td><td style="text-align:center; padding:6px; border:1px solid #333">${s.code_short || '—'}</td><td style="text-align:center; padding:6px; border:1px solid #333">جروب ${s.group_id || '—'}</td><td style="text-align:center; padding:6px; border:1px solid #333">${fullStudent.phone || '—'}</td></tr>`;
+    return `<tr><td style="text-align:center; padding:6px; border:1px solid #333">${idx + 1}</td><td style="padding:6px; border:1px solid #333"><b>${esc(s.full_name || '')}</b></td><td style="text-align:center; padding:6px; border:1px solid #333">${esc(s.code_short || '—')}</td><td style="text-align:center; padding:6px; border:1px solid #333">جروب ${esc(s.group_id || '—')}</td><td style="text-align:center; padding:6px; border:1px solid #333">${esc(fullStudent.phone || '—')}</td></tr>`;
   }).join('');
-  printWindow.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>كشف ${unitName}</title><style>body { font-family: 'Cairo', sans-serif; margin: 20mm; direction: rtl; } .sheet-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; } .sheet-logo { max-width: 70px; } .sheet-title { text-align: center; } table { width: 100%; border-collapse: collapse; } th { background: #f0f0f0; border: 1px solid #333; padding: 8px; }</style></head><body><div class="sheet-header"><img src="assets/university_logo.png" class="sheet-logo"><div class="sheet-title"><h1>كلية الطب البيطري — جامعة القاهرة</h1><p>كشف توزيع الدورة الثانية — ${unitName}</p></div><img src="assets/college_logo.png" class="sheet-logo"></div><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الكود</th><th>الجروب</th><th>الهاتف</th></tr></thead><tbody>${rowsHtml}</tbody></table><script>window.onload = function() { window.print(); };<\/script></body></html>`);
+  printWindow.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>كشف ${safeUnit}</title><style>body { font-family: 'Cairo', sans-serif; margin: 20mm; direction: rtl; } .sheet-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; } .sheet-logo { max-width: 70px; } .sheet-title { text-align: center; } table { width: 100%; border-collapse: collapse; } th { background: #f0f0f0; border: 1px solid #333; padding: 8px; }</style></head><body><div class="sheet-header"><img src="assets/university_logo.png" class="sheet-logo"><div class="sheet-title"><h1>كلية الطب البيطري — جامعة القاهرة</h1><p>كشف توزيع الدورة الثانية — ${safeUnit}</p></div><img src="assets/college_logo.png" class="sheet-logo"></div><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الكود</th><th>الجروب</th><th>الهاتف</th></tr></thead><tbody>${rowsHtml}</tbody></table><script>window.onload = function() { window.print(); };<\/script></body></html>`);
   printWindow.document.close();
 };
 
 window.copyUnitListWithPhones = function(unitName, listId) {
-  const students = DB.assignments.filter(a => a.round_key === 'units' && (a.unit_name || '').trim() === unitName.trim());
+  const unitRows = (window.getUnitAssignments ? getUnitAssignments() : (DB.assignments || []).filter(a => a.round_key === 'units'));
+  const students = unitRows.filter(a => (a.unit_name || '').trim() === unitName.trim());
   const lines = students.map(s => { const full = resolveStudent(s) || {}; return `${s.full_name}\t${s.code_short}\tجروب ${s.group_id}\t${full.phone || ''}`; });
   navigator.clipboard.writeText(`كشف وحدة: ${unitName} (${lines.length} طالب)\n` + lines.join('\n')).then(() => alert(`تم النسخ ${ico("check")}`)).catch(() => { openModal(`قائمة طلاب ${unitName}`, `<pre style="white-space:pre-wrap; direction:rtl">${lines.join('\n')}</pre>`); });
 };

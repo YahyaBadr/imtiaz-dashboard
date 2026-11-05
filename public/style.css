@@ -789,7 +789,7 @@ body {
     radial-gradient(1100px 500px at 85% -8%, rgba(227, 167, 60, 0.10), transparent 60%),
     radial-gradient(900px 480px at 8% 4%, rgba(23, 107, 135, 0.07), transparent 55%),
     var(--c-page-bg);
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
 
 /* ── الترويسة: بلّوم عميق + شريط ذهبي علوي ── */
@@ -995,7 +995,7 @@ html.dark .site-nav { background: #1E121E; }
 
 /* ── توهج ذهبي خفيف للعناوين الرئيسية عند التمرير فوقها ── */
 .section-title { position: relative; }
-.stat-tile, .round-card, .unit-card, .kpi-card { will-change: transform; }
+.stat-tile:hover, .round-card:hover, .unit-card:hover, .kpi-card:hover { will-change: transform; }
 .stat-tile:hover, .kpi-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
 
 /* ═══════ قائمة التصدير المنسدلة (export.js) ═══════ */
@@ -1052,7 +1052,7 @@ html.dark .export-pick { background: #241C2A; color: var(--c-text-main); border-
 @keyframes exportSpin { to { transform: rotate(360deg); } }
 
 /* ═══════ الوضع الداكن (html.dark — تُعاد تعريف متغيرات الهوية فقط) ═══════ */
-html.dark body { background-color: #17111B; color: #EDE6F0; }
+html.dark body { background-color: var(--c-page-bg); color: var(--c-text-main); }
 html.dark {
   --c-page-bg:      #17111B;
   --c-card-bg:      #221A27;
@@ -1585,9 +1585,8 @@ html.dark .elite-bullet { background: var(--c-card-bg); }
   --e-transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* backbone: smooth everything */
+/* backbone: smooth scrolling (transitions applied per-component) */
 html { scroll-behavior: smooth; }
-* { transition: var(--e-transition); }
 
 /* 모든 الكروت تحصل على تأثير Élite عند المرور */
 .card, .round-card, .status-card, .unit-card, .domain-card, .kpi-card, .stat-card, .field-pref-card, .table-wrap {
@@ -1626,7 +1625,7 @@ body {
     radial-gradient(1000px 550px at 5% 5%, rgba(23, 107, 135, 0.06), transparent 50%),
     radial-gradient(800px 400px at 40% 90%, rgba(42, 157, 114, 0.05), transparent 45%),
     var(--c-page-bg);
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
 
 /* ═══ كروت المجالات الثلاثة — خيل / معامل / سمك ═══ */
@@ -2011,6 +2010,11 @@ html.dark .ico-chip.tone-teal  { color: #7FC8DD; background: rgba(91, 184, 212, 
 html.dark .ico-chip.tone-rust  { color: #DE9B85; background: rgba(222, 155, 133, 0.16); }
 html.dark .ico-chip.tone-green { color: #6FD8AC; background: rgba(76, 199, 150, 0.16); }
 html.dark .ico-chip.tone-navy  { color: #9FB6DC; background: rgba(127, 166, 217, 0.16); }
+html.dark .ico-chip.tone-mustard { color: #E8C468; background: rgba(232, 196, 104, 0.16); }
+/* تقليل backdrop-filter على الشاشات الصغيرة (أداء) */
+@media (max-width: 640px) {
+  .modal-box, .search-modal-box, .elite-card, .profile-drawer, .gate-card { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+}
 html.dark .ico-chip.tone-olive { color: #B5C7A8; background: rgba(168, 191, 144, 0.16); }
 html.dark tr:hover td,
 html.dark .data-table tbody tr:hover,

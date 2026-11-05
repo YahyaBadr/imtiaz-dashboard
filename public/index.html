@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#2B1A2B" id="meta-theme-color">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-m61cXV0vjUbJA1Ak4HPGkWbKRm6xvz6mWG3hjpa7poo'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://script.google.com https://script.googleapis.com https://script.googleusercontent.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="color-scheme" content="light">
 
   <!-- PWA / Install -->
@@ -20,10 +21,10 @@
 
   <link rel="preload" href="assets/fonts/cairo-400-arabic-0.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/cairo-700-arabic-6.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="cairo.css?v=1012">
-  <link rel="stylesheet" href="style.css?v=1012">
-  <link rel="stylesheet" href="print.css?v=1012" media="print">
-  <script src="config.js?v=1012"></script>
+  <link rel="stylesheet" href="cairo.css?v=1016">
+  <link rel="stylesheet" href="style.css?v=1016">
+  <link rel="stylesheet" href="print.css?v=1016" media="print">
+  <script src="config.js?v=1016"></script>
 </head>
 <body>
 
@@ -94,7 +95,7 @@
 
   <main id="main-content" class="main-content">
     <div id="loading-screen" class="loading-screen" role="status"><div class="loading-spinner"></div><p>جاري تحميل البيانات…</p></div>
-    <div id="error-screen" class="error-screen hidden"></div>
+    <div id="error-screen" class="error-screen hidden" role="alert"></div>
     <div id="page-overview" class="page hidden"></div>
     <div id="page-schedule" class="page hidden"></div>
     <div id="page-round-1" class="page hidden"></div>
@@ -221,17 +222,17 @@
     </button>
   </div>
 
-  <script src="icons.js?v=1012"></script>
-  <script src="identity.js?v=1012"></script>
-  <script src="app.js?v=1012"></script>
-  <script src="export-core.js?v=1012"></script>
-  <script src="export-assets.js?v=1012"></script>
-  <script src="export.js?v=1012"></script>
-  <script src="pages/overview.js?v=1012"></script>
-  <script src="pages/schedule.js?v=1012"></script>
-  <script src="pages/rounds.js?v=1012"></script>
-  <script src="pages/units.js?v=1012"></script>
-  <script src="pages/not-registered.js?v=1012"></script>
+  <script src="icons.js?v=1016"></script>
+  <script src="identity.js?v=1016"></script>
+  <script src="app.js?v=1016"></script>
+  <script src="export-core.js?v=1016"></script>
+  <!-- export-assets.js يُحمَّل عند الطلب (تصدير PDF) لتقليل الحمولة الأولية -->
+  <script src="export.js?v=1016"></script>
+  <script src="pages/overview.js?v=1016"></script>
+  <script src="pages/schedule.js?v=1016"></script>
+  <script src="pages/rounds.js?v=1016"></script>
+  <script src="pages/units.js?v=1016"></script>
+  <script src="pages/not-registered.js?v=1016"></script>
   <script>
     (function () {
       // شاشة الاستقبال تظهر فوراً (حتى قبل تحميل بقية السكربتات) وتختفي تلقائياً

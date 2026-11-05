@@ -13,7 +13,7 @@ function renderNotRegistered(container) {
   const sortedRounds = Object.keys(byRound).sort((a, b) => roundOrder.indexOf(a) - roundOrder.indexOf(b));
   const totalMissing = rows.length;
 
-  const lotusSvg = `<svg class="title-ornament" viewBox="0 0 24 14" aria-hidden="true"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
+  const lotusSvg = window.lotusSvg || '';
 
   container.innerHTML = `
     <div class="card card-sm units-intro-card" style="margin-bottom: calc(var(--gap)*1.5); border-right:4px solid var(--c-amber)">
@@ -43,7 +43,7 @@ function buildRoundSection(roundKey, groupsMap) {
 
   return `
     <div class="nr-section" id="${secId}">
-      <div class="nr-header"><h2 class="section-title" style="margin-bottom:0"><span>${roundLabel(roundKey)}</span></h2><span class="badge badge-amber num">${roundTotal} غير مسجل</span></div>
+      <div class="nr-header"><h2 class="section-title" style="margin-bottom:0"><span>${esc(roundLabel(roundKey))}</span></h2><span class="badge badge-amber num">${roundTotal} غير مسجل</span></div>
       ${groupBlocks}
     </div>`;
 }
@@ -66,7 +66,7 @@ function buildGroupBlock(groupId, students, roundKey) {
   return `
     <div style="margin-bottom: var(--gap)">
       <div class="nr-header">
-        <div style="display:flex; align-items:center; gap:8px"><span class="cartouche-badge">جروب ${groupId}</span><span style="font-weight:700; font-size:0.92rem; color:var(--c-heading)">طلاب غير مسجلين</span></div>
+        <div style="display:flex; align-items:center; gap:8px"><span class="cartouche-badge">جروب ${esc(groupId)}</span><span style="font-weight:700; font-size:0.92rem; color:var(--c-heading)">طلاب غير مسجلين</span></div>
         <div style="display:flex; gap:8px; align-items:center"><span class="badge badge-grey num">${students.length} طلاب</span>${btn('نسخ', 'copy-block', { block: blockId, label: 'جروب ' + groupId + ' — ' + roundLabel(roundKey) }, 'btn-surface btn-sm')}</div>
       </div>
       <div class="copyable-list"><div class="copyable-list-inner" id="${blockId}">${rows}</div></div>

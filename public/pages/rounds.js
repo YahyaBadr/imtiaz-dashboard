@@ -305,7 +305,7 @@ window.renderRound2Domain = function (container, domainKey) {
           const gids = [...new Set(unitStudents.map((st) => st.gid).filter(Boolean))].sort((a, b) => (+a) - (+b));
           const share = Math.round((unitStudents.length / registeredTotal) * 100);
           return `
-          <div class="unit-card tone-${tone}" data-action="toggle-unit" data-unit="${esc(unitName)}">
+          <div class="unit-card tone-${tone}" role="button" tabindex="0" data-action="toggle-unit" data-unit="${esc(unitName)}">
             <div class="unit-card-header">
               <div class="unit-card-top">
                 <span class="unit-card-ico tone-${tone}" aria-hidden="true">${iconSvg('hospital')}</span>

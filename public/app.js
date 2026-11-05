@@ -49,8 +49,7 @@ window.Gate = (function () {
         return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
       }
     } catch (e) { /* ignore */ }
-    let h = 5381; for (let i = 0; i < txt.length; i++) { h = ((h * 33) ^ txt.charCodeAt(i)) >>> 0; }
-    return 'f' + h.toString(16);
+    return null;
   };
 
   function sessionValid() {
@@ -160,7 +159,7 @@ window.Gate = (function () {
     }
     const u = normUser(user), raw = String(pass || '').trim(), p = passHash(raw);
     // يقبل كلمة المرور نصاً صريحاً (كما في Google Sheet) أو بصمة passHash محفوظة مسبقاً
-    const hit = list.find((x) => x.u === u && (passHash(x.p) === p || x.p === p || x.p === raw));
+    const hit = list.find((x) => x.u === u && passHash(x.p) === p);
     if (hit) { currentRole = hit.role || ''; return true; }
     const knownUser = list.some((x) => x.u === u);
     throw Object.assign(new Error(knownUser ? 'WRONG_PASS' : 'UNKNOWN_USER'), { accounts: list.length });
@@ -171,8 +170,7 @@ window.Gate = (function () {
   }
 
   function expectedHashes() {
-    const c = cfg(), out = [];
-    if (c.PASSPHRASE) out.push({ hash: null, plain: String(c.PASSPHRASE), source: 'config' });
+    const out = [];
     const local = ls.get(LOCAL_KEY);
     if (local) out.push({ hash: local, plain: null, source: 'device' });
     return out;
@@ -184,7 +182,8 @@ window.Gate = (function () {
     const list = expectedHashes();
     if (!list.length) return false;
     const h = await sha256(val);
-    return list.some((x) => (x.hash ? x.hash === h : x.plain === val));
+    if (!h) return false;
+    return list.some((x) => x.hash === h);
   }
 
   function markUnlocked(userName) {
@@ -320,7 +319,7 @@ window.Gate = (function () {
     if (pwd.length < 4) { showGate('الرمز قصير جداً — استخدم ٤ أحرف على الأقل.'); return false; }
     if (!c.PASSPHRASE && !ls.get(LOCAL_KEY)) {
       if (confirmPass !== undefined && confirmPass !== pwd) { showGate('الرمزان غير متطابقين.'); return false; }
-      ls.set(LOCAL_KEY, await sha256(pwd));
+      const _h = await sha256(pwd); if (!_h) { showGate('المتصفح لا يدعم التشفير (HTTPS مطلوب).'); return false; } ls.set(LOCAL_KEY, _h);
       markUnlocked('');
       toast('تم ضبط الرمز — احتفظ به، لا يمكن استعادته');
       return true;
@@ -339,7 +338,7 @@ window.Gate = (function () {
       setBusy(true);
       const u = $('gate-user') ? $('gate-user').value : '';
       const p = $('gate-pass') ? $('gate-pass').value : '';
-      Promise.resolve(onPass(u, p)).then(() => setBusy(false)).catch(() => setBusy(false));
+      Promise.resolve(onPass(u, p)).then((ok) => { setBusy(false); }).catch(() => setBusy(false));
     });
     const setupBtn = document.querySelector('[data-action="gate-set-pass"]');
     if (setupBtn) setupBtn.addEventListener('click', () => onPass('', $('gate-pass') ? $('gate-pass').value : '', $('gate-pass2') ? $('gate-pass2').value : ''));
@@ -1096,6 +1095,7 @@ function writeCache(sheets) {
 function hasRequired(sheets) { return REQUIRED.every((k) => Array.isArray(sheets[k])); }
 
 function buildDB(S) {
+  window._unitRegsCache = null; window._eqRotMap = null;
   const g = (k) => S[k] || [];
   /* ── تطبيع رؤوس الأعمدة العربية الشائعة → أسماء الحقول التي تعتمد عليها اللوحة ──
      (يُطبَّق على كل شيت؛ لا يمس عموداً إن لم يكن الرأس مطابقاً، فلا كسر للراسلين حالياً) */
@@ -1399,7 +1399,7 @@ function buildDB(S) {
   /* ── البند أ: تعارضات الجروب (كشف الرايوند ٢ ≠ سجل الطلاب) تُسجَّل كصفوف قضايا
      حتى تظهر في لوحة «قضايا البيانات» وصفحة التصدير — لا تعارض صامت.
      كل طالب/صف يُسجَّل مرة واحدة فقط؛ تُعاد القائمة من جديد مع كل بناء للبيانات فلا تتضاعف. */
-  const conflictIssues = DB.issuesR2.slice();
+  const conflictIssues = DB.issuesR2.filter((r) => !r || !r._synthetic).slice();
   const conflictSeen = Object.create(null);
   DB.assignments.concat(DB.unregistered).forEach((row) => {
     const s = resolveStudent(row);
@@ -1492,17 +1492,19 @@ window.displayNameForStudent = function (student) {
 /* ───────────────────────── 5) النوافذ (مع زر الرجوع في الهاتف) ───────────────────────── */
 
 window.Overlays = (function () {
-  const stack = []; let ignore = 0;
+  const stack = []; let ignore = 0; let prevFocus = null;
   const lock = () => document.body.classList.toggle('no-scroll', stack.length > 0);
   const push = () => { try { history.pushState({ ov: stack.length }, '', location.href); } catch (e) { /* ignore */ } };
 
   function open(el, replace) {
+    if (!stack.length) prevFocus = document.activeElement;
     if (replace && stack.length) { stack.pop().remove(); document.body.appendChild(el); stack.push(el); lock(); return el; }   // نعيد استخدام نفس خانة التاريخ
     document.body.appendChild(el); stack.push(el); push(); lock(); return el;
   }
   function closeTop(fromPop) {
     const el = stack.pop(); if (!el) return false;
     el.remove(); lock();
+    if (!stack.length && prevFocus && document.contains(prevFocus)) { try { prevFocus.focus(); } catch (e) {} prevFocus = null; }
     if (!fromPop) { try { ignore++; history.back(); } catch (e) { ignore--; } }
     return true;
   }
@@ -1515,7 +1517,7 @@ window.Overlays = (function () {
     const n = stack.length; if (!n) return;
     while (stack.length) stack.pop().remove();
     lock();
-    try { ignore++; history.go(-n); } catch (e) { ignore--; }
+    try { ignore += n; history.go(-n); } catch (e) { ignore = Math.max(0, ignore - n); }
   }
   window.addEventListener('popstate', () => { if (ignore > 0) { ignore--; return; } closeTop(true); });
   return { open, closeTop, closeEl, closeAll, count: () => stack.length };
@@ -1536,7 +1538,7 @@ window.openModal = function (title, bodyHTML, opts) {
 window.btn = function (label, action, data, cls) {
   let s = `<button type="button" class="btn ${cls || 'btn-plum'}" data-action="${esc(action)}"`;
   Object.keys(data || {}).forEach((k) => { if (data[k] !== undefined && data[k] !== null) s += ` data-${k}="${esc(data[k])}"`; });
-  return s + `>${label}</button>`;
+  return s + `>${esc(label)}</button>`;
 };
 
 /* ───────────────────────── 6) قوائم الطلاب ───────────────────────── */
@@ -1600,7 +1602,8 @@ document.addEventListener('input', (e) => {
   const inp = e.target.closest && e.target.closest('[data-filter-list]');
   if (!inp) return;
   const q = normAr(inp.value);
-  const list = document.querySelector(inp.getAttribute('data-filter-list'));
+  const root = inp.closest('.modal-box, .modal-overlay, .profile-drawer') || document;
+  const list = root.querySelector(inp.getAttribute('data-filter-list'));
   if (!list) return;
   let shown = 0;
   list.querySelectorAll('[data-s]').forEach((r) => { const ok = !q || r.getAttribute('data-s').indexOf(q) > -1; r.style.display = ok ? '' : 'none'; if (ok) shown++; });
@@ -1989,11 +1992,10 @@ window.showPage = function (pageId) {
   window.moveNavIndicator && window.moveNavIndicator(pageId);
   window.updateNavBadges && window.updateNavBadges();
   if (!pageEl.dataset.rendered) {
-    try { PAGE_RENDERERS[pageId](); pageEl.dataset.rendered = 'true'; }
+    try { PAGE_RENDERERS[pageId](); pageEl.dataset.rendered = 'true'; _activePage = pageId; }
     catch (err) { console.error('[showPage] render error:', err); pageEl.innerHTML = `<div class="card error-card"><h3>تعذّر عرض هذه الصفحة</h3><p class="muted">${esc(err.message)}</p><button type="button" class="btn btn-plum" data-action="retry">إعادة تحميل البيانات</button></div>`; }
-    setTimeout(() => VERIFY.run(), 60);
+    requestAnimationFrame(() => setTimeout(() => VERIFY.run(), 0));
   }
-  _activePage = pageId;
   window.scrollTo({ top: 0, behavior: 'auto' });
 };
 
@@ -2032,7 +2034,7 @@ let _loading = false, _lastFp = null;
 
 async function refreshData(opts) {
   opts = opts || {};
-  if (_loading) return;
+  if (_loading) return Promise.resolve();
   _loading = true;
   const btn = document.getElementById('refresh-btn'); if (btn) btn.classList.add('spinning');
   try {
@@ -2097,6 +2099,7 @@ async function init() {
 function bootAfterUnlock() {
   Gate.whoChip();
   initInstallUI();
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
   const afterPaint = () => { window.Splash && Splash.dismiss(); VERIFY.run(); };
 
   const cached = readCache();
@@ -2229,6 +2232,7 @@ const ACTIONS = {
   },
   'splash-skip': () => { window.Splash && Splash.dismiss(); }
 };
+window.lotusSvg = `<svg class="title-ornament" viewBox="0 0 24 14" aria-hidden="true"><path d="M12 1L16 6H8L12 1Z" fill="#E3A73C"/><path d="M12 13L8 8H16L12 13Z" fill="#E3A73C"/><circle cx="3" cy="7" r="2.2" fill="#E3A73C"/><circle cx="21" cy="7" r="2.2" fill="#E3A73C"/></svg>`;
 window.registerAction = function (name, fn) { ACTIONS[name] = fn; };
 
 // فتح صفحة الوحدات البيطرية وفتح كارد الوحدة المطلوبة
@@ -2281,8 +2285,10 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest ? e.target.closest('[data-action]') : null;
   if (!el) return;
   const fn = ACTIONS[el.dataset.action];
+  if (!fn) { console.warn('[action] unknown:', el.dataset.action); return; }
   if (fn) {
-    if (el.tagName === 'A') return;
+    if (el.tagName === 'A' && !el.dataset.action) return;
+    if (el.tagName === 'A' && el.dataset.action) e.preventDefault();
     fn(el, e);
     if (more && el.closest('#header-more-menu')) {
       more.classList.add('hidden');
@@ -2292,6 +2298,6 @@ document.addEventListener('click', (e) => {
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && Overlays.count()) { Overlays.closeTop(false); return; }
-  if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.matches && e.target.matches('[role="button"][data-action]')) { e.preventDefault(); e.target.click(); }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.matches && e.target.matches('[role="button"][data-action]') && e.target.tagName !== 'BUTTON') { e.preventDefault(); e.target.click(); }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openGlobalSearch(); }
 });

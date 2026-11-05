@@ -2254,9 +2254,11 @@ registerAction('goto-unit', (el) => {
   if (!openTarget()) setTimeout(openTarget, 120);
 });
 
-// تبديل فتح/إغلاق كارد الوحدة البيطرية عند الضغط عليه
+// تبديل فتح/إغلاق كارد الوحدة البيطرية عند الضغط عليه (يدعم كلا التصميمين: .unit-card و .unit-card-gradient)
 registerAction('toggle-unit', (el) => {
-  el.classList.toggle('open');
+  const c = el.closest('.unit-card-gradient, .unit-card');
+  if (c) c.classList.toggle('open');
+  else el.classList.toggle('open');
 });
 
 // الجدول العام على الهاتف: فتح/إغلاق قسم الجروب (accordion)

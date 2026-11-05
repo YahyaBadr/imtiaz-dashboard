@@ -333,6 +333,13 @@ html.dark .compact-status-card .compact-status-meta .muted { color: #9C8C99; }
 .journey-step-name { font-weight: 700; font-size: 0.86rem; color: var(--c-heading); min-width: 70px; }
 .journey-step-desc { flex: 1; font-size: 0.8rem; color: var(--c-text-muted); overflow-wrap: anywhere; }
 .journey-step-status { font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+/* الوضع الداكن — سجل التنقل (compact) */
+html.dark .journey-step-compact { background: var(--c-surface); border-color: var(--c-border); }
+html.dark .journey-step-compact.current { background: #3A243A !important; border-color: var(--c-gold) !important; }
+html.dark .journey-step-compact .journey-step-name { color: #FFFFFF; }
+html.dark .journey-step-compact .journey-step-desc { color: #D6CAD8; }
+html.dark .journey-step-compact .journey-step-status { color: #E2D7E5; }
+html.dark .journey-step-compact .step-bullet { border-color: var(--c-card-bg); }
 
 .unit-card-ico { flex-shrink: 0; font-size: 1.4rem; }
 .unit-card-info { flex: 1; min-width: 0; }
@@ -393,7 +400,7 @@ html.dark .rotation-block { color: var(--c-text-muted); }
 html.dark .rot-card,
 html.dark .gantt-cell-inner,
 html.dark .gantt-cell .rot-card {
-  background: #1A101A !important;
+  background: var(--c-card-bg) !important;
   border: 1px solid rgba(227, 167, 60, 0.35) !important;
   color: #FFFFFF !important;
 }
@@ -430,7 +437,7 @@ html.dark .gantt-cell-inner .g-chip {
 html.dark .rot-card:hover,
 html.dark .gantt-cell-inner:hover,
 html.dark .gantt-cell .rot-card:hover {
-  background: #241424 !important;
+  background: var(--c-surface) !important;
   border-color: var(--c-gold) !important;
 }
 .gantt-round-name { font-weight: 700; font-size: 0.92rem; color: var(--c-heading); }
@@ -1108,13 +1115,13 @@ html.dark .copyable-name,
 html.dark .table-cards tbody tr { background: var(--c-surface); }
 /* أرضيات القطاعات الفاتحة داخل الكروت → تينت مهذب منخفض التشبع (~14% من لون القسم فوق سطح الثيم)
    + حدود 1px بلون القسم — دورة الإصلاحات الدقيقة بند 3 (بدل درجات طينية مشبعة مستوردة) */
-html.dark .rot-card, html.dark .gantt-cell-inner { background: #1A101A !important; border-color: rgba(227, 167, 60, 0.35) !important; }
-html.dark .rot-card.units, html.dark .gantt-cell-inner.units           { background: #1A101A !important; border-color: rgba(23, 107, 135, 0.35) !important; }
-html.dark .rot-card.college, html.dark .gantt-cell-inner.college       { background: #1A101A !important; border-color: rgba(117, 63, 45, 0.35) !important; }
-html.dark .rot-card.poultry, html.dark .gantt-cell-inner.poultry       { background: #1A101A !important; border-color: rgba(42, 157, 114, 0.35) !important; }
-html.dark .rot-card.slaughter, html.dark .gantt-cell-inner.slaughter   { background: #1A101A !important; border-color: rgba(212, 166, 42, 0.35) !important; }
-html.dark .rot-card.equine_lab_fish, html.dark .gantt-cell-inner.equine_lab_fish { background: #1A101A !important; border-color: rgba(11, 37, 69, 0.35) !important; }
-html.dark .rot-card.elective, html.dark .gantt-cell-inner.elective     { background: #1A101A !important; border-color: rgba(91, 110, 79, 0.35) !important; }
+html.dark .rot-card, html.dark .gantt-cell-inner { background: var(--c-card-bg) !important; border-color: rgba(227, 167, 60, 0.35) !important; }
+html.dark .rot-card.units, html.dark .gantt-cell-inner.units           { background: var(--c-card-bg) !important; border-color: rgba(23, 107, 135, 0.35) !important; }
+html.dark .rot-card.college, html.dark .gantt-cell-inner.college       { background: var(--c-card-bg) !important; border-color: rgba(117, 63, 45, 0.35) !important; }
+html.dark .rot-card.poultry, html.dark .gantt-cell-inner.poultry       { background: var(--c-card-bg) !important; border-color: rgba(42, 157, 114, 0.35) !important; }
+html.dark .rot-card.slaughter, html.dark .gantt-cell-inner.slaughter   { background: var(--c-card-bg) !important; border-color: rgba(212, 166, 42, 0.35) !important; }
+html.dark .rot-card.equine_lab_fish, html.dark .gantt-cell-inner.equine_lab_fish { background: var(--c-card-bg) !important; border-color: rgba(11, 37, 69, 0.35) !important; }
+html.dark .rot-card.elective, html.dark .gantt-cell-inner.elective     { background: var(--c-card-bg) !important; border-color: rgba(91, 110, 79, 0.35) !important; }
 html.dark .g-chip, html.dark .rot-foot .g-chip, html.dark .gantt-count-badge { background: rgba(255, 255, 255, 0.07); border-color: var(--c-border); color: var(--c-text-muted); }
 html.dark .g-chip.num, html.dark .gantt-count-badge { color: var(--c-text-main); }
 
@@ -1235,7 +1242,7 @@ html.dark .journey-bullet { border-color: var(--c-surface); }
 .rot-card.slaughter       { background: #FAF6EB; border-color: #EFE0B6; }
 .rot-card.equine_lab_fish { background: #EEF2F8; border-color: #C0D0E8; }
 .rot-card.elective        { background: #F4F6F2; border-color: #D2DBCF; }
-html.dark .rot-card { background: #1A101A !important; border-color: rgba(227, 167, 60, 0.35) !important; }
+html.dark .rot-card { background: var(--c-card-bg) !important; border-color: rgba(227, 167, 60, 0.35) !important; }
 @media (max-width: 480px) {
   .rot-card { min-height: 124px; padding: 8px 9px; }
   .rot-title { font-size: .82rem; }
@@ -2159,6 +2166,13 @@ html.dark .unit-card.tone-gold .unit-card-count-pill { color: #2B1A2B; }
 .unit-student-list li:hover { background: color-mix(in srgb, var(--uc-accent) 6%, transparent); }
 
 html.dark .unit-card { background: linear-gradient(180deg, var(--c-card-bg) 0%, color-mix(in srgb, var(--uc-accent) 11%, var(--c-card-bg)) 170%); }
+/* كروت الوحدات (التصميم gradient) في الوضع الداكن */
+html.dark .unit-card-gradient { background: var(--c-card-bg); border-color: var(--c-border); }
+html.dark .unit-card-gradient:hover { border-color: var(--c-gold); }
+html.dark .unit-card-gradient::before { opacity: 0.85; }
+html.dark .unit-card-gradient.open .unit-card-header { background: color-mix(in srgb, var(--uc-accent, var(--c-gold)) 8%, var(--c-card-bg)); }
+html.dark .btn-icon { background: var(--c-card-bg); border-color: var(--c-border); color: var(--c-heading); }
+html.dark .btn-icon:hover { background: var(--c-gold-light); border-color: var(--c-gold); }
 html.dark .unit-split-f { color: #F0A6A8; background: rgba(240, 166, 168, .12); }
 html.dark .unit-split-m { color: #7FC8DD; background: rgba(127, 200, 221, .12); }
 html.dark .unit-meta-chip { background: color-mix(in srgb, var(--c-card-bg) 82%, transparent); }
@@ -2205,29 +2219,21 @@ html.dark .unit-meta-chip { background: color-mix(in srgb, var(--c-card-bg) 82%,
   .rotation-context-go { font-size: .74rem; }
 }
 
-/* Nuclear fix — كروت المصفوفة (الراوندات) غامقة في الدارك مود فقط، ما يؤثرش على الليت */
-html.dark .rot-card,
-html.dark .gantt-cell-inner {
-  background: #1A101A !important;
-  border-color: rgba(227, 167, 60, 0.35) !important;
+/* كروت الراوندات في الوضع الداكن — تباين عالٍ (العناوين بيضاء، الأرقام فاتحة) */
+html.dark .rot-card .rot-title,
+html.dark .gantt-cell-inner .rot-title {
   color: #FFFFFF !important;
 }
-html.dark .rot-card .rot-head,
 html.dark .rot-card .rot-meta,
-html.dark .rot-card .rot-foot,
-html.dark .rot-card .rot-title,
+html.dark .gantt-cell-inner .rot-meta {
+  color: #E6DCE8 !important;
+}
 html.dark .rot-card .muted,
-html.dark .gantt-cell-inner .rot-title,
 html.dark .gantt-cell-inner .muted {
-  color: #BFA8BF !important;
+  color: #C9B8CB !important;
 }
 html.dark .rot-card .num,
 html.dark .gantt-cell-inner .num {
-  color: #E2D7E5 !important;
-}
-html.dark .rot-card:hover,
-html.dark .gantt-cell-inner:hover {
-  background: #241424 !important;
-  border-color: var(--c-gold) !important;
+  color: #F0D9A5 !important;
 }
 

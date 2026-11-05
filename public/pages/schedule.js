@@ -186,7 +186,7 @@ function renderSchedule(container) {
             <button type="button" class="btn btn-surface btn-sm"${act('group-roster', { gid })}>${iconSvg('users')} قائمة طلاب جروب ${esc(gid)}</button>
           </div>
           <!-- سجل التنقل لهذا الجروب عبر الراوندات -->
-          <div style="padding:10px 16px; border-bottom:1px solid var(--c-surface); background:#FAF7F2;">
+          <div style="padding:10px 16px; border-bottom:1px solid var(--c-surface); background:var(--c-surface);">
             <div style="font-size:0.78rem; font-weight:700; color:var(--c-text-muted); margin-bottom:6px;">سجل التنقل بالراوندات</div>
             <div style="display:flex; flex-direction:column; gap:5px;">
               ${roundCols.map((c) => {

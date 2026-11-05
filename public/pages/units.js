@@ -161,6 +161,6 @@ window.copyUnitListWithPhones = function(unitName, listId) {
 };
 
 /* ═══ أزرار صفحة الوحدات — كل الضغطات عبر المعالج الموحّد (data-action) ═══ */
-registerAction('toggle-unit', (el) => { const c = el.closest('.unit-card-gradient'); if (c) c.classList.toggle('open'); });
+registerAction('toggle-unit', (el) => { const c = el.closest('.unit-card-gradient, .unit-card'); if (c) c.classList.toggle('open'); });
 registerAction('print-unit', (el) => printUnitSheet(el.dataset.unit || ''));
 registerAction('copy-unit', (el) => copyUnitListWithPhones(el.dataset.unit || ''));

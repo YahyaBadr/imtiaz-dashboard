@@ -99,7 +99,8 @@ function unregisteredRow(u) {
 }
 
 /* ═══ خريطة: group_id → round_key للرايوند ٢ من جدول الجولات ═══ */
-/* لأن جدول التسجيلات يُخزن round_key='units' للجميع، التخصص الفعلي يُعرف من الجدول الزمني. */
+/* المصدر الموثوق للمجال هو جدول الجولات (04) — قد تختلف قيم round_key في جدول
+   التسجيلات بين المجالات، لكن الربط عبر group_id يضمن تصنيفاً واحداً متسقاً. */
 window.buildR2GroupFieldMap = function () {
   const map = {};
   (DB.roundSchedule || []).forEach((r) => {

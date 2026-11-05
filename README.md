@@ -6,8 +6,8 @@ Data is sourced live from a Google Spreadsheet via a Google Apps Script Web App 
 
 ## Features
 
-- 📊 **Pages**: Overview (الملخص), Rotation Matrix (المصفوفة), Rounds (الراوند ١–٤), Units (الوحدات), Unregistered Students (غير المسجلين)
-- 📱 **PWA / installable** — service worker caches the app shell; works offline with the last-known data
+- 📊 **Pages**: Overview (الملخص), Rotation Matrix (المصفوفة), Rounds (الراوند ١–٤ + a placeholder page for elective round ٥), Round-2 domain pages (وحدات / كلية / خيل ومعامل وسمك / سلخ / دواجن), Unregistered Students (غير المسجلين)
+- 📱 **Installable web app** — web manifest + offline data cache. The service worker is intentionally **not registered** (to avoid stale app-shell caching); sheet data is cached in `localStorage`.
 - 🌐 **Arabic RTL UI** with the self-hosted Cairo font, fully responsive (desktop & mobile)
 - 🔍 **Arabic-aware search** (normalizes أ/إ/آ, ى/ي, ة/ه, diacritics, Arabic numerals)
 - 🖥️ **Presentation mode** (hides contact numbers for projector display) and 🖨️ print styles
@@ -32,7 +32,7 @@ Data is sourced live from a Google Spreadsheet via a Google Apps Script Web App 
     ├── index.html         # App shell (RTL, PWA meta, nav tabs)
     ├── app.js             # Core: data fetching, caching, dates, search, install
     ├── config.js          # ⚙️ All user-editable settings (API URL, flags, dates)
-    ├── sw.js              # Service worker (offline cache; bump CACHE_VERSION on redeploy)
+    ├── sw.js              # Service worker (present but intentionally NOT registered)
     ├── manifest.json      # PWA manifest
     ├── style.css          # Main styles
     ├── cairo.css          # Self-hosted Cairo font styles
@@ -105,14 +105,14 @@ If some sheets fail to fetch, the last cached copy is used as a fallback; the Ap
 
 The site is designed to deploy from GitHub via **Cloudflare Pages/Workers** (push → auto-redeploy). Any static host that serves the `public/` folder works too.
 
-**After each redeploy:** bump `CACHE_VERSION` in `public/sw.js` (e.g. `imtiaz-v21`) so clients pick up the new app shell.
+**After changing shipped JS/CSS:** bump the `?v=` query value in `public/index.html` (e.g. `?v=1008`) so browsers fetch the new files. The service worker is intentionally not registered.
 
 ## Development Notes
 
 - There is **no build step** — edit files in `public/` and refresh.
 - Keep all configuration in `config.js`; do not add a second copy of it.
 - Add new interactive elements using `data-action` attributes (see `window.act()` in `app.js`) instead of inline handlers, and always escape dynamic text with `window.esc()`.
-- The service worker only precaches the app shell; sheet data is cached separately in `localStorage` under `imtiaz_data_cache_v2`.
+- Sheet data is cached in `localStorage` under `imtiaz_data_cache_v3_r2`; the service worker is intentionally not registered.
 
 ## License
 

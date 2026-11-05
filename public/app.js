@@ -7,6 +7,21 @@
 window.DB = {};
 const CFG = () => window.APP_CONFIG || {};
 
+/* إخفاء أي صورة تحمل data-hide-on-error إذا فشل تحميلها.
+   بديل آمن لـ onerror المضمّن الذي تحجبه سياسة CSP. */
+(function () {
+  const hide = (img) => { if (img && img.hasAttribute && img.hasAttribute('data-hide-on-error')) img.style.display = 'none'; };
+  document.addEventListener('error', (e) => {
+    const t = e.target;
+    if (t && t.tagName === 'IMG') hide(t);
+  }, true);
+  const sweep = () => document.querySelectorAll('img[data-hide-on-error]').forEach((img) => {
+    if (img.complete && img.naturalWidth === 0) hide(img);
+  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', sweep);
+  else sweep();
+})();
+
 /* ═══════════════════════════════════════════════════════════════════════════
    0) ACCESS GATE — بوابة الدخول
    لا تُطلب أي بيانات من الـ API ولا تُعرض أي صفحة قبل اجتياز هذه البوابة.
@@ -144,7 +159,8 @@ window.Gate = (function () {
       list = fb;                                          // بدون إنترنت — استخدم آخر نسخة آمنة
     }
     const u = normUser(user), raw = String(pass || '').trim(), p = passHash(raw);
-    const hit = list.find((x) => x.u === u && (passHash(x.p) === p || x.p === raw));
+    // يقبل كلمة المرور نصاً صريحاً (كما في Google Sheet) أو بصمة passHash محفوظة مسبقاً
+    const hit = list.find((x) => x.u === u && (passHash(x.p) === p || x.p === p || x.p === raw));
     if (hit) { currentRole = hit.role || ''; return true; }
     const knownUser = list.some((x) => x.u === u);
     throw Object.assign(new Error(knownUser ? 'WRONG_PASS' : 'UNKNOWN_USER'), { accounts: list.length });
@@ -205,7 +221,7 @@ window.Gate = (function () {
     if (userF) userF.style.display = (modeName === 'sheet') ? '' : 'none';
     const uLabel = document.querySelector('label[for="gate-user"]');
     if (uLabel) uLabel.style.display = (modeName === 'sheet') ? '' : 'none';
-    const needsLocalSetup = (modeName === 'local') && !ls.get(LOCAL_KEY);
+    const needsLocalSetup = (modeName === 'local') && !ls.get(LOCAL_KEY) && !c.PASSPHRASE;
     if (setup) setup.classList.toggle('hidden', !needsLocalSetup);
     if (note) note.textContent = needsLocalSetup
       ? 'لم يتم تعيين رمز بعد. اختر رمز دخول خاص بهذا الجهاز (٤ أحرف أو أكثر).'
@@ -263,7 +279,7 @@ window.Gate = (function () {
     const modeName = (String(c.MODE || 'sheet').toLowerCase() === 'local') ? 'local' : 'sheet';
     let user = '', pwd = '';
     if (modeName === 'sheet') { user = String(userOrPass || '').trim(); pwd = String(pass === undefined ? confirmPass : pass || '').trim(); }
-    else { pwd = String(confirmPass !== undefined && pass !== undefined ? pass : (userOrPass || '')).trim(); }
+    else { pwd = String(pass !== undefined && pass !== null ? pass : (userOrPass || '')).trim(); }
 
     /* لا نكتب كلمة المرور في localStorage إطلاقاً — اسم المستخدم فقط */
     const rememberUser = (u) => { try { if (u) ls.set('imtiaz_gate_last_user_v1', String(u).trim()); } catch (e) {} };
@@ -473,12 +489,20 @@ window.getTodayStr = function () { return dateInTZ(new Date()); };
    الصيغة: 14 رقمًا — الرقم 1 قرن، رقم 2-3 سنة، رقم 4-5 شهر، رقم 6-7 يوم
    مثال: 30304242102642 → 2003-04-24 */
 window.extractBirthFromNID = function (nid) {
-  const n = String(nid || '').replace(/\D/g, '');
-  if (!n || n.length < 7) return '';
+  // بعض الملفات تحتوي أرقاماً عربية-هندية (٠-٩) أو فارسية (۰-۹) — نحوّلها أولاً
+  const n = String(nid || '')
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/\D/g, '');
+  if (n.length < 7) return '';
+  const century = n[0];
   const yy = n.slice(1, 3);
   const mm = n.slice(3, 5);
   const dd = n.slice(5, 7);
-  const y = '20' + yy;   // الرقم القومي المصري يبدأ بمؤشر القرن (2=2000s)
+  // مؤشر القرن في الرقم القومي المصري: 2 = 1900s، 3 = 2000s
+  const prefix = century === '3' ? '20' : century === '2' ? '19' : '';
+  if (!prefix) return '';
+  const y = prefix + yy;
   const m = mm.padStart(2, '0');
   const d = dd.padStart(2, '0');
   // التحقق من صحة التاريخ
@@ -1750,7 +1774,9 @@ window.showPage = function (pageId) {
   if (_activePage === pageId && pageEl.dataset.rendered) return;
   document.querySelectorAll('.page').forEach((p) => p.classList.add('hidden'));
   pageEl.classList.remove('hidden');
-  document.querySelectorAll('.nav-btn').forEach((b) => { const on = b.dataset.page === pageId; b.classList.toggle('active', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  // صفحات الراوند ٢ الفرعية تُبقي تبويب «الراوند ٢» نشطاً في شريط التنقل
+  const navId = /^round-2-(units|college|equine|slaughter|poultry|unregistered)$/.test(pageId) ? 'round-2' : pageId;
+  document.querySelectorAll('.nav-btn').forEach((b) => { const on = b.dataset.page === navId; b.classList.toggle('active', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   window.moveNavIndicator && window.moveNavIndicator(pageId);
   window.updateNavBadges && window.updateNavBadges();
   if (!pageEl.dataset.rendered) {
@@ -1929,7 +1955,9 @@ const ACTIONS = {
     const s = window.ImtiazIdentity.findByKey(DB.identity, el.dataset.sid); const out = document.getElementById('nid-display'); if (!s || !out) return;
     const nid = String(s.national_id || ''); const masked = '••••••••••' + nid.slice(-4);
     const wasMasked = out.dataset.masked === '1';
-    out.textContent = wasMasked ? nid : masked; out.dataset.masked = wasMasked ? '0' : '1'; el.textContent = wasMasked ? '' : '';
+    out.textContent = wasMasked ? nid : masked; out.dataset.masked = wasMasked ? '0' : '1';
+    el.innerHTML = wasMasked ? ico('eye-off') : ico('eye');
+    el.setAttribute('aria-label', wasMasked ? 'إخفاء الرقم القومي' : 'إظهار الرقم القومي');
   },
 
   /* ── بوابة الدخول ── */
@@ -1937,7 +1965,10 @@ const ACTIONS = {
     const inp = document.getElementById('gate-pass'); if (!inp) return;
     const show = inp.type === 'password';
     inp.type = show ? 'text' : 'password';
-    el.textContent = show ? '' : '';
+    const eyeOn = el.querySelector('.eye-on'), eyeOff = el.querySelector('.eye-off');
+    if (eyeOn) eyeOn.classList.toggle('hidden', show);
+    if (eyeOff) eyeOff.classList.toggle('hidden', !show);
+    el.setAttribute('aria-pressed', String(show));
     el.setAttribute('aria-label', show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
     try { inp.focus(); } catch (e) {}
   },
@@ -1991,22 +2022,27 @@ const ACTIONS = {
 };
 window.registerAction = function (name, fn) { ACTIONS[name] = fn; };
 
-// فتح صفحة راوند ٢ (الوحدات البيطرية تظهر ككارد داخل الراوند)
+// فتح صفحة الوحدات البيطرية وفتح كارد الوحدة المطلوبة
 registerAction('goto-unit', (el) => {
   Overlays.closeAll();
-  showPage('round-2');
-  const want = String(el.dataset.unit || '').trim();
-  setTimeout(() => {
-    const cards = document.querySelectorAll('#units-grid .unit-card');
+  showPage('round-2-units');
+  const want = normAr(String(el.dataset.unit || '').trim());
+  if (!want) return;
+  const openTarget = () => {
+    const cards = document.querySelectorAll('#page-round-2-units .units-grid .unit-card');
+    let fallback = null;
     for (const card of cards) {
-      const name = card.querySelector('.unit-name');
-      if (name && normAr(name.textContent) === normAr(want)) {
-        card.classList.add('open');
-        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
-      }
+      const nameEl = card.querySelector('.unit-card-name');
+      if (!nameEl) continue;
+      const name = normAr(nameEl.textContent);
+      if (name === want) { card.classList.add('open'); card.scrollIntoView({ behavior: 'smooth', block: 'center' }); return true; }
+      if (!fallback && (name.indexOf(want) > -1 || want.indexOf(name) > -1)) fallback = card;
     }
-  }, 120);
+    if (fallback) { fallback.classList.add('open'); fallback.scrollIntoView({ behavior: 'smooth', block: 'center' }); return true; }
+    return false;
+  };
+  // الصفحة تُرسَم تزامنياً، لكن نؤجل قليلاً لضمان اكتمال التخطيط قبل التمرير
+  if (!openTarget()) setTimeout(openTarget, 120);
 });
 
 // تبديل فتح/إغلاق كارد الوحدة البيطرية عند الضغط عليه

@@ -9,8 +9,8 @@
 
   <!-- PWA / Install -->
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="assets/college_logo.png">
-  <link rel="apple-touch-icon" href="assets/college_logo.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="الإمتياز البيطري">
@@ -20,10 +20,10 @@
 
   <link rel="preload" href="assets/fonts/cairo-400-arabic-0.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/cairo-700-arabic-6.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="cairo.css?v=1007">
-  <link rel="stylesheet" href="style.css?v=1007">
-  <link rel="stylesheet" href="print.css?v=1007" media="print">
-  <script src="config.js?v=1007"></script>
+  <link rel="stylesheet" href="cairo.css?v=1008">
+  <link rel="stylesheet" href="style.css?v=1008">
+  <link rel="stylesheet" href="print.css?v=1008" media="print">
+  <script src="config.js?v=1008"></script>
 </head>
 <body>
 
@@ -33,7 +33,7 @@
   <header class="site-header">
     <div class="header-inner">
       <div class="header-top-row" id="header-row">
-        <div class="logo-wrapper area-logo-r"><img src="assets/university_logo.png" alt="جامعة القاهرة" class="header-logo" onerror="this.style.display='none'"></div>
+        <div class="logo-wrapper area-logo-r"><img src="assets/university_logo.png" alt="جامعة القاهرة" class="header-logo" data-hide-on-error></div>
 
         <div class="header-title-box area-title">
           <h1>لوحة متابعة الإمتياز البيطري</h1>
@@ -75,7 +75,7 @@
           </div>
         </div>
 
-        <div class="logo-wrapper area-logo-l"><img src="assets/college_logo.png" alt="كلية الطب البيطري" class="header-logo" onerror="this.style.display='none'"></div>
+        <div class="logo-wrapper area-logo-l"><img src="assets/college_logo.png" alt="كلية الطب البيطري" class="header-logo" data-hide-on-error></div>
       </div>
     </div>
   </header>
@@ -118,7 +118,7 @@
   <div id="gate-splash" class="splash hidden" role="presentation">
     <button type="button" class="splash-skip" data-action="splash-skip">تخطّي ←</button>
     <div class="splash-inner">
-      <div class="splash-ring"><img src="assets/college_logo.png" alt="" onerror="this.style.display='none'"></div>
+      <div class="splash-ring"><img src="assets/college_logo.png" alt="" data-hide-on-error></div>
       <h2 class="splash-title">لوحة متابعة الإمتياز البيطري</h2>
       <p class="splash-sub">كلية الطب البيطري · جامعة القاهرة</p>
       <div class="splash-line"><i></i></div>
@@ -131,7 +131,7 @@
   <div id="gate-overlay" class="gate-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="gate-title">
     <div class="gate-card">
       <div class="gate-brand">
-        <img src="assets/college_logo.png" alt="" class="gate-logo" onerror="this.style.display='none'">
+        <img src="assets/college_logo.png" alt="" class="gate-logo" data-hide-on-error>
         <h2 id="gate-title">لوحة متابعة الإمتياز البيطري</h2>
         <p class="gate-sub">كلية الطب البيطري — جامعة القاهرة · مكتب وكيل الكلية</p>
         <span class="gate-chip" id="gate-chip"><span class="chip-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>دخول بالأسم والصلاحيات</span>
@@ -150,7 +150,7 @@
           <input type="password" class="gate-input" id="gate-pass" name="gatepass"
                  autocomplete="current-password" enterkeyhint="go" placeholder="••••••••"
                  aria-describedby="gate-err">
-          <button type="button" class="gate-eye" id="gate-eye" data-action="gate-eye" title="إظهار/إخفاء" aria-label="إظهار كلمة المرور"><span class="eye-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span><span class="eye-off hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></button>
+          <button type="button" class="gate-eye" id="gate-eye" data-action="gate-eye" title="إظهار/إخفاء" aria-label="إظهار كلمة المرور" aria-pressed="false"><span class="eye-on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="eye-off hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a13.2 13.2 0 0 1-1.56 2.54"/><path d="M6.61 6.61A13.5 13.5 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.35-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg></span></button>
         </div>
 
         <p class="gate-caps hidden" id="gate-caps"><span class="caps-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>مفتاح Caps Lock مُفعَّل</p>
@@ -189,11 +189,11 @@
     </div>
     <!-- بند 3: تصدير مفصّل — لكل جروب على حدة (بياناته عبر كل الراوندات) ولكل راوند على حدة (كل المسجلين فيه) -->
     <div class="export-scope-label" role="presentation">تفصيلي حسب الجروب</div>
-    <select id="export-group-select" class="export-pick" data-action="export-scope-pick" aria-label="اختيار جروب للتصدير">
+    <select id="export-group-select" class="export-pick" aria-label="اختيار جروب للتصدير">
       <option value="">— اختر جروبًا —</option>
     </select>
     <div class="export-scope-label" role="presentation">تفصيلي حسب الراوند</div>
-    <select id="export-round-select" class="export-pick" data-action="export-scope-pick" aria-label="اختيار راوند للتصدير">
+    <select id="export-round-select" class="export-pick" aria-label="اختيار راوند للتصدير">
       <option value="">— اختر راوندًا —</option>
     </select>
     <div class="export-scope-label" role="presentation">حزم جاهزة</div>
@@ -221,17 +221,17 @@
     </button>
   </div>
 
-  <script src="icons.js?v=1007"></script>
-  <script src="identity.js?v=1007"></script>
-  <script src="app.js?v=1007"></script>
-  <script src="export-core.js?v=1007"></script>
-  <script src="export-assets.js?v=1007"></script>
-  <script src="export.js?v=1007"></script>
-  <script src="pages/overview.js?v=1007"></script>
-  <script src="pages/schedule.js?v=1007"></script>
-  <script src="pages/rounds.js?v=1007"></script>
-  <script src="pages/units.js?v=1007"></script>
-  <script src="pages/not-registered.js?v=1007"></script>
+  <script src="icons.js?v=1008"></script>
+  <script src="identity.js?v=1008"></script>
+  <script src="app.js?v=1008"></script>
+  <script src="export-core.js?v=1008"></script>
+  <script src="export-assets.js?v=1008"></script>
+  <script src="export.js?v=1008"></script>
+  <script src="pages/overview.js?v=1008"></script>
+  <script src="pages/schedule.js?v=1008"></script>
+  <script src="pages/rounds.js?v=1008"></script>
+  <script src="pages/units.js?v=1008"></script>
+  <script src="pages/not-registered.js?v=1008"></script>
   <script>
     (function () {
       // شاشة الاستقبال تظهر فوراً (حتى قبل تحميل بقية السكربتات) وتختفي تلقائياً

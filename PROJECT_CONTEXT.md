@@ -34,14 +34,14 @@ Read this first instead of re-scanning the whole tree.
 |---|---|
 | `index.html` | RTL Arabic app shell. Header, nav tabs (`data-action="page"`), `<main>` with one `<div id="page-*">` per page, loading/error screens, gate overlay, export menu, toast. Loads `config.js` first, then `icons.js`, `app.js`, `export-*.js`, `pages/*.js`; calls `window.AppBoot()`. |
 | `config.js` | **Single source of settings** → `window.APP_CONFIG`: `API_URL`, `OFFLINE_CACHE`, `REQUEST_TIMEOUT_MS`, `TIMEZONE`, `LAST_DATA_UPDATE`, `GATE{...}`, feature flags, `DEFAULT_ROUND_DATES`. Edit here only; never duplicate. |
-| `sw.js` | Service worker (PWA). Precaches app shell only. **Never caches Apps Script data** (network-only for `script.google.com`). `CACHE_VERSION = 'imtiaz-v21'` — bump on redeploy. |
+| `sw.js` | Service worker file — **present but intentionally NOT registered** (to avoid stale app-shell caches). App-shell cache busting happens via `?v=` in `index.html`. |
 | `manifest.json`, `assets/*`, `*.css` | PWA manifest, logos, Cairo font, main/print styles. |
 
 ### Core JS
 
 | File | Purpose |
 |---|---|
-| `app.js` | **The core (~1835 lines).** Gate, data layer (`SHEETS`, `fetchSheetRaw`, `normalizeRows`, `buildDB`), dates (Africa/Cairo), search, overlays/modals, student profiles, PWA install, page routing (`PAGE_RENDERERS`, `showPage`), unified `data-action` click handler, splash, boot (`AppBoot`/`init`/`bootAfterUnlock`). |
+| `app.js` | **The core (~2065 lines).** Gate, data layer (`SHEETS`, `fetchSheetRaw`, `normalizeRows`, `buildDB`), dates (Africa/Cairo), search, overlays/modals, student profiles, PWA install, page routing (`PAGE_RENDERERS`, `showPage`), unified `data-action` click handler, splash, boot (`AppBoot`/`init`/`bootAfterUnlock`). |
 | `icons.js` | SVG icon set (`iconSvg()`, `ico()`). |
 | `export.js`, `export-core.js`, `export-assets.js` | In-browser file generation (xlsx/pdf/docx/csv) using vendored libs in `public/vendor/`. No network. |
 
@@ -119,20 +119,22 @@ else       → fetch(base + '?sheet=' + name + '&key=' + API_TOKEN)  → JSON.pa
 `Gate.init()` blocks `init()` until unlocked. `MODE:'sheet'` fetches the
 `Accounts` tab through the **same** `fetchSheetRaw` → `./data/Accounts.csv`
 in local mode. Password hashed in-browser (FNV-1a for sheet mode, SHA-256
-for local passphrase), session in `localStorage`. `lock()` wipes
+for local passphrase), session in `localStorage`. The password column accepts
+either plaintext (legacy Google Sheet) or a pre-computed `passHash` value, so
+`public/data/Accounts.csv` ships hashed. `lock()` wipes
 `imtiaz_data_cache_v3_r2`. Rate limit: 5 attempts → 30s lockout.
 
 ### 3.3 Cache
 
-- `localStorage['imtiaz_data_cache_v2'] = {ts, sheets}` — data only, separate
-  from the SW app-shell cache.
+- `localStorage['imtiaz_data_cache_v3_r2'] = {ts, sheets}` — data only.
+  There is no active SW app-shell cache (see `sw.js` row above).
 - Boot: cache hit + all required sheets → instant paint from cache, then
   silent background `refreshData()`. Miss → `refreshData({firstPaint:true})`.
 - Partial failure: failed sheet keeps its cached copy (`{...cached, ...fresh}`).
   Cache rewritten only when **all** sheets succeed. `fingerprint()` skips
   rebuild if unchanged.
-- SW: `script.google.com` bypassed (network-only); everything else
-  cache-first with background refresh.
+- No service worker is registered: every sheet fetch goes to the network and
+  falls back to the `localStorage` cache on failure.
 
 ### 3.4 `buildDB` normalization
 
@@ -189,5 +191,5 @@ sections **«الدورة الثانية (R2)»**; other pages are round-neutral
 - All settings in `public/config.js` only.
 - No inline `onclick` — `data-action="..."` + `window.act()` / `window.btn()`.
 - Escape dynamic text with `window.esc()` (dates: `window.escDates()`).
-- Bump `CACHE_VERSION` in `public/sw.js` on redeploy.
+- Bump the `?v=` query value in `public/index.html` when shipping JS/CSS changes (the service worker is not registered).
 - Keep Arabic labels/values from the sheet; code stays English-keyed.

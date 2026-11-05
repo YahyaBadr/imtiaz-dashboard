@@ -318,16 +318,20 @@
     if (scope === 'students') return all.filter((s) => s.name === 'دليل الطلاب');
     if (scope === 'unreg')    return all.filter((s) => s.name === 'غير المسجلين');
     if (scope === 'units')    return all.filter((s) => s.name === 'الوحدات');
-    // نطاق «الصفحة الحالية»: مجموعة الأوراق المرتبطة بالتبويب النشط
-    const activeBtn = document.querySelector('.site-nav .nav-btn.active');
-    const page = activeBtn ? activeBtn.dataset.page : null;
+    // نطاق «الصفحة الحالية»: نعتمد على الصفحة الظاهرة فعلاً (يشمل صفحات الراوند الفرعية
+    // التي لا يطابقها زر تنقّل نشط، وكانت سابقاً تُصدّر الملف كاملاً بالخطأ).
+    const activeEl = document.querySelector('.page:not(.hidden)');
+    const page = activeEl && activeEl.id ? activeEl.id.replace(/^page-/, '') : null;
     const pick = {
       overview: ['الملخص', 'تواريخ الدورة', 'التنبيهات', 'توزيع التدريب R2', 'المجالات الأكثر طلبًا', 'الجروبات'],
       schedule: ['مصفوفة التدوير', 'تواريخ الدورة', 'الجروبات'],
       units: ['الوحدات'],
       'not-registered': ['غير المسجلين']
     }[page] || null;
-    return pick ? all.filter((s) => pick.indexOf(s.name) > -1) : all;
+    if (pick) return all.filter((s) => pick.indexOf(s.name) > -1);
+    const mPageRound = page && page.match(/^round[:\-_]?(\d+)/i);
+    if (mPageRound) { const s = roundSheetSet(d, mPageRound[1]); return s ? [s] : []; }
+    return all;
   }
 
   window.ExportCore = {

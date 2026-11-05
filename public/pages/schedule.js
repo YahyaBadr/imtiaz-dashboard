@@ -216,7 +216,7 @@ window.openRoundDetailModal = function (rawKey, roundTitle, groupId, studentCoun
 
   const actions = roundKey === 'units'
     ? `<div class="modal-actions">
-         ${btn(`${iconSvg('hospital')} الانتقال لصفحة الوحدات البيطرية`, 'goto-page', { page: 'units' })}
+         ${btn(`${iconSvg('hospital')} الانتقال لصفحة الوحدات البيطرية`, 'goto-page', { page: 'round-2-units' })}
          ${btn(`${iconSvg('users')} قائمة طلاب جروب ${gid}`, 'group-roster', { gid, replace: 1 }, 'btn-surface')}
        </div>`
     : `<div class="modal-actions">

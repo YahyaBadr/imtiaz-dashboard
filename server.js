@@ -20,15 +20,27 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
-  // Normalize URL
-  let reqPath = decodeURI(req.url.split('?')[0]);
+  // Normalize URL (decodeURI can throw on malformed escapes such as "%")
+  let reqPath;
+  try {
+    reqPath = decodeURI(String(req.url || '/').split('?')[0]);
+  } catch (e) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('400 Bad Request');
+    return;
+  }
+  if (reqPath.indexOf('\0') !== -1) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('400 Bad Request');
+    return;
+  }
   if (reqPath === '/') reqPath = '/index.html';
 
-  const filePath = path.join(PUBLIC_DIR, reqPath);
-
-  // Security: prevent directory traversal
-  if (!filePath.startsWith(PUBLIC_DIR)) {
-    res.writeHead(403);
+  // Resolve then verify the path stays inside PUBLIC_DIR (handles ".." and separators)
+  const filePath = path.resolve(PUBLIC_DIR, '.' + reqPath);
+  const rel = path.relative(PUBLIC_DIR, filePath);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Access Denied');
     return;
   }
@@ -49,7 +61,13 @@ const server = http.createServer((req, res) => {
       'Cache-Control': 'no-cache'
     });
 
-    fs.createReadStream(filePath).pipe(res);
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', (streamErr) => {
+      console.error('[server] read error:', streamErr.message);
+      if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('500 Internal Server Error');
+    });
+    stream.pipe(res);
   });
 });
 

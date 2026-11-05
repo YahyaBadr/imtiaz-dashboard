@@ -389,77 +389,12 @@ html.dark .rotation-block { color: var(--c-text-muted); }
 .gantt-cell-inner.elective  { background: #F4F6F2; border-color: #D2DBCF; border-right: 4px solid var(--c-olive); }
 
 /* ─── الدارك مود للجدول العام — كروت الراوند تكون غامقة/شفافة مش بيضاء صارخة ─── */
-html.dark .gantt-cell-inner { background: rgba(43, 26, 43, 0.35); border-color: rgba(227, 167, 60, 0.25); color: #FFFFFF; }
-html.dark .gantt-cell-inner:hover { background: rgba(43, 26, 43, 0.55); border-color: var(--c-gold); }
-html.dark .gantt-cell-inner.units     { border-right-color: var(--c-teal); }
-html.dark .gantt-cell-inner.college   { border-right-color: var(--c-rust); }
-html.dark .gantt-cell-inner.poultry   { border-right-color: var(--c-green); }
-html.dark .gantt-cell-inner.slaughter { border-right-color: var(--c-mustard); }
-html.dark .gantt-cell-inner.equine_lab_fish { border-right-color: var(--c-navy); }
-html.dark .gantt-cell-inner.elective  { border-right-color: var(--c-olive); }
-html.dark .gantt-cell-inner .gantt-round-name,
-html.dark .gantt-cell-inner .rot-title { color: #FFFFFF; }
-html.dark .gantt-cell-inner .muted,
-html.dark .gantt-cell-inner .rot-meta span { color: #C9B7C9; }
-html.dark .gantt-cell-inner .num { color: #E2D7E5; }
-
-/* ─── الدارك مود — كروت الراوند داخل كل جروب (اللي كانت بيضاء صارخة) ─── */
+/* ─── الدارك مود — كروت الراوند داخل كل جروب (الأخير والمؤكد) ─── */
 html.dark .rot-card,
 html.dark .gantt-cell-inner,
 html.dark .gantt-cell .rot-card {
-  background: #231623 !important;
-  border-color: rgba(227, 167, 60, 0.25) !important;
-  color: #FFFFFF !important;
-}
-html.dark .rot-card .rot-head,
-html.dark .rot-card .rot-meta,
-html.dark .rot-card .rot-foot,
-html.dark .gantt-cell-inner .rot-head,
-html.dark .gantt-cell-inner .rot-meta,
-html.dark .gantt-cell-inner .rot-foot {
-  background: transparent !important;
-  color: #FFFFFF !important;
-}
-html.dark .rot-card .rot-title,
-html.dark .gantt-cell-inner .rot-title,
-html.dark .gantt-head-title,
-html.dark .gantt-head-dates {
-  color: #FFFFFF !important;
-}
-html.dark .rot-card .rot-status .badge,
-html.dark .gantt-cell-inner .rot-status .badge {
-  border-color: rgba(227, 167, 60, 0.4) !important;
-}
-html.dark .rot-card .rot-meta span,
-html.dark .gantt-cell-inner .rot-meta span,
-html.dark .rot-card .rot-foot span,
-html.dark .gantt-cell-inner .rot-foot span {
-  color: #C9B7C9 !important;
-}
-html.dark .rot-card .num,
-html.dark .gantt-cell-inner .num,
-html.dark .gantt-head-dates {
-  color: #E2D7E5 !important;
-}
-html.dark .rot-card .g-chip,
-html.dark .gantt-cell-inner .g-chip {
-  background: rgba(227, 167, 60, 0.15) !important;
-  border-color: rgba(227, 167, 60, 0.3) !important;
-  color: #F0D9A5 !important;
-}
-html.dark .rot-card:hover,
-html.dark .gantt-cell-inner:hover,
-html.dark .gantt-cell:hover {
-  background: #2E1E2E !important;
-  border-color: var(--c-gold) !important;
-}
-
-/* ─── الدارك مود — كروت الراوند داخل كل جروب (ثابت ومؤكد) ─── */
-html.dark .rot-card,
-html.dark .gantt-cell,
-html.dark .gantt-cell-inner {
-  background: #1E121E !important;
-  border: 1px solid rgba(227, 167, 60, 0.3) !important;
+  background: #1A101A !important;
+  border: 1px solid rgba(227, 167, 60, 0.35) !important;
   color: #FFFFFF !important;
 }
 html.dark .rot-card .rot-head,
@@ -478,8 +413,25 @@ html.dark .gantt-head-dates {
   color: #FFFFFF !important;
 }
 html.dark .rot-card .muted,
-html.dark .gantt-cell-inner .muted {
-  color: #C9B7C9 !important;
+html.dark .gantt-cell-inner .muted,
+html.dark .gantt-cell-inner .rot-meta span {
+  color: #BFA8BF !important;
+}
+html.dark .rot-card .num,
+html.dark .gantt-cell-inner .num {
+  color: #E2D7E5 !important;
+}
+html.dark .rot-card .g-chip,
+html.dark .gantt-cell-inner .g-chip {
+  background: rgba(227, 167, 60, 0.15) !important;
+  border-color: rgba(227, 167, 60, 0.35) !important;
+  color: #F0D9A5 !important;
+}
+html.dark .rot-card:hover,
+html.dark .gantt-cell-inner:hover,
+html.dark .gantt-cell .rot-card:hover {
+  background: #241424 !important;
+  border-color: var(--c-gold) !important;
 }
 .gantt-round-name { font-weight: 700; font-size: 0.92rem; color: var(--c-heading); }
 
@@ -1156,13 +1108,13 @@ html.dark .copyable-name,
 html.dark .table-cards tbody tr { background: var(--c-surface); }
 /* أرضيات القطاعات الفاتحة داخل الكروت → تينت مهذب منخفض التشبع (~14% من لون القسم فوق سطح الثيم)
    + حدود 1px بلون القسم — دورة الإصلاحات الدقيقة بند 3 (بدل درجات طينية مشبعة مستوردة) */
-html.dark .rot-card, html.dark .gantt-cell-inner { background: var(--c-surface); }
-html.dark .rot-card.units, html.dark .gantt-cell-inner.units           { background: color-mix(in srgb, #5BB8D4 14%, var(--c-surface)); border-color: color-mix(in srgb, #5BB8D4 42%, var(--c-border)); }
-html.dark .rot-card.college, html.dark .gantt-cell-inner.college       { background: color-mix(in srgb, #C97B5A 14%, var(--c-surface)); border-color: color-mix(in srgb, #C97B5A 42%, var(--c-border)); }
-html.dark .rot-card.poultry, html.dark .gantt-cell-inner.poultry       { background: color-mix(in srgb, #4CC796 14%, var(--c-surface)); border-color: color-mix(in srgb, #4CC796 42%, var(--c-border)); }
-html.dark .rot-card.slaughter, html.dark .gantt-cell-inner.slaughter   { background: color-mix(in srgb, #E8C55F 14%, var(--c-surface)); border-color: color-mix(in srgb, #E8C55F 42%, var(--c-border)); }
-html.dark .rot-card.equine_lab_fish, html.dark .gantt-cell-inner.equine_lab_fish { background: color-mix(in srgb, #7FA6D9 14%, var(--c-surface)); border-color: color-mix(in srgb, #7FA6D9 42%, var(--c-border)); }
-html.dark .rot-card.elective, html.dark .gantt-cell-inner.elective     { background: color-mix(in srgb, #A8BF90 14%, var(--c-surface)); border-color: color-mix(in srgb, #A8BF90 42%, var(--c-border)); }
+html.dark .rot-card, html.dark .gantt-cell-inner { background: #1A101A !important; border-color: rgba(227, 167, 60, 0.35) !important; }
+html.dark .rot-card.units, html.dark .gantt-cell-inner.units           { background: #1A101A !important; border-color: rgba(23, 107, 135, 0.35) !important; }
+html.dark .rot-card.college, html.dark .gantt-cell-inner.college       { background: #1A101A !important; border-color: rgba(117, 63, 45, 0.35) !important; }
+html.dark .rot-card.poultry, html.dark .gantt-cell-inner.poultry       { background: #1A101A !important; border-color: rgba(42, 157, 114, 0.35) !important; }
+html.dark .rot-card.slaughter, html.dark .gantt-cell-inner.slaughter   { background: #1A101A !important; border-color: rgba(212, 166, 42, 0.35) !important; }
+html.dark .rot-card.equine_lab_fish, html.dark .gantt-cell-inner.equine_lab_fish { background: #1A101A !important; border-color: rgba(11, 37, 69, 0.35) !important; }
+html.dark .rot-card.elective, html.dark .gantt-cell-inner.elective     { background: #1A101A !important; border-color: rgba(91, 110, 79, 0.35) !important; }
 html.dark .g-chip, html.dark .rot-foot .g-chip, html.dark .gantt-count-badge { background: rgba(255, 255, 255, 0.07); border-color: var(--c-border); color: var(--c-text-muted); }
 html.dark .g-chip.num, html.dark .gantt-count-badge { color: var(--c-text-main); }
 
@@ -1283,7 +1235,7 @@ html.dark .journey-bullet { border-color: var(--c-surface); }
 .rot-card.slaughter       { background: #FAF6EB; border-color: #EFE0B6; }
 .rot-card.equine_lab_fish { background: #EEF2F8; border-color: #C0D0E8; }
 .rot-card.elective        { background: #F4F6F2; border-color: #D2DBCF; }
-html.dark .rot-card { background: var(--c-surface); border-color: var(--c-border); }
+html.dark .rot-card { background: #1A101A !important; border-color: rgba(227, 167, 60, 0.35) !important; }
 @media (max-width: 480px) {
   .rot-card { min-height: 124px; padding: 8px 9px; }
   .rot-title { font-size: .82rem; }

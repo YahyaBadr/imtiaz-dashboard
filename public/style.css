@@ -347,7 +347,7 @@ html.dark .rotation-block { color: var(--c-text-muted); }
 
 .verify-badge { position: fixed; bottom: 20px; left: 20px; padding: 10px 16px; border-radius: 10px; font-size: 0.84rem; font-weight: 600; z-index: 200; max-width: 380px; line-height: 1.5; box-shadow: 0 4px 14px rgba(43, 26, 43, 0.15); direction: rtl; border: 1px solid; }
 .verify-ok { background: var(--c-emerald-bg); color: var(--c-green); border-color: var(--c-emerald-border); }
-.verify-fail { background: var(--c-rose-bg); color: var(--c-rose); border-color: var(--c-rose-border); }
+.verify-fail { background: var(--c-amber-bg); color: #92400E; border-color: var(--c-amber-border); }
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(43, 26, 43, 0.6); backdrop-filter: blur(4px); z-index: 500; display: flex; align-items: center; justify-content: center; padding: var(--gap); animation: pageFadeIn 0.15s ease; }
 .modal-box { background: var(--c-card-bg); border-radius: var(--radius-card); box-shadow: 0 20px 40px rgba(43, 26, 43, 0.3); width: 100%; max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; border: 1.5px solid var(--c-gold); }
@@ -533,7 +533,7 @@ html.dark .copyable-name:hover, html.dark .copyable-name:focus-within { backgrou
 .error-card h2 { color: var(--c-heading); font-size: 1.2rem; }
 .error-card p { max-width: 620px; }
 /* بند د: التوست أعلى المحتوى (لا يغطي شرائح الأسماء القابلة للضغط) وينتهي بعد ~3 ثوانٍ */
-.toast { position: fixed; top: calc(12px + env(safe-area-inset-top)); bottom: auto; left: 50%; transform: translateX(-50%) translateY(-14px); background: var(--c-plum); color: #FFFFFF; padding: 11px 20px; border-radius: var(--radius-pill); font-size: 0.88rem; font-weight: 600; box-shadow: 0 8px 24px rgba(43, 26, 43, 0.3); opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; z-index: 600; max-width: min(92vw, 560px); text-align: center; border: 1px solid var(--c-gold); }
+.toast { position: fixed; top: calc(12px + env(safe-area-inset-top)); bottom: auto; left: 50%; transform: translateX(-50%) translateY(-14px); background: var(--c-plum); color: #FFFFFF; padding: 11px 20px; border-radius: var(--radius-pill); font-size: 0.88rem; font-weight: 600; box-shadow: 0 8px 24px rgba(43, 26, 43, 0.3); opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; z-index: 600; max-width: min(92vw, 560px); max-height: 45vh; overflow-y: auto; overscroll-behavior: contain; text-align: center; border: 1px solid var(--c-gold); line-height: 1.7; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 @keyframes btnSpin { to { transform: rotate(360deg); } }
 .header-btn.spinning .btn-ico { display: inline-block; animation: btnSpin 0.9s linear infinite; }
@@ -1762,11 +1762,14 @@ html.dark .domain-period { color: #B4A7BE; }
 
 /* ═══ بطاقات الوحدات — تأثير أنيق ═══ */
 .unit-card {
-  background: var(--e-gradient-surface);
-  border: 1px solid var(--c-border);
+  background: linear-gradient(180deg, var(--c-card-bg) 0%, var(--c-gold-light) 140%);
+  border: 1px solid var(--c-gold-border);
+  border-top: 3px solid var(--c-gold);
+  border-radius: var(--radius-card);
   box-shadow: var(--e-shadow-card);
 }
 .unit-card:hover {
+  transform: translateY(-2px);
   box-shadow: var(--e-shadow-hover);
   border-color: var(--c-gold);
 }

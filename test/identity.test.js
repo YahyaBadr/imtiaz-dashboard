@@ -74,7 +74,9 @@ test('group conflicts are reported, never silent', () => {
     const hit = identity.resolve(row, index);
     return hit && identity.groupConflict(row.group_id, hit.group_id);
   });
-  assert.ok(withConflict.length > 0, 'expected at least one unregistered group conflict');
+  // Owner-corrected roster: Habiba (803) → group 6 (was 7) and Amnah's stale group 9 cancelled → group 6.
+  // With the corrected assignments the unregistered rows must now agree with the master roster.
+  assert.equal(withConflict.length, 0, 'expected no unregistered group conflicts after owner corrections');
   withConflict.forEach((row, i) => {
     const hit = identity.resolve(row, index);
     const conflict = identity.groupConflict(row.group_id, hit.group_id);

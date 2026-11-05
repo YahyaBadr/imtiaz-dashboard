@@ -387,6 +387,21 @@ html.dark .rotation-block { color: var(--c-text-muted); }
 .gantt-cell-inner.slaughter { background: #FAF6EB; border-color: #EFE0B6; border-right: 4px solid var(--c-mustard); }
 .gantt-cell-inner.equine_lab_fish { background: #EEF2F8; border-color: #C0D0E8; border-right: 4px solid var(--c-navy); }
 .gantt-cell-inner.elective  { background: #F4F6F2; border-color: #D2DBCF; border-right: 4px solid var(--c-olive); }
+
+/* ─── الدارك مود للجدول العام — كروت الراوند تكون غامقة/شفافة مش بيضاء صارخة ─── */
+html.dark .gantt-cell-inner { background: rgba(43, 26, 43, 0.35); border-color: rgba(227, 167, 60, 0.25); color: #FFFFFF; }
+html.dark .gantt-cell-inner:hover { background: rgba(43, 26, 43, 0.55); border-color: var(--c-gold); }
+html.dark .gantt-cell-inner.units     { border-right-color: var(--c-teal); }
+html.dark .gantt-cell-inner.college   { border-right-color: var(--c-rust); }
+html.dark .gantt-cell-inner.poultry   { border-right-color: var(--c-green); }
+html.dark .gantt-cell-inner.slaughter { border-right-color: var(--c-mustard); }
+html.dark .gantt-cell-inner.equine_lab_fish { border-right-color: var(--c-navy); }
+html.dark .gantt-cell-inner.elective  { border-right-color: var(--c-olive); }
+html.dark .gantt-cell-inner .gantt-round-name,
+html.dark .gantt-cell-inner .rot-title { color: #FFFFFF; }
+html.dark .gantt-cell-inner .muted,
+html.dark .gantt-cell-inner .rot-meta span { color: #C9B7C9; }
+html.dark .gantt-cell-inner .num { color: #E2D7E5; }
 .gantt-round-name { font-weight: 700; font-size: 0.92rem; color: var(--c-heading); }
 
 .profile-overlay { justify-content: flex-start; padding: 0; }

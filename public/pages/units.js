@@ -84,33 +84,44 @@ function buildUnitCard(u, byUnit) {
   const hasCapacity = !isNaN(cap) && cap > 0; const listId = 'unit-list-' + slugify(unitName);
   const students = byUnit[unitName] || [];
 
-  let barHTML = '';
+  let occHTML = '';
+  let occClass = 'occ-low';
   if (hasCapacity) {
     const pct = Math.min(Math.round((reg / cap) * 100), 100);
-    barHTML = `<div class="progress-wrap" style="margin-top:4px"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div><span class="num">${pct}%</span><span class="badge badge-gold" style="font-size:0.7rem">مبدئي</span></div>`;
+    occClass = pct >= 90 ? 'occ-high' : (pct >= 60 ? 'occ-mid' : 'occ-low');
+    occHTML = `
+      <div class="unit-occupancy">
+        <div class="unit-occ-bar"><div class="unit-occ-fill ${occClass}" style="width:${pct}%"></div></div>
+        <div class="unit-occ-text"><span>${pct}% إشغال</span><span>${reg} من ${cap}</span></div>
+      </div>`;
   }
 
   return `
-    <div class="unit-card">
-      <div class="unit-card-header" role="button" tabindex="0" data-action="toggle-unit">
-        <div class="unit-card-top">
-          <div><div class="unit-name">${esc(unitName)}</div><div class="unit-gov">${ico('map-pin')} المحافظة: ${esc(gov)}</div></div>
-          <button class="unit-toggle-btn" tabindex="-1" aria-hidden="true">▾</button>
+    <div class="unit-card-gradient" role="button" tabindex="0" data-action="toggle-unit">
+      <div class="unit-card-header" style="padding:0; border-bottom:none; cursor:pointer; display:flex; flex-direction:column; gap:0;">
+        <div class="unit-card-top" style="padding:16px 20px; border-bottom:1px solid var(--c-surface); display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
+          <div style="flex:1; min-width:0;">
+            <div class="unit-name" style="font-weight:700; font-size:1.05rem; color:var(--c-heading); line-height:1.3; margin-bottom:2px;">${esc(unitName)}</div>
+            <div class="unit-gov" style="font-size:0.82rem; color:var(--c-text-muted); margin-top:0;">${ico('map-pin')} ${esc(gov)}</div>
+          </div>
+          <button class="unit-toggle-btn" tabindex="-1" aria-hidden="true" style="background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--c-text-subtle); line-height:1; transform:rotate(0deg); transition:transform 0.2s ease, color 0.2s ease;">▾</button>
         </div>
-        <div class="unit-stats">
-          <span class="unit-count-box">${ico('user')} المقيدون: <strong class="num">${reg}</strong> ${hasCapacity ? `/ طاقة استيعابية: <span class="num">${cap}</span>` : ''}</span>
+        <div style="padding:12px 20px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; border-bottom:1px solid var(--c-surface);">
+          <span class="unit-count-box" style="font-size:0.84rem; color:var(--c-text-muted); display:flex; align-items:center; gap:4px;">
+            ${ico('user')} <strong class="num">${reg}</strong> مقيد${hasCapacity ? ` / <span class="num">${cap}</span> طاقة` : ''}
+          </span>
           ${females > 0 ? `<span class="unit-count-box gender-f">${ico('female')} <strong class="num">${females}</strong></span>` : ''}
           ${males   > 0 ? `<span class="unit-count-box gender-m">${ico('male')} <strong class="num">${males}</strong></span>` : ''}
         </div>
-        ${barHTML}
+        ${occHTML}
       </div>
 
-      <div class="unit-card-body">
+      <div class="unit-card-body" style="padding:16px 20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px">
           <span style="font-size:0.84rem; color:var(--c-text-muted)">كشف الطلاب (<strong class="num">${students.length}</strong> طالب/ة — انقر لفتح الملف):</span>
-          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap">
-            ${btn('طباعة كشف الوحدة', 'print-unit', { unit: unitName }, 'btn-surface btn-sm')}
-            ${btn('نسخ الأسماء والهواتف', 'copy-unit', { unit: unitName }, 'btn-surface btn-sm')}
+          <div class="unit-actions">
+            <button type="button" class="btn-icon" data-action="print-unit" data-unit="${esc(unitName)}" title="طباعة كشف الوحدة">${ico('print')}</button>
+            <button type="button" class="btn-icon" data-action="copy-unit" data-unit="${esc(unitName)}" title="نسخ الأسماء والهواتف">${ico('copy')}</button>
           </div>
         </div>
         <ul class="unit-student-list" id="${listId}">
@@ -150,6 +161,6 @@ window.copyUnitListWithPhones = function(unitName, listId) {
 };
 
 /* ═══ أزرار صفحة الوحدات — كل الضغطات عبر المعالج الموحّد (data-action) ═══ */
-registerAction('toggle-unit', (el) => { const c = el.closest('.unit-card'); if (c) c.classList.toggle('open'); });
+registerAction('toggle-unit', (el) => { const c = el.closest('.unit-card-gradient'); if (c) c.classList.toggle('open'); });
 registerAction('print-unit', (el) => printUnitSheet(el.dataset.unit || ''));
 registerAction('copy-unit', (el) => copyUnitListWithPhones(el.dataset.unit || ''));

@@ -558,6 +558,18 @@ window.computeStatus = function (startDate, endDate) {
   return 'upcoming';
 };
 
+/* شارة "جنسية غير مصرية" لحملة جواز السفر / الرقم غير المصري — تُعرض بدل التنبيه/الخطأ */
+window.nationalityBadgeHtml = function (student) {
+  if (!student) return '';
+  const t = student._id_type || (student.national_id ? window.classifyNationalId(student.national_id).type : '');
+  if (t !== 'passport') return '';
+  const nid = String(student.national_id || '').trim();
+  return `<span class="nationality-badge" title="هذه الوثيقة ليست رقم قومي مصري (${esc(nid || '—')})">
+    <span class="ico" aria-hidden="true">${iconSvg('passport')}</span>
+    جنسية غير مصرية
+  </span>`;
+};
+
 window.computeAge = function (birth) {
   const b = formatDate(birth).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!b) return 'غير محدد';
@@ -1556,7 +1568,8 @@ window.renderStudentListModal = function (title, rows, opts) {
     const name = window.ImtiazIdentity.displayName(row, s);
     const groupId = row.group_id || src.group_id;
     const sub = [groupId ? 'جروب ' + groupId : 'بدون جروب', src.code_short ? 'كود ' + src.code_short : '', row.unit_name || ''].filter(Boolean).join(' · ');
-    return { attrs, name: name || 'غير محدد', sub, g, search: normAr((name || '') + ' ' + (src.full_name || '') + ' ' + (src.code_short || '') + ' ' + (src.student_code || '') + ' ' + (groupId ? 'جروب ' + groupId : '')) };
+    const nationality = s && window.nationalityBadgeHtml ? window.nationalityBadgeHtml(s) : '';
+    return { attrs, name: name || 'غير محدد', sub, g, nationality, search: normAr((name || '') + ' ' + (src.full_name || '') + ' ' + (src.code_short || '') + ' ' + (src.student_code || '') + ' ' + (groupId ? 'جروب ' + groupId : '')) };
   });
 
   const html = `
@@ -1569,7 +1582,7 @@ window.renderStudentListModal = function (title, rows, opts) {
       ${items.length ? items.map((it) => `
         <div class="slist-row" data-s="${esc(it.search)}"${it.attrs}>
           <div class="initials-avatar">${esc(getInitials(it.name))}</div>
-          <div class="slist-main"><div class="slist-name">${esc(it.name)}</div><div class="slist-sub">${esc(it.sub)}</div></div>
+          <div class="slist-main"><div class="slist-name">${esc(it.name)}</div><div class="slist-sub">${esc(it.sub)}</div>${it.nationality || ''}</div>
           <span class="slist-g ${it.g === 'F' ? 'gender-f' : it.g === 'M' ? 'gender-m' : ''}">${it.g === 'F' ? iconSvg('female') : it.g === 'M' ? iconSvg('male') : ''}</span>
           <span class="slist-arrow" aria-hidden="true">${iconSvg('chevron')}</span>
         </div>`).join('') : '<div class="empty-note">لا توجد أسماء في هذه القائمة.</div>'}
@@ -1644,13 +1657,13 @@ function buildStudentJourney(student) {
   }
   const later = 'لم يُحدد بعد';
   const d0 = getRoundDates('0');
+  const currentOrder = curRow ? String(curRow.round_order) : null;
   return [
-    step(1, 'الراوند 1', 'أقسام الكلية', later),
-    step(2, 'الراوند 2', 'وحدات بيطرية', r2stationText(mine, isMissing)),
-    { roundName: 'الدورة الحالية (حسب الجدول)', dates: curRow && formatDate(curRow.start_date) ? `${formatDate(curRow.start_date)} إلى ${formatDate(curRow.end_date)}` : 'غير متاح', station: curStation, status: curRow ? computeStatus(formatDate(curRow.start_date) || getRoundDates(curRow.round_order).start, formatDate(curRow.end_date) || getRoundDates(curRow.round_order).end) : 'upcoming' },
+    {...step(1, 'الراوند 1', 'أقسام الكلية', later), isCurrent: currentOrder === '1'},
+    {...step(2, 'الراوند 2', 'وحدات بيطرية', r2stationText(mine, isMissing)), isCurrent: currentOrder === '2'},
     step(3, 'الراوند 3', 'دواجن', later),
     step(4, 'الراوند 4', 'مجازر / خيل', later),
-    { roundName: 'تدريب اختياري', dates: d0.start ? `${d0.start} إلى ${d0.end}` : 'غير متاح', station: 'حسب اختيار الطالب', status: computeStatus(d0.start, d0.end) }
+    {...{ roundName: 'تدريب اختياري', dates: d0.start ? `${d0.start} إلى ${d0.end}` : 'غير متاح', station: 'حسب اختيار الطالب', status: computeStatus(d0.start, d0.end) }, isCurrent: currentOrder === '0'}
   ];
 }
 
@@ -1682,6 +1695,7 @@ window.openStudentProfile = function (rawKey, opts) {
               <span class="badge ${student.gender === 'F' ? 'badge-rose' : 'badge-plum'}">${student.gender === 'F' ? 'أنثى' : student.gender === 'M' ? 'ذكر' : 'غير محدد'}</span>
               <span class="cartouche-badge-dark">جروب ${esc(student.group_id || '—')}</span>
               <span class="student-code">${esc(student.code_short || '—')}</span>
+              ${window.nationalityBadgeHtml ? window.nationalityBadgeHtml(student) : ''}
             </div>
             <div class="profile-who">
               <div class="initials-avatar lg">${esc(getInitials(displayName))}</div>
@@ -1730,7 +1744,7 @@ window.openStudentProfile = function (rawKey, opts) {
           <div class="profile-section">
             <div class="profile-section-title">المسار التدريبي</div>
             <div class="journey-timeline">
-              ${journey.map((st) => `<div class="journey-step ${st.status}"><div class="journey-bullet"></div>
+              ${journey.map((st) => `<div class="journey-step ${st.status}${st.isCurrent ? ' current' : ''}"><div class="journey-bullet"></div>
                 <div class="journey-content">
                   <div class="journey-top"><span class="journey-name">${esc(st.roundName)}</span>${statusBadge(st.status)}</div>
                   <div class="journey-dates">${ico('calendar')} <span class="num">${escDates(st.dates)}</span></div>

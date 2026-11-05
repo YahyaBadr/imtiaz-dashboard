@@ -185,6 +185,26 @@ function renderSchedule(container) {
             <span class="gantt-stack-tools-label">${roundCols.length} مراحل تدريب</span>
             <button type="button" class="btn btn-surface btn-sm"${act('group-roster', { gid })}>${iconSvg('users')} قائمة طلاب جروب ${esc(gid)}</button>
           </div>
+          <!-- سجل التنقل لهذا الجروب عبر الراوندات -->
+          <div style="padding:10px 16px; border-bottom:1px solid var(--c-surface); background:#FAF7F2;">
+            <div style="font-size:0.78rem; font-weight:700; color:var(--c-text-muted); margin-bottom:6px;">سجل التنقل بالراوندات</div>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+              ${roundCols.map((c) => {
+                const r = gs[String(c.order)] || {};
+                const st = computeStatus(r.start_date || c.start, r.end_date || c.end);
+                const statusMap = { current: 'الحالي', finished: 'انتهى', upcoming: 'قادم' };
+                const rKey = r.round_key || c.order;
+                const meta = ROUND_META[rKey] || { icon: 'pin', label: r.round_name_ar || roundLabel(rKey) || c.title, tone: 'tone-gold' };
+                const dates = (c.start && c.end) ? `${c.start} → ${c.end}` : 'غير محدد';
+                return `<div style="display:flex; align-items:center; gap:8px; font-size:0.82rem;">
+                  <span style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:6px; background:${st === 'current' ? 'var(--c-gold)' : st === 'finished' ? 'var(--c-green)' : 'var(--c-surface)'}; color:${st === 'current' ? '#2B1A2B' : st === 'finished' ? '#FFFFFF' : 'var(--c-text-muted)'}; font-weight:700; font-size:0.75rem;">${c.order === '0' ? '0' : c.order}</span>
+                  <span style="flex:1; min-width:0;">${esc(r.round_name_ar || roundLabel(rKey) || c.title)}</span>
+                  <span style="font-size:0.72rem; color:var(--c-text-muted); white-space:nowrap;">${dates}</span>
+                  <span class="badge ${st === 'current' ? 'badge-emerald' : st === 'finished' ? 'badge-grey' : 'badge-amber'}" style="font-size:0.68rem;">${statusMap[st]}</span>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>
           <div class="gantt-stack-cards">
             ${roundCols.map((c) => ganttCellHtml(c, gid, count, gs, { stack: true })).join('')}
           </div>

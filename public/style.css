@@ -155,6 +155,7 @@ body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; dir
 .alert-item.alert-rose  { border-color: var(--c-rose-border);  background: var(--c-rose-bg);  color: var(--c-rose); }
 .alert-item.alert-amber { border-color: var(--c-amber-border); background: var(--c-amber-bg); color: #92400E; }
 .alert-item.alert-plum  { border-color: var(--c-border-gold);  background: #FFFFFF;           color: var(--c-heading); }
+.alert-item.alert-emerald { border-color: var(--c-emerald-border); background: var(--c-emerald-bg); color: var(--c-green); }
 .alert-icon { font-size: 1.2rem; flex-shrink: 0; }
 
 .progress-wrap { display: flex; align-items: center; gap: 10px; font-size: 0.84rem; }
@@ -251,12 +252,88 @@ tr.clickable-row:hover td { background: var(--c-gold-light); }
 .unit-gov { font-size: 0.82rem; color: var(--c-text-muted); margin-top: 2px; }
 .unit-toggle-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: var(--c-text-subtle); line-height: 1; transition: transform 0.2s ease, color 0.2s ease; }
 .unit-card.open .unit-toggle-btn { transform: rotate(180deg); color: var(--c-heading); }
+.unit-card-gradient.open .unit-card-header { border-bottom-color: var(--c-border); background: #FAF7F2; }
+.unit-card-gradient.open .unit-toggle-btn { transform: rotate(180deg); color: var(--c-heading); }
+.unit-card-gradient.open .unit-card-body { display: block; }
 .unit-stats { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .unit-count-box { font-size: 0.84rem; color: var(--c-text-muted); display: flex; align-items: center; gap: 4px; }
 .unit-count-box strong { color: var(--c-text-main); font-weight: 700; }
 .unit-card-body { display: none; padding: 16px 20px; }
 .unit-card.open .unit-card-body { display: block; }
 /* كارد الوحدة: أيقونة ومعلومات */
+/* ─── شارة الجنسية غير المصرية (بدل التنبيه/الخطأ) ─── */
+.nationality-badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px;
+  border-radius: var(--radius-pill); font-size: 0.75rem; font-weight: 700;
+  border: 1px solid; background: var(--c-amber-bg); color: var(--c-amber);
+  border-color: var(--c-amber-border); white-space: nowrap;
+}
+.nationality-badge .ico { font-size: 0.85rem; }
+
+/* ─── كروت الوحدات — تصميم بالدرجات اللونية (gradient) ─── */
+.unit-card-gradient {
+  position: relative; overflow: hidden; border-radius: var(--radius-card);
+  border: 1px solid var(--c-border); box-shadow: var(--shadow-card);
+  background: #FFFFFF; transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.unit-card-gradient:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); border-color: var(--c-gold); }
+.unit-card-gradient::before {
+  content: ''; position: absolute; top: 0; right: 0; left: 0; height: 14px;
+  background: linear-gradient(90deg, var(--c-gold), var(--c-teal), var(--c-navy), var(--c-gold));
+  z-index: 2;
+}
+.unit-card-gradient .unit-card-body { padding: 16px 20px; }
+
+/* شريط الطاقة على كارت الوحدة — لوني متغير حسب نسبة الإشغال */
+.unit-occupancy { margin-top: 10px; }
+.unit-occupancy .unit-occ-bar { height: 8px; border-radius: var(--radius-pill); overflow: hidden; background: var(--c-surface); box-shadow: inset 0 0 0 1px var(--c-border); margin-bottom: 6px; }
+.unit-occupancy .unit-occ-fill { height: 100%; border-radius: var(--radius-pill); transition: width 0.6s ease, background 0.3s ease; }
+.unit-occupancy .unit-occ-text { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--c-text-muted); }
+.unit-occupancy .unit-occ-fill.occ-low   { background: var(--c-emerald); }
+.unit-occupancy .unit-occ-fill.occ-mid   { background: var(--c-amber); }
+.unit-occupancy .unit-occ-fill.occ-high  { background: var(--c-rose); }
+
+/* أزرار الأيقونات الصغيرة (طباعة / نسخ) على كروت الوحدات */
+.unit-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.btn-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: var(--radius-btn);
+  border: 1.5px solid var(--c-border); background: #FFFFFF; color: var(--c-heading);
+  font-size: 1rem; cursor: pointer; transition: all 0.15s ease;
+}
+.btn-icon:hover { border-color: var(--c-gold); color: var(--c-gold-hover); background: var(--c-gold-light); }
+.btn-icon svg { width: 16px; height: 16px; }
+
+/* ─── حالة مضغوطة للجدول العام (موبايل) ─── */
+.compact-status-card {
+  background: var(--c-card-bg); border: 1px solid var(--c-border); border-radius: var(--radius-card);
+  padding: 12px 16px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;
+  box-shadow: var(--shadow-xs); transition: border-color 0.15s ease;
+}
+.compact-status-card:hover { border-color: var(--c-gold); }
+html.dark .compact-status-card { background: #2B1A2B; border-color: #4A2E4A; color: #FFFFFF; }
+html.dark .compact-status-card .compact-status-group { color: #FFFFFF; }
+html.dark .compact-status-card .compact-status-meta { color: #D6CAD8; }
+html.dark .compact-status-card .compact-status-meta .muted { color: #9C8C99; }
+.compact-status-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.compact-status-group { font-weight: 700; font-size: 0.95rem; color: var(--c-heading); }
+.compact-status-meta { font-size: 0.8rem; color: var(--c-text-muted); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.compact-status-foot { margin-top: 6px; font-size: 0.82rem; color: var(--c-text-main); font-weight: 600; }
+.compact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; margin-bottom: calc(var(--gap) * 1.5); }
+@media (max-width: 640px) { .compact-grid { grid-template-columns: 1fr; } }
+
+/* ─── سجل التنقل لكل جروب (تاريخ المجالات) ─── */
+.journey-timeline-compact { display: flex; flex-direction: column; gap: 6px; padding-right: 16px; position: relative; }
+.journey-timeline-compact::before { content: ''; position: absolute; top: 4px; bottom: 4px; right: 6px; width: 2px; background: var(--c-border); }
+.journey-step-compact { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #FAF7F2; border: 1px solid var(--c-border); border-radius: 10px; }
+.journey-step-compact .step-bullet { position: absolute; right: -16px; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; border-radius: 50%; border: 2px solid #FFFFFF; }
+.journey-step-compact.current .step-bullet { background: var(--c-gold); box-shadow: 0 0 0 3px rgba(227, 167, 60, 0.3); }
+.journey-step-compact.finished .step-bullet { background: var(--c-green); }
+.journey-step-compact.upcoming .step-bullet { background: var(--c-amber); }
+.journey-step-name { font-weight: 700; font-size: 0.86rem; color: var(--c-heading); min-width: 70px; }
+.journey-step-desc { flex: 1; font-size: 0.8rem; color: var(--c-text-muted); overflow-wrap: anywhere; }
+.journey-step-status { font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+
 .unit-card-ico { flex-shrink: 0; font-size: 1.4rem; }
 .unit-card-info { flex: 1; min-width: 0; }
 .unit-card-name { font-weight: 700; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -328,6 +405,9 @@ html.dark .rotation-block { color: var(--c-text-muted); }
 .journey-step { position: relative; }
 .journey-bullet { position: absolute; right: -18px; top: 8px; width: 10px; height: 10px; border-radius: 50%; background: #9C8C99; border: 2px solid #FFFFFF; }
 .journey-step.current .journey-bullet { background: var(--c-gold); box-shadow: 0 0 0 3px rgba(227, 167, 60, 0.3); }
+.journey-step.current { background: #FFF7E6 !important; border-color: var(--c-gold) !important; position: relative; }
+.journey-step.current::after { content: 'الحالي'; position: absolute; left: 8px; top: 6px; font-size: 0.65rem; font-weight: 800; color: var(--c-heading); background: var(--c-gold); padding: 1px 6px; border-radius: var(--radius-badge); }
+html.dark .journey-step.current { background: #3A243A !important; border-color: var(--c-gold) !important; }
 .journey-step.finished .journey-bullet { background: var(--c-green); }
 .journey-content { background: #FAF7F2; border: 1px solid var(--c-border); border-radius: 10px; padding: 10px 14px; }
 .pref-list { display: flex; flex-direction: column; gap: 8px; }
@@ -543,6 +623,27 @@ html { display: block !important; }
 body.no-scroll { overflow: hidden; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+/* ─── الجدول العام (Gantt) — إخفاء الجدول الأفقي على الموبايل، إظهار الكومات الرأسية بدلاً منه ─── */
+@media (max-width: 1199px) {
+  .gantt-table-only { display: none !important; }
+  .gantt-stack { display: block !important; }
+}
+@media (min-width: 1200px) {
+  .gantt-table-only { display: block !important; }
+  .gantt-stack { display: none !important; }
+}
+.gantt-stack-group .gantt-stack-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--c-border); background: var(--c-surface); cursor: pointer; }
+.gantt-stack-group.open .gantt-stack-head { border-bottom-color: var(--c-border); }
+.gantt-stack-head .gantt-stack-count { font-size: 0.85rem; color: var(--c-text-muted); margin-left: auto; }
+.gantt-stack-tools { padding: 10px 16px; border-bottom: 1px solid var(--c-surface); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gantt-stack-tools-label { font-size: 0.78rem; color: var(--c-text-muted); font-weight: 600; }
+.gantt-stack-cards { padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+.gantt-stack-group .gantt-cell-inner { padding: 10px; gap: 6px; }
+.gantt-stack-group .gantt-head { display: none; }
+.gantt-stack-group .rot-head { padding: 8px; }
+.gantt-stack-group .rot-meta { gap: 6px; }
+.gantt-stack-group .rot-foot { padding: 6px 8px; }
+
    15) ACCESS GATE — بوابة الدخول
    ═══════════════════════════════════════════════════════════════════════════ */
 /* بند1: صفر تمرير أفقي في صفحة الدخول عند أي عرض (320→1900).

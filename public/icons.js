@@ -23,6 +23,7 @@ window.ICONS = {
   'info': '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
   'check': '<path d="M20 6 9 17l-5-5"/>',
   'copy': '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  'print': '<polyline points="6 9 6 2 H6 2"/><path d="M6 18H6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v8v8H6z"/><path d="M6 14V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12z"/><path d="M7 15h2"/><path d="M10 15h2"/><path d="M10 18H8v2z"/>',
   'refresh': '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/>',
   'eye': '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
   'eye-off': '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a13.2 13.2 0 0 1-1.56 2.54"/><path d="M6.61 6.61A13.5 13.5 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.35-1.61"/><line x1="2" x2="22" y1="2" y2="22"/>',
@@ -86,7 +87,8 @@ window.ICONS = {
   'pdf': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h1.5a1.5 1.5 0 0 1 0 3H9v-3"/><path d="M9 16v2"/><path d="M14 13v5"/><path d="M14 13h2"/><path d="M17.5 15.5a1.5 1.5 0 0 0-1.5-1.5"/>',
   'word': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m7 13 2 5 2-5 2 5 2-5"/>',
   'excel': '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9.5 9 5 5"/><path d="m14.5 9-5 5"/>',
-  'csv': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/>'
+  'csv': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/>',
+  'passport': '<rect width="16" height="22" x="4" y="1" rx="2"/><path d="M4 9h16"/><path d="M4 13h16"/><path d="M4 17h16"/><circle cx="12" cy="13" r="2"/>'
 };
 
 // أيقونة مصغّرة بحجم ثابت (تُستخدم داخل الشارات والأزرار)

@@ -6,6 +6,8 @@ function renderOverview(container) {
   const totalStudents = DB.groups.reduce((a, g) => a + (parseInt(g.total_students, 10) || 0), 0) || DB.students.length;
   const r2Reg = DB.round2Summary.reduce((a, r) => a + (parseInt(r.registered, 10) || 0), 0);
   const r2Missing = DB.round2Summary.reduce((a, r) => a + (parseInt(r.not_registered, 10) || 0), 0);
+  const r2Expected = DB.round2Summary.reduce((a, r) => a + (parseInt(r.expected_students, 10) || 0), 0);
+  const totalDiff = totalStudents - r2Expected;
 
   // وسم الدورة الثانية — التواريخ من شيت 09_round_dates وليست ثابتة في الكود
   const d2 = getRoundDates('2');
@@ -106,6 +108,10 @@ function renderOverview(container) {
         <div class="hero-stat-card"${act('r2-registered')}><div class="hero-stat-number num" id="hero-cnt-reg">0</div><div class="hero-stat-label">مسجلون في مواقع التدريب (دورة 2) <span class="go">${ico('external')}</span></div></div>
         <div class="hero-stat-card"${act('goto-page', { page: 'not-registered' })}><div class="hero-stat-number num amber" id="hero-cnt-missing">0</div><div class="hero-stat-label">طلاب غير مسجلين (دورة 2) <span class="go">${ico('external')}</span></div></div>
       </div>
+      ${totalDiff !== 0
+        ? `<div class="alert-item alert-amber static" style="margin-top:12px"><span class="alert-icon">${ico('info')}</span><div>إجمالي الدفعة المقيدة: <strong class="num">${totalStudents}</strong> — المتوقع في الدورة الثانية: <strong class="num">${r2Expected}</strong> — الفرق: <strong class="num">${totalDiff > 0 ? '+' : ''}${totalDiff}</strong> طالب/ة.</div></div>`
+        : `<div class="alert-item alert-emerald static" style="margin-top:12px"><span class="alert-icon">${ico('check')}</span><div>إجمالي الدفعة المقيدة: <strong class="num">${totalStudents}</strong> — المتطابق تماماً مع متوقع الدورة الثانية (<strong class="num">${r2Expected}</strong>).</div></div>`
+      }
     </section>
 
     <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>تدوير المجالات — كل أسبوعين يتغير المجال</h2>
@@ -176,16 +182,53 @@ function renderOverview(container) {
       </section>
     </div>
 
-    <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('refresh')} موقع كل جروب الآن في الجدول العام</h2>
-    <div class="status-grid">
+    <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('refresh')} موقع كل جروب الآن — سجل التنقل بالراوندات</h2>
+    <div class="compact-grid">
       ${DB.groups.map((g) => {
         const sched = DB.roundSchedule.filter((r) => String(r.group_id) === String(g.group_id)).sort((a, b) => (+a.round_order || 0) - (+b.round_order || 0));
-        if (!sched.length) return `<div class="status-card"${act('group-roster', { gid: g.group_id })}><div><div class="status-group-name">جروب ${esc(g.group_id)}</div><div class="status-round-name">لا يوجد جدول</div></div></div>`;
+        const todayStr = getTodayStr();
         const st = (r) => computeStatus(r.start_date, r.end_date);
-        const cur = sched.find((r) => st(r) === 'current') || sched.find((r) => st(r) === 'upcoming') || sched[sched.length - 1];
-        const meta = ROUND_META[cur.round_key] || {};
-        return `<div class="status-card"${act('round-detail', { round: cur.round_key, title: cur.round_name_ar || roundLabel(cur.round_key), gid: g.group_id, count: g.total_students || 0, matrix: cur.round_order + '_' + cur.round_key })}>
-          <div><div class="status-group-name">جروب ${esc(g.group_id)}</div><div class="status-round-name">${roundIcon(cur.round_key)} ${esc(cur.round_name_ar || roundLabel(cur.round_key))}</div></div>${statusBadge(st(cur))}</div>`;
+        // الراوند الحالي / القادم / الأخير
+        let cur = sched.find((r) => st(r) === 'current');
+        if (!cur) cur = sched.find((r) => st(r) === 'upcoming');
+        if (!cur) cur = sched[sched.length - 1] || null;
+        // سجل التنقل: الراوند 1 → 2 → 3 → 4 → اختياري
+        const journeySteps = ['1', '2', '3', '4', '0'].map((o) => {
+          const r = sched.find((x) => String(x.round_order) === String(o)) || {};
+          const d = getRoundDates(o);
+          const status = st(r) || computeStatus(d.start, d.end);
+          const label = o === '0' ? 'اختياري' : `الراوند ${o}`;
+          const name = r.round_name_ar || roundLabel(r.round_key) || (o === '0' ? 'تدريب اختياري' : label);
+          let stepStatus = 'upcoming';
+          if (status === 'current') stepStatus = 'current';
+          else if (status === 'finished') stepStatus = 'finished';
+          const dates = (d.start && d.end) ? `${d.start} → ${d.end}` : 'غير محدد';
+          return `<div class="journey-step-compact ${stepStatus}">
+            <div class="step-bullet"></div>
+            <span class="journey-step-name">${esc(label)}</span>
+            <span class="journey-step-desc">${esc(name)} — ${dates}</span>
+            <span class="journey-step-status">${status === 'current' ? 'الحالي' : status === 'finished' ? 'انتهى' : 'قادم'}</span>
+          </div>`;
+        }).join('');
+        if (!sched || !sched.length) {
+          return `<div class="compact-status-card"${act('group-roster', { gid: g.group_id })}>
+            <div class="compact-status-head"><span class="compact-status-group">جروب ${esc(g.group_id)}</span><span class="badge badge-grey">لا يوجد جدول</span></div>
+            <div class="compact-status-meta"><span>총</span> ${g.total_students || 0} طالب/ة</div>
+          </div>`;
+        }
+        const curMeta = ROUND_META[cur.round_key] || {};
+        const curStatus = st(cur);
+        return `<div class="compact-status-card"${act('round-detail', { round: cur.round_key, title: cur.round_name_ar || roundLabel(cur.round_key), gid: g.group_id, count: g.total_students || 0, matrix: cur.round_order + '_' + cur.round_key })}>
+          <div class="compact-status-head">
+            <span class="compact-status-group">جروب ${esc(g.group_id)}</span>
+            ${statusBadge(curStatus)}
+          </div>
+          <div class="compact-status-meta">
+            ${roundIcon(cur.round_key)} <strong>${esc(cur.round_name_ar || roundLabel(cur.round_key))}</strong>
+            <span class="muted">· ${g.total_students || 0} طالب/ة</span>
+          </div>
+          <div class="journey-timeline-compact">${journeySteps}</div>
+        </div>`;
       }).join('')}
     </div>
 

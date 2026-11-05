@@ -2205,3 +2205,29 @@ html.dark .unit-meta-chip { background: color-mix(in srgb, var(--c-card-bg) 82%,
   .rotation-context-go { font-size: .74rem; }
 }
 
+/* Nuclear fix — كروت المصفوفة (الراوندات) غامقة في الدارك مود فقط، ما يؤثرش على الليت */
+html.dark .rot-card,
+html.dark .gantt-cell-inner {
+  background: #1A101A !important;
+  border-color: rgba(227, 167, 60, 0.35) !important;
+  color: #FFFFFF !important;
+}
+html.dark .rot-card .rot-head,
+html.dark .rot-card .rot-meta,
+html.dark .rot-card .rot-foot,
+html.dark .rot-card .rot-title,
+html.dark .rot-card .muted,
+html.dark .gantt-cell-inner .rot-title,
+html.dark .gantt-cell-inner .muted {
+  color: #BFA8BF !important;
+}
+html.dark .rot-card .num,
+html.dark .gantt-cell-inner .num {
+  color: #E2D7E5 !important;
+}
+html.dark .rot-card:hover,
+html.dark .gantt-cell-inner:hover {
+  background: #241424 !important;
+  border-color: var(--c-gold) !important;
+}
+

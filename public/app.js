@@ -1527,7 +1527,7 @@ window.openModal = function (title, bodyHTML, opts) {
   opts = opts || {};
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
-  overlay.innerHTML = `<div class="modal-box ${opts.cls || ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+  overlay.innerHTML = `<div class="modal-box ${opts.cls || ''}" role="dialog" aria-modal="true" dir="rtl" aria-label="${esc(title)}">
     <div class="modal-header"><h2 class="modal-title">${esc(title)}</h2><button type="button" class="modal-close" data-action="close-overlay" aria-label="إغلاق">${iconSvg('x')}</button></div>
     <div class="modal-body">${bodyHTML}</div></div>`;
   Overlays.open(overlay, opts.replace);
@@ -1538,7 +1538,7 @@ window.openModal = function (title, bodyHTML, opts) {
 window.btn = function (label, action, data, cls) {
   let s = `<button type="button" class="btn ${cls || 'btn-plum'}" data-action="${esc(action)}"`;
   Object.keys(data || {}).forEach((k) => { if (data[k] !== undefined && data[k] !== null) s += ` data-${k}="${esc(data[k])}"`; });
-  return s + `>${esc(label)}</button>`;
+  return s + `>${label}</button>`;
 };
 
 /* ───────────────────────── 6) قوائم الطلاب ───────────────────────── */

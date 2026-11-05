@@ -242,10 +242,10 @@ window.openRoundDetailModal = function (rawKey, roundTitle, groupId, studentCoun
   const actions = roundKey === 'units'
     ? `<div class="modal-actions">
          ${btn(`${iconSvg('hospital')} الانتقال لصفحة الوحدات البيطرية`, 'goto-page', { page: 'round-2-units' })}
-         ${btn(`${iconSvg('users')} قائمة طلاب جروب ${gid}`, 'group-roster', { gid, replace: 1 }, 'btn-surface')}
+         ${btn(`${iconSvg('users')} قائمة طلاب جروب ${esc(gid)}`, 'group-roster', { gid, replace: 1 }, 'btn-surface')}
        </div>`
     : `<div class="modal-actions">
-         ${btn(`${iconSvg('users')} استعراض قائمة طلاب جروب ${gid} (${cnt} طالب)`, 'group-roster', { gid, replace: 1 })}
+         ${btn(`${iconSvg('users')} استعراض قائمة طلاب جروب ${esc(gid)} (${esc(cnt)} طالب)`, 'group-roster', { gid, replace: 1 })}
        </div>`;
 
   openModal(`تفاصيل الدورة — جروب ${gid}`, `

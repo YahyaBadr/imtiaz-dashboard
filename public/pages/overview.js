@@ -21,42 +21,76 @@ function renderOverview(container) {
   const prefAverages = computeFieldPreferences();
   const alerts = buildOverviewAlerts();
 
-  /* كروت المجالات الثلاثة المتناوبة — خيل / معامل / سمك (كل أسبوعين) */
+  /* كروت المجالات الثلاثة المتناوبة — خيل / معامل / سمك (كل أسبوعين).
+     تُربط بالراوند النشط وبالجروب المشارك فيه من شيت الراوندات:
+     مثلاً في الراوند 2 = جروب 5، ثم يتغيّر الجروب تلقائياً في الراوندات التالية. */
   const domCfg = CFG().DOMAINS || {};
+  const domOrder = domCfg.order || ['horse', 'lab', 'fish'];
   const today = getTodayStr();
-  const blocks = subUnitBlocksForOrder('2');  // راوند الدورة الثانية
-  let activeDomain = 'horse';
-  let rotationInfo = '';
-  if (blocks && blocks.blocks) {
-    const todayBlockIdx = Math.max(0, Math.floor((Date.parse(today + 'T00:00:00Z') - Date.parse(blocks.start + 'T00:00:00Z')) / (14 * 86400000)));
-    const domOrder = domCfg.order || ['horse', 'lab', 'fish'];
-    activeDomain = domOrder[todayBlockIdx % domOrder.length] || 'horse';
-    const d = domCfg[activeDomain] || {};
-    rotationInfo = `المجال النشط الآن: <strong class="num">${d.label || activeDomain}</strong> · يتم التبديل كل أسبوعين`;
-  }
+  const activeRound = getActiveRoundInfo();
+  const eqGroup = getRoundDomainGroups(activeRound.order, 'equine_lab_fish');
+  const blocks = subUnitBlocksForOrder(activeRound.order);
+  const blockCount = blocks && blocks.blocks ? blocks.blocks.length : 0;
+  const dayDiff = (a, b) => Math.floor((Date.parse(a + 'T00:00:00Z') - Date.parse(b + 'T00:00:00Z')) / 86400000);
 
-  const domainCards = (domCfg.order || ['horse', 'lab', 'fish']).map((dk) => {
+  let blockIdx = -1;
+  if (blocks) {
+    if (activeRound.status === 'finished') blockIdx = blockCount - 1;
+    else if (activeRound.status === 'current') blockIdx = Math.min(Math.max(dayDiff(today, blocks.start), 0), blockCount - 1);
+  }
+  const activeDomain = blockIdx >= 0 ? (domOrder[blockIdx % domOrder.length] || domOrder[0]) : domOrder[0];
+  const roundTagTxt = activeRound.order === '0' ? 'التدريب الاختياري' : `الراوند ${activeRound.order}`;
+  const groupTxt = eqGroup ? `جروب ${eqGroup}` : 'الجروب غير محدد بعد';
+  const roundStatusTxt = activeRound.status === 'current' ? 'جارية الآن' : activeRound.status === 'finished' ? 'انتهت' : 'تبدأ قريباً';
+  const leftDays = activeRound.status === 'upcoming' ? daysUntil(activeRound.dates.start) : null;
+  const countdown = leftDays !== null && leftDays >= 0
+    ? `${leftDays} ${leftDays === 1 ? 'يوم' : leftDays === 2 ? 'يومين' : leftDays <= 10 ? 'أيام' : 'يوماً'}`
+    : '';
+  const rotationInfo = activeRound.status === 'current'
+    ? `المجال النشط الآن: <strong>${esc((domCfg[activeDomain] || {}).label || activeDomain)}</strong> · يتم التبديل كل أسبوعين`
+    : activeRound.status === 'upcoming'
+      ? `يبدأ التدوير ${countdown ? 'خلال ' + countdown + ' ' : ''}(${esc(activeRound.dates.start || '—')}) · كل أسبوعين`
+      : `انتهى تدوير هذا الراوند (${esc(activeRound.dates.end || '—')})`;
+
+  const domainCards = domOrder.map((dk) => {
     const d = domCfg[dk] || {};
-    const isActive = dk === activeDomain;
-    const nextIdx = (domCfg.order || ['horse', 'lab', 'fish']).indexOf(dk) + 1;
-    const nextDomain = domCfg.order ? domCfg.order[nextIdx % domCfg.order.length] : 'horse';
-    const nextD = domCfg[nextDomain] || {};
+    const isActive = activeRound.status === 'current' && dk === activeDomain;
+    const isDone = activeRound.status === 'finished';
+
+    // أقرب بلوك لهذا المجال بدءاً من البلوك الحالي/القادم
+    let pickIdx = -1;
+    for (let i = Math.max(blockIdx, 0); i < blockCount && pickIdx < 0; i++) {
+      if (domOrder[i % domOrder.length] === dk) pickIdx = i;
+    }
+    if (pickIdx < 0) {
+      for (let i = 0; i < blockCount && pickIdx < 0; i++) {
+        if (domOrder[i % domOrder.length] === dk) pickIdx = i;
+      }
+    }
+    const blk = blocks && pickIdx >= 0 ? blocks.blocks[pickIdx] : null;
+    const badge = isActive ? 'المجال الحالي' : isDone ? 'انتهى' : (pickIdx === 0 ? 'البداية' : 'قادم');
+    const pct = isActive && blk
+      ? Math.min(100, Math.max(0, Math.round(((dayDiff(today, blk.start) + 1) / (dayDiff(blk.end, blk.start) + 1)) * 100)))
+      : isDone ? 100 : 0;
+    const period = blk ? `${blk.start} ← ${blk.end}` : 'غير محدد بعد';
     return `
-      <div class="domain-card ${isActive ? 'domain-active' : ''}"${act('goto-page', { page: 'schedule' })}>
+      <div class="domain-card ${isActive ? 'domain-active' : ''} ${isDone ? 'domain-done' : ''}"${act('goto-page', { page: 'schedule' })}>
         <div class="domain-header">
           <div class="domain-ico ${d.tone || 'tone-gold'}">${ico(d.icon || 'pin')}</div>
-          <span class="domain-badge ${isActive ? 'badge-gold' : 'badge-plum'}">${isActive ? 'نشط الآن' : 'قادم'}</span>
+          <span class="domain-badge ${isActive ? 'badge-gold' : 'badge-plum'}">${badge}</span>
         </div>
         <div class="domain-title">${esc(d.label || dk)}</div>
         <div class="domain-body">
-          <div class="domain-period">${isActive ? rotationInfo : `يبدأ بعد المجالات السابقة · يليه <strong>${esc(nextD.label || nextDomain)}</strong>`}</div>
+          <div class="domain-period">${isActive ? rotationInfo : isDone ? 'انتهى هذا المجال' : `من ${esc(period)}`}</div>
           <div class="domain-progress">
-            <div class="domain-track"></div>
-            <div class="domain-fill ${isActive ? '' : 'domain-fill-upcoming'}" style="width:${isActive ? 100 : 33}%"></div>
+            <div class="domain-track"><div class="domain-fill ${isActive ? '' : 'domain-fill-upcoming'}" style="width:${pct}%"></div></div>
+            <span class="domain-pct num">${pct}%</span>
           </div>
         </div>
         <div class="domain-footer">
-          <span class="domain-go">عرض التفاصيل ${ico('external')}</span>
+          <span class="domain-round-chip">${esc(roundTagTxt)}</span>
+          <span class="domain-group-chip">${esc(groupTxt)}</span>
+          <span class="domain-go">التفاصيل ${ico('external')}</span>
         </div>
       </div>`;
   }).join('');
@@ -75,6 +109,16 @@ function renderOverview(container) {
     </section>
 
     <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>تدوير المجالات — كل أسبوعين يتغير المجال</h2>
+    <div class="rotation-context"${act('goto-page', { page: 'schedule' })}>
+      <div class="rotation-context-main">
+        <span class="rotation-context-ico" aria-hidden="true">${ico('refresh')}</span>
+        <div>
+          <div class="rotation-context-title">${esc(roundTagTxt)} · ${esc(groupTxt)} <span class="badge ${activeRound.status === 'current' ? 'badge-emerald' : activeRound.status === 'finished' ? 'badge-grey' : 'badge-amber'}">${roundStatusTxt}</span></div>
+          <div class="rotation-context-sub">${esc(activeRound.dates.start || '—')} ← ${esc(activeRound.dates.end || '—')}${blockCount ? ` · ${blockCount} بلوكات نصف شهرية` : ''} · المجال يتغيّر كل أسبوعين</div>
+        </div>
+      </div>
+      <span class="rotation-context-go">عرض الجدول العام ${ico('external')}</span>
+    </div>
     <div class="domain-grid elite">
       ${domainCards}
     </div>
@@ -132,7 +176,7 @@ function renderOverview(container) {
       </section>
     </div>
 
-    <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('refresh')} موقع كل جروب الآن في مصفوفة التدريب</h2>
+    <h2 class="section-title"><span class="title-ornament" aria-hidden="true"></span>${ico('refresh')} موقع كل جروب الآن في الجدول العام</h2>
     <div class="status-grid">
       ${DB.groups.map((g) => {
         const sched = DB.roundSchedule.filter((r) => String(r.group_id) === String(g.group_id)).sort((a, b) => (+a.round_order || 0) - (+b.round_order || 0));

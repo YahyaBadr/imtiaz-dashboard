@@ -1,7 +1,7 @@
 'use strict';
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   صفحة مصفوفة التدوير الزمني — كل خلية قابلة للضغط عبر data-action
+   صفحة الجدول العام للتدوير الزمني — كل خلية قابلة للضغط عبر data-action
    (بدون onclick مضمّن حتى لا تنكسر الأزرار مع أسماء الدورات/الجروبات)
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -123,8 +123,8 @@ function renderSchedule(container) {
         <div class="schedule-intro-main">
           <span class="schedule-intro-ico" aria-hidden="true">${iconSvg('calendar')}</span>
           <div>
-            <div class="schedule-intro-title">مصفوفة التدوير الزمني للإمتياز</div>
-            <div class="schedule-intro-sub">انقر على أي خلية أو جروب لعرض تفاصيل التوزيع والكشوف المعتمدة · تُعرض المصفوفة كجدول متسع على الشاشات العريضة وكأقسام رأسية لكل جروب على الشاشات الضيقة — بدون أي سحب أفقي</div>
+            <div class="schedule-intro-title">الجدول العام للتدوير الزمني</div>
+            <div class="schedule-intro-sub">انقر على أي خلية أو جروب لعرض تفاصيل التوزيع والكشوف المعتمدة · يظهر الجدول كاملًا على الشاشات العريضة، وعلى الهاتف كأقسام قابلة للفتح لكل جروب — بدون أي سحب أفقي</div>
           </div>
         </div>
         <div class="schedule-legend">
@@ -170,15 +170,20 @@ function renderSchedule(container) {
       </div>
     </div>
 
-    <!-- صياغة رأسية: قسم لكل جروب + راونداته ككروت مكدسة — تُعرض فقط عند <1200px، صفر تمرير أفقي -->
+    <!-- صياغة رأسية: قسم قابل للفتح لكل جروب + راونداته ككروت مكدسة — تُعرض فقط عند <1200px، صفر تمرير أفقي -->
     <div class="gantt-stack">
-      ${DB.groups.map((g) => {
+      ${DB.groups.map((g, gi) => {
         const gid = String(g.group_id), count = groupCounts[gid] || 0, gs = schedMap[gid] || {};
-        return `<section class="gantt-stack-group card">
-          <div class="gantt-stack-head"${act('group-roster', { gid })}>
+        const open = gi === 0;
+        return `<section class="gantt-stack-group card${open ? ' open' : ''}">
+          <div class="gantt-stack-head"${act('toggle-stack-group', { gid })} role="button" tabindex="0" aria-expanded="${open ? 'true' : 'false'}">
             <span class="cartouche-badge">جروب ${esc(gid)}</span>
             <span class="gantt-stack-count"><strong class="num">${count}</strong> طالب/ة</span>
-            <span class="go" aria-hidden="true">${iconSvg('external')}</span>
+            <span class="gantt-stack-chevron" aria-hidden="true">${iconSvg('chevron-down')}</span>
+          </div>
+          <div class="gantt-stack-tools">
+            <span class="gantt-stack-tools-label">${roundCols.length} مراحل تدريب</span>
+            <button type="button" class="btn btn-surface btn-sm"${act('group-roster', { gid })}>${iconSvg('users')} قائمة طلاب جروب ${esc(gid)}</button>
           </div>
           <div class="gantt-stack-cards">
             ${roundCols.map((c) => ganttCellHtml(c, gid, count, gs, { stack: true })).join('')}

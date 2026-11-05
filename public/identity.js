@@ -138,10 +138,13 @@
     const name = normName(row.full_name);
     const compact = compactName(row.full_name);
 
+    /* الاسم المطابق داخل نفس الجروب أدق من الكود عند تعارض الأكواد:
+       بعض كشوف الراوند تحتوي كوداً مكرراً بين طالبين، ومطابقة الاسم داخل
+       الجروب تُعيد الطالب الصحيح بدل نسب الصف لصاحب الكود الآخر. */
     let hit = unique(index.byGroupShort, gid + '|' + short);
+    if (!hit && gid) hit = unique(index.byGroupName, gid + '|' + name);
     if (!hit) hit = unique(index.byFull, full);
     if (!hit) hit = unique(index.byShort, short);
-    if (!hit) hit = unique(index.byGroupName, gid + '|' + name);
     if (!hit) hit = unique(index.byName, name);
     if (!hit) hit = unique(index.byCompactName, compact);
     return hit;

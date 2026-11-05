@@ -512,6 +512,43 @@ window.extractBirthFromNID = function (nid) {
   return dateStr;
 };
 
+/* تصنيف وثيقة الهوية: الرقم القومي المصري 14 رقماً، أو جواز سفر (حروف/8 أرقام).
+   الطلاب الوافدون مسجلون بجواز السفر فعلياً — لا يجوز اعتبار بياناتهم «خطأ». */
+window.classifyNationalId = function (value) {
+  const raw = String(value === null || value === undefined ? '' : value).trim();
+  const digits = raw
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/\D/g, '');
+  if (!raw || /^(فاضي|فارغ|غير متوفر|غير متاح|لا يوجد|—|-|n\/a)$/i.test(raw)) {
+    return { type: 'missing', label: 'غير متوفر', valid: false };
+  }
+  if (/[A-Za-z]/.test(raw)) {
+    // حروف لاتينية مع عدد أرقام قصير = جواز سفر/وثيقة أجنبية.
+    // أما 13-14 رقماً مع حرف دخيل فهذا رقم قومي مكتوب خطأً.
+    return digits.length <= 9
+      ? { type: 'passport', label: 'جواز سفر', valid: true }
+      : { type: 'invalid', label: 'رقم قومي غير صحيح', valid: false };
+  }
+  if (digits.length === 14) {
+    const birth = extractBirthFromNID(digits);
+    if (/^[23]/.test(digits) && birth) return { type: 'nid', label: 'رقم قومي', valid: true, birth };
+    return { type: 'invalid', label: 'رقم قومي غير صحيح', valid: false };
+  }
+  if (digits.length === 8) {
+    // جوازات السفر المصرية/الأجنبية كثيراً ما تكون 8 أرقام
+    return { type: 'passport', label: 'جواز سفر', valid: true };
+  }
+  return { type: 'invalid', label: 'رقم غير مكتمل', valid: false };
+};
+
+/* هل قيمة الرقم القومي تبدو جواز سفر (أو غير متوفرة)؟ تُستخدم لتنقية ملاحظات
+   جودة البيانات حتى لا تُعرض بيانات الوافدين كأخطاء. */
+window.isPassportIdValue = function (value) {
+  const kind = window.classifyNationalId(value).type;
+  return kind === 'passport' || kind === 'missing';
+};
+
 window.computeStatus = function (startDate, endDate) {
   const s = formatDate(startDate), e = formatDate(endDate);
   if (!s || !e) return 'upcoming';
@@ -547,6 +584,48 @@ window.getRoundDates = function (order) {
   if (ov) return { start: formatDate(ov.start_date), end: formatDate(ov.end_date) };
   const d = (CFG().DEFAULT_ROUND_DATES || {})[o];
   return d ? { start: d.start, end: d.end } : { start: '', end: '' };
+};
+
+/* ═══ الراوند النشط — مصدر واحد لكل الصفحات ═══
+   إذا لم يكن هناك راوند جارٍ الآن (فترة الاستعداد بين راوندين) نختار أقرب
+   راوند لم يبدأ بعد، حتى لا تعود الصفحة تلقائياً للراوند المنتهي. */
+window.getActiveRoundOrder = function () {
+  const orders = ['1', '2', '3', '4', '0'];
+  const info = orders.map((o) => ({ o, d: getRoundDates(o) }));
+  const current = info.find((x) => x.d.start && computeStatus(x.d.start, x.d.end) === 'current');
+  if (current) return current.o;
+  const upcoming = info
+    .filter((x) => x.d.start && computeStatus(x.d.start, x.d.end) === 'upcoming')
+    .sort((a, b) => (a.d.start < b.d.start ? -1 : 1));
+  if (upcoming.length) return upcoming[0].o;
+  const finished = info.filter((x) => x.d.end).sort((a, b) => (a.d.end < b.d.end ? 1 : -1));
+  return finished.length ? finished[0].o : '2';
+};
+
+window.getActiveRoundInfo = function () {
+  const order = getActiveRoundOrder();
+  const dates = getRoundDates(order);
+  return {
+    order,
+    dates,
+    status: computeStatus(dates.start, dates.end),
+    label: order === '0' ? 'التدريب الاختياري' : 'الراوند ' + order
+  };
+};
+
+/* جروبات مجال معيّن داخل راوند (مثال: خيل ومعامل وسمك في الراوند 2 = جروب 5).
+   المصدر: شيت 03_rounds_overview ثم جدول الجروبات 04 كاحتياطي. */
+window.getRoundDomainGroups = function (order, key) {
+  const o = String(order), k = normRoundKey(key);
+  const ov = (DB.roundsOverview || []).find((r) => String(r.round_order) === o && normRoundKey(r.round_key) === k);
+  if (ov && String(ov.groups_together || '').trim()) return String(ov.groups_together).trim();
+  const rows = (DB.roundSchedule || []).filter((r) => String(r.round_order) === o && normRoundKey(r.round_key) === k);
+  const gids = [];
+  rows.forEach((r) => {
+    const gid = cleanGroupId(r.group_id);
+    if (gid && gids.indexOf(gid) === -1) gids.push(gid);
+  });
+  return gids.sort((a, b) => (+a) - (+b)).join('+');
 };
 
 /* ═══ البند 4 — نموذج تدوير «خيل / معامل / سمك» نصف الشهري ═══
@@ -1061,10 +1140,56 @@ function buildDB(S) {
     });
     return o;
   };
+  /* ── تنقية تكرار سجل الطلاب ──
+     بعض ملفات الشيت تحتوي نفس الطالب مرتين (اسم عربي + اسم لاتيني، أو نفس
+     الاسم/الرقم القومي داخل الجروب). الصف المكرر لا يُحتسب في قوام الجروبات
+     ولا في إجمالي الطلاب، ويُسجَّل كملاحظة شفافية. */
+  const rawStudentRows = g('students').map((r) => {
+    r = fixRow(r);
+    return { ...r, group_id: cleanGroupId(r.group_id), gender: normGender(r.gender) };
+  });
+  const studentRows = [];
+  const byNidGroup = Object.create(null);
+  const byNameGroup = Object.create(null);
+  const duplicateStudents = [];
+  const hasArabicName = (v) => /[\u0600-\u06ff]/.test(String(v || ''));
+  const nameKeyOf = (v) => normAr(v).replace(/\s+/g, '');
+  rawStudentRows.forEach((r) => {
+    const nidDigits = String(r.national_id || '').replace(/\D/g, '');
+    const gid = r.group_id;
+    const nk = nameKeyOf(r.full_name);
+    const nidKey = nidDigits && gid ? nidDigits + '|' + gid : '';
+    let keep = null;
+    if (nidKey && byNidGroup[nidKey]) {
+      const cand = byNidGroup[nidKey];
+      const sameName = nameKeyOf(cand.full_name) === nk;
+      const sameScript = hasArabicName(cand.full_name) === hasArabicName(r.full_name);
+      // نفس الرقم القومي + نفس الجروب = نفس الطالب، إلا إذا كان الاسمان
+      // عربيين ومختلفين (حينها يكون الرقم مكرراً بالخطأ بين طالبين).
+      if (sameName || !sameScript) keep = cand;
+    }
+    if (!keep && gid && nk && byNameGroup[gid + '|' + nk]) keep = byNameGroup[gid + '|' + nk];
+    if (keep) {
+      // نفضّل الاسم العربي وأكمل أي بيانات ناقصة من الصف المكرر
+      if (hasArabicName(r.full_name) && !hasArabicName(keep.full_name)) {
+        const oldName = keep.full_name;
+        Object.assign(keep, r, { full_name: r.full_name });
+        duplicateStudents.push({ kept: r.full_name, dropped: oldName, group_id: gid, national_id: nidDigits });
+      } else {
+        duplicateStudents.push({ kept: keep.full_name, dropped: r.full_name, group_id: gid, national_id: nidDigits });
+      }
+      Object.keys(r).forEach((k) => { if ((keep[k] === undefined || keep[k] === '') && r[k] !== '') keep[k] = r[k]; });
+      return;
+    }
+    studentRows.push(r);
+    if (nidKey) byNidGroup[nidKey] = r;
+    if (gid && nk) byNameGroup[gid + '|' + nk] = r;
+  });
+
   // قوام الجروب من كشف الطلاب نفسه (أدق من عمود إجمالي قد يكون قديماً في جدول الجروبات)
   // نحسب أيضاً توزيع النوع من نفس الكشف حتى لا تتناقض أعمدة الجنس مع القوام.
   const roster = {};
-  g('students').map(fixRow).forEach((r) => {
+  studentRows.forEach((r) => {
     const gid = cleanGroupId(r.group_id);
     if (!gid) return;
     const st = roster[gid] || (roster[gid] = { total: 0, F: 0, M: 0, U: 0 });
@@ -1075,7 +1200,17 @@ function buildDB(S) {
     else st.U++;
   });
 
-  DB.students = g('students').map((r) => { r = fixRow(r); return { ...r, group_id: cleanGroupId(r.group_id), gender: normGender(r.gender), birth_date: r.birth_date || extractBirthFromNID(r.national_id) }; });
+  DB.students = studentRows.map((r) => {
+    const idInfo = window.classifyNationalId(r.national_id);
+    return {
+      ...r,
+      group_id: cleanGroupId(r.group_id),
+      gender: normGender(r.gender),
+      _id_type: idInfo.type,
+      _id_label: idInfo.label,
+      birth_date: r.birth_date || idInfo.birth || extractBirthFromNID(r.national_id)
+    };
+  });
   const declaredGroups = g('groups').map(fixRow);
   const declaredIds = Object.create(null);
   DB.groups = declaredGroups.map((r) => {
@@ -1151,7 +1286,68 @@ function buildDB(S) {
   }
   DB.roundDates = g('roundDates').map(fixRow);
   DB.fields = g('fields').map(fixRow);
-  DB.issues = g('issues').map(fixRow);
+  /* ملاحظات جودة البيانات: لا نعرض بيانات الوافدين (جواز سفر) كأخطاء.
+     - رقم قومي غير صحيح: يُستبعد إذا كانت القيمة جواز سفر أو غير متوفرة.
+     - رقم موبايل أجنبي: يُستبعد لصاحب جواز السفر (الرقم الأجنبي طبيعي).
+     الصفوف المكررة التي أُزيلت تُضاف كملاحظة شفافية. */
+  /* فهرس الهوية يُبنى قبل ملاحظات جودة البيانات حتى تُطابق الأكواد بدقة */
+  DB.identity = window.ImtiazIdentity.buildIndex(DB.students);
+  DB.studentLookup = window.ImtiazIdentity.aliases(DB.identity);
+
+  const studentsByName = Object.create(null);
+  DB.students.forEach((s) => {
+    const k = normAr(s.full_name).replace(/\s+/g, '');
+    if (!k) return;
+    (studentsByName[k] || (studentsByName[k] = [])).push(s);
+  });
+  const issueStudent = (r) => {
+    const byCode = r.code ? window.ImtiazIdentity.findByKey(DB.identity, String(r.code)) : null;
+    if (byCode) return byCode;
+    const k = normAr(r.name).replace(/\s+/g, '');
+    const list = studentsByName[k] || [];
+    const g = String(r.group || '').split(';')[0].trim();
+    const exact = list.find((s) => !g || String(s.group_id) === g) || list[0];
+    if (exact) return exact;
+    // اسم مختصر في ملاحظة الشيت (بدون اسم العائلة) — نطابق البداية إذا كانت فريدة
+    if (k.length >= 8) {
+      const near = DB.students.filter((s) => {
+        const sn = normAr(s.full_name).replace(/\s+/g, '');
+        return sn && (sn.indexOf(k) === 0 || k.indexOf(sn) === 0);
+      });
+      if (near.length === 1) return near[0];
+    }
+    return null;
+  };
+  DB.issues = g('issues').map(fixRow).filter((r) => {
+    const problem = String(r.problem || '');
+    const student = issueStudent(r);
+    const passport = student && student._id_type === 'passport';
+    if (/^رقم قومي/.test(problem)) {
+      const value = problem.split(':').slice(1).join(':').trim();
+      // جواز السفر ليس «رقم قومي غير صحيح»؛ والفراغ يعني «غير متوفر» لا «خطأ»
+      return !passport && window.classifyNationalId(value).type === 'invalid';
+    }
+    if (/^رقم موبايل/.test(problem)) {
+      // الرقم الأجنبي/غير المكتمل متوقع لصاحب جواز السفر
+      if (passport) return false;
+      return !/^(فاضي|فارغ|غير متوفر|)$/i.test(problem.split(':').slice(1).join(':').trim());
+    }
+    if (/الرقم القومي مختلف أو ناقص/.test(problem)) {
+      // غياب الرقم القومي = «غير متوفر» وليس خطأ بيانات
+      return !passport && !(student && student._id_type === 'missing');
+    }
+    if (/^مسجل في الفورم/.test(problem)) return !passport;
+    return true;
+  });
+  duplicateStudents.forEach((d) => {
+    DB.issues.push({
+      group: d.group_id,
+      name: d.dropped,
+      code: '',
+      problem: 'صف مكرر لنفس الطالب (' + d.kept + ') — تم استبعاده من القوائم والإجماليات',
+      _duplicate: '1'
+    });
+  });
   DB.issuesR2 = g('issuesR2').map(fixRow);
 
   DB.fieldsMap = {}; DB.fields.forEach((f) => { DB.fieldsMap[f.column] = f.name_ar; });
@@ -1161,10 +1357,9 @@ function buildDB(S) {
   DB.roundNames = {};
   [DB.roundsOverview, DB.roundSchedule, DB.round2Summary].forEach((list) => list.forEach((r) => { if (r.round_key && r.round_name_ar) DB.roundNames[normRoundKey(r.round_key)] = r.round_name_ar; }));
 
-  /* فهرس هوية موحّد: الكود الكامل + القصير + الجروب + الاسم.
-     الفهرس القديم كان يستبدل الأكواد المتكررة بصمت؛ الجديد يتجاهل المفتاح غير الفريد. */
-  DB.identity = window.ImtiazIdentity.buildIndex(DB.students);
-  DB.studentLookup = window.ImtiazIdentity.aliases(DB.identity);
+  /* فهرس الهوية الموحّد (الكود الكامل + القصير + الجروب + الاسم) بُني قبل
+     ملاحظات جودة البيانات؛ الفهرس القديم كان يستبدل الأكواد المتكررة بصمت،
+     والجديد يتجاهل المفتاح غير الفريد. */
 
   /* مطابقة أعداد ملخص الراوند ٢ مع الكشوف الفعلية (طلاب فريدون، لا صفوف مكررة) */
   const r2GroupField = {};
@@ -2048,6 +2243,14 @@ registerAction('goto-unit', (el) => {
 // تبديل فتح/إغلاق كارد الوحدة البيطرية عند الضغط عليه
 registerAction('toggle-unit', (el) => {
   el.classList.toggle('open');
+});
+
+// الجدول العام على الهاتف: فتح/إغلاق قسم الجروب (accordion)
+registerAction('toggle-stack-group', (el) => {
+  const group = el.closest('.gantt-stack-group');
+  if (!group) return;
+  const open = group.classList.toggle('open');
+  el.setAttribute('aria-expanded', String(open));
 });
 
 document.addEventListener('click', (e) => {

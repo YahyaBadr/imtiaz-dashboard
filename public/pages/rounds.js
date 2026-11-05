@@ -286,17 +286,47 @@ window.renderRound2Domain = function (container, domainKey) {
       grouped[unit].push(st);
     });
     const unitNames = Object.keys(grouped).sort();
+    const unitTones = ['teal', 'rust', 'navy', 'mustard', 'green', 'plum', 'gold'];
+    const stationMeta = {};
+    (DB.stationsUnits || []).forEach((u) => {
+      const n = String(u.unit_name || '').trim();
+      if (n) stationMeta[n] = u;
+    });
+    const registeredTotal = students.length || 1;
     contentHtml = `
       <div class="units-grid">
-        ${unitNames.map((unitName) => {
+        ${unitNames.map((unitName, ui) => {
           const unitStudents = grouped[unitName];
+          const tone = unitTones[ui % unitTones.length];
+          const meta = stationMeta[unitName] || {};
+          const gov = String(meta.governorate || '').trim();
+          const fCount = unitStudents.filter((st) => st.gender === 'F').length;
+          const mCount = unitStudents.filter((st) => st.gender === 'M').length;
+          const gids = [...new Set(unitStudents.map((st) => st.gid).filter(Boolean))].sort((a, b) => (+a) - (+b));
+          const share = Math.round((unitStudents.length / registeredTotal) * 100);
           return `
-          <div class="unit-card" data-action="toggle-unit" data-unit="${esc(unitName)}" style="cursor:pointer;">
+          <div class="unit-card tone-${tone}" data-action="toggle-unit" data-unit="${esc(unitName)}">
             <div class="unit-card-header">
-              <span class="unit-card-ico">${iconSvg('hospital')}</span>
-              <div class="unit-card-info">
-                <div class="unit-card-name">${esc(unitName)}</div>
-                <div class="unit-card-count">${unitStudents.length} طالب/ة</div>
+              <div class="unit-card-top">
+                <span class="unit-card-ico tone-${tone}" aria-hidden="true">${iconSvg('hospital')}</span>
+                <div class="unit-card-info">
+                  <div class="unit-card-name">${esc(unitName)}</div>
+                  <div class="unit-card-meta">
+                    ${gov ? `<span class="unit-meta-chip">${iconSvg('map-pin')} ${esc(gov)}</span>` : ''}
+                    <span class="unit-meta-chip">${gids.length} جروب: ${gids.map((x) => `<b>${esc(x)}</b>`).join(' · ')}</span>
+                  </div>
+                </div>
+                <div class="unit-card-count-pill"><strong class="num">${unitStudents.length}</strong><span>طالب/ة</span></div>
+              </div>
+              <div class="unit-card-split">
+                <span class="unit-split unit-split-f"><span class="num">${fCount}</span> طالبات</span>
+                <span class="unit-split unit-split-m"><span class="num">${mCount}</span> طلاب</span>
+                <span class="unit-split unit-split-share">${share}% من مسجلي القسم</span>
+              </div>
+              <div class="unit-card-meter" aria-hidden="true"><div class="unit-card-meter-fill" style="width:${Math.max(4, Math.min(100, share))}%"></div></div>
+              <div class="unit-card-foot">
+                <span class="unit-card-hint">${iconSvg('users')} عرض أسماء الطلاب</span>
+                <span class="unit-card-chevron" aria-hidden="true">${iconSvg('chevron-down')}</span>
               </div>
             </div>
             <div class="unit-card-body">

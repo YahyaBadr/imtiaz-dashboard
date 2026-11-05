@@ -178,7 +178,7 @@
       return [gid, g.group_name || ('جروب ' + gid), tot, c.f, c.m, unk, String(cls)];
     });
 
-    /* 5) المصفوفة: لكل جروب × راوند — القسم، القوام، مشارك مع، الإجمالي، الحالة */
+    /* 5) الجدول العام: لكل جروب × راوند — القسم، القوام، مشارك مع، الإجمالي، الحالة */
     const matrix = [];
     (DB.roundSchedule || []).forEach((r) => {
       const gid = String(r.group_id);
@@ -303,7 +303,7 @@
       { name: 'توزيع التدريب R2', header: ['المجال', 'مسجلون', 'متوقعون', 'السعة', 'غير مسجلين', 'نسبة %', 'الحالة'], rows: d.training, tone: '2A9D8F' },
       { name: 'المجالات الأكثر طلبًا', header: ['الترتيب', 'المجال', 'المتوسط', 'اختيار أول'], rows: d.topFields, tone: 'C97B2C' },
       { name: 'الجروبات', header: ['الجروب', 'اسم الجروب', 'الإجمالي', 'طالبات', 'طلاب', 'غير محدد', 'التصنيف'], rows: d.groups, tone: '3E7CB1' },
-      { name: 'مصفوفة التدوير', header: ['الجروب', 'الراوند', 'من', 'إلى', 'قوام الجروب', 'مشاركة', 'إجمالي المتواجدين', 'الحالة'], rows: d.matrix, tone: '5F8D4E' },
+      { name: 'الجدول العام', header: ['الجروب', 'الراوند', 'من', 'إلى', 'قوام الجروب', 'مشاركة', 'إجمالي المتواجدين', 'الحالة'], rows: d.matrix, tone: '5F8D4E' },
       { name: 'الوحدات', header: ['الوحدة', 'المحافظة', 'مفيدون إناث', 'مفيدون ذكور', 'مفيدون إجمالي', 'المقيدون', 'السعة', 'نسبة الإشغال', 'كشف مسجلين', 'بنات الكشف', 'بنين الكشف'], rows: d.units, tone: '2A9D8F' },
       { name: 'غير المسجلين', header: ['الاسم', 'الكود', 'الجروب', 'الدورة', 'النوع'], rows: d.unreg, tone: 'A63D40' },
       { name: 'دليل الطلاب', header: ['الاسم', 'الرقم المرجعي', 'الجروب', 'النوع', 'الهاتف'], rows: d.students, tone: '6B4C7A' }
@@ -314,7 +314,7 @@
     if (mG) { const s = groupSheetSet(d, mG[1]); return s ? [s] : []; }
     const mR = scope.match(/^round[:\-_](\d+)$/i);
     if (mR) { const s = roundSheetSet(d, mR[1]); return s ? [s] : []; }
-    if (scope === 'matrix')   return all.filter((s) => s.name === 'مصفوفة التدوير');
+    if (scope === 'matrix')   return all.filter((s) => s.name === 'الجدول العام');
     if (scope === 'students') return all.filter((s) => s.name === 'دليل الطلاب');
     if (scope === 'unreg')    return all.filter((s) => s.name === 'غير المسجلين');
     if (scope === 'units')    return all.filter((s) => s.name === 'الوحدات');
@@ -324,7 +324,7 @@
     const page = activeEl && activeEl.id ? activeEl.id.replace(/^page-/, '') : null;
     const pick = {
       overview: ['الملخص', 'تواريخ الدورة', 'التنبيهات', 'توزيع التدريب R2', 'المجالات الأكثر طلبًا', 'الجروبات'],
-      schedule: ['مصفوفة التدوير', 'تواريخ الدورة', 'الجروبات'],
+      schedule: ['الجدول العام', 'تواريخ الدورة', 'الجروبات'],
       units: ['الوحدات'],
       'not-registered': ['غير المسجلين']
     }[page] || null;

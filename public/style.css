@@ -402,6 +402,55 @@ html.dark .gantt-cell-inner .rot-title { color: #FFFFFF; }
 html.dark .gantt-cell-inner .muted,
 html.dark .gantt-cell-inner .rot-meta span { color: #C9B7C9; }
 html.dark .gantt-cell-inner .num { color: #E2D7E5; }
+
+/* ─── الدارك مود — كروت الراوند داخل كل جروب (اللي كانت بيضاء صارخة) ─── */
+html.dark .rot-card,
+html.dark .gantt-cell-inner,
+html.dark .gantt-cell .rot-card {
+  background: #231623 !important;
+  border-color: rgba(227, 167, 60, 0.25) !important;
+  color: #FFFFFF !important;
+}
+html.dark .rot-card .rot-head,
+html.dark .rot-card .rot-meta,
+html.dark .rot-card .rot-foot,
+html.dark .gantt-cell-inner .rot-head,
+html.dark .gantt-cell-inner .rot-meta,
+html.dark .gantt-cell-inner .rot-foot {
+  background: transparent !important;
+  color: #FFFFFF !important;
+}
+html.dark .rot-card .rot-title,
+html.dark .gantt-cell-inner .rot-title,
+html.dark .gantt-head-title,
+html.dark .gantt-head-dates {
+  color: #FFFFFF !important;
+}
+html.dark .rot-card .rot-status .badge,
+html.dark .gantt-cell-inner .rot-status .badge {
+  border-color: rgba(227, 167, 60, 0.4) !important;
+}
+html.dark .rot-card .rot-meta span,
+html.dark .gantt-cell-inner .rot-meta span,
+html.dark .rot-card .rot-foot span,
+html.dark .gantt-cell-inner .rot-foot span {
+  color: #C9B7C9 !important;
+}
+html.dark .rot-card .num,
+html.dark .gantt-cell-inner .num {
+  color: #E2D7E5 !important;
+}
+html.dark .rot-card .g-chip,
+html.dark .gantt-cell-inner .g-chip {
+  background: rgba(227, 167, 60, 0.15) !important;
+  border-color: rgba(227, 167, 60, 0.3) !important;
+  color: #F0D9A5 !important;
+}
+html.dark .rot-card:hover,
+html.dark .gantt-cell-inner:hover {
+  background: #2E1E2E !important;
+  border-color: var(--c-gold) !important;
+}
 .gantt-round-name { font-weight: 700; font-size: 0.92rem; color: var(--c-heading); }
 
 .profile-overlay { justify-content: flex-start; padding: 0; }

@@ -5,26 +5,26 @@
    Bump CACHE_VERSION whenever you redeploy so clients get the new files.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const CACHE_VERSION = 'imtiaz-v22';
+const CACHE_VERSION = 'imtiaz-v23';
 const APP_SHELL = [
   './',
   './index.html',
-  './style.css',
-  './cairo.css',
-  './print.css',
-  './config.js',
-  './app.js',
-  './identity.js',
-  './icons.js',
-  './export-core.js',
-  './export.js',
+  './style.css?v=1022',
+  './cairo.css?v=1022',
+  './print.css?v=1022',
+  './config.js?v=1022',
+  './app.js?v=1022',
+  './identity.js?v=1022',
+  './icons.js?v=1022',
+  './export-core.js?v=1022',
+  './export.js?v=1022',
   './export-assets.js',
   './manifest.json',
-  './pages/overview.js',
-  './pages/schedule.js',
-  './pages/rounds.js',
-  './pages/units.js',
-  './pages/not-registered.js',
+  './pages/overview.js?v=1022',
+  './pages/schedule.js?v=1022',
+  './pages/rounds.js?v=1022',
+  './pages/units.js?v=1022',
+  './pages/not-registered.js?v=1022',
   './vendor/xlsx-js-style.min.js',
   './vendor/jszip.min.js',
   './vendor/xlsx.full.min.js',
@@ -82,7 +82,13 @@ self.addEventListener('fetch', (e) => {
           if (res && res.ok) cache.put(req, res.clone());
           return res;
         }).catch(() => null);
-        return cached || network || (req.destination === 'document' ? cache.match('./index.html') : Response.error());
+        if (cached) return cached;
+        const fresh = await network;
+        if (fresh) return fresh;
+        // لو الرابط فيه ?v=... غير موجود في الكاش، جرّب نفس الملف بدون الاستعلام (وضع عدم الاتصال)
+        const loose = await cache.match(req, { ignoreSearch: true });
+        if (loose) return loose;
+        return req.destination === 'document' ? cache.match('./index.html') : Response.error();
       })
     );
   }

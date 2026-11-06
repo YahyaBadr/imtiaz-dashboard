@@ -41,8 +41,8 @@ window.APP_CONFIG = {
     SESSION_HOURS: 8,           // مدة البقاء داخل اللوحة بعد الدخول
     REMEMBER_HOURS: 8,          // (قديم — لنفس الغرض)
     AUTO_LOCK_MINUTES: 0,       // قفل تلقائي بعد الخمول (0 = لا قفل تلقائي)
-    MAX_ATTEMPTS: 5,            // محاولات قبل إيقاف مؤقت قصير
-    LOCKOUT_SECONDS: 30,
+    MAX_ATTEMPTS: 0,            // 0 = بدون حد للمحاولات (الإيقاف المؤقت ملغي)
+    LOCKOUT_SECONDS: 0,         // 0 = تعطيل الإيقاف المؤقت تماماً
     USERS_TTL_MINUTES: 60,      // إعادة قراءة قائمة المستخدمين بعد هذه المدة
     API_TOKEN: ''               // لو ضبطت SECRET_TOKEN في Apps Script، ضع نفس القيمة هنا
   },

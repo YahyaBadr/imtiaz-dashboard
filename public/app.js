@@ -59,7 +59,13 @@ window.Gate = (function () {
       return !!(s && s.exp > Date.now());
     } catch (e) { return false; }
   }
+  // الإيقاف المؤقت اختياري: MAX_ATTEMPTS = 0 أو LOCKOUT_SECONDS = 0 يعني تعطيله تماماً
+  function lockoutDisabled() {
+    const c = cfg();
+    return !(Number(c.MAX_ATTEMPTS) > 0) || !(Number(c.LOCKOUT_SECONDS) > 0);
+  }
   function lockoutLeft() {
+    if (lockoutDisabled()) return 0;
     try {
       const a = JSON.parse(ls.get(ATTEMPTS_KEY) || '{"n":0,"until":0}');
       const left = Math.ceil((a.until - Date.now()) / 1000);
@@ -68,6 +74,7 @@ window.Gate = (function () {
   }
   function bumpAttempts() {
     const c = cfg();
+    if (lockoutDisabled()) { resetAttempts(); return { n: 0, until: 0 }; }
     let a = { n: 0, until: 0 };
     try { a = JSON.parse(ls.get(ATTEMPTS_KEY) || '{"n":0,"until":0}'); } catch (e) { /* ignore */ }
     a.n = (a.n || 0) + 1;
@@ -301,16 +308,17 @@ window.Gate = (function () {
       } catch (e) {
         const m = (e && e.message) || '';
         if (m === 'EMPTY_ACCOUNTS') diag = 'تبويب الحسابات فارغ أو أعمدته غير مفهومة — الصف يجب أن يكون: العمود الأول اسم مستخدم، الثاني كلمة مرور.';
-        else if (m === 'UNKNOWN_USER') diag = 'اسم المستخدم غير موجود في قائمة الحسابات. المحاولات المتبقية: ';
-        else if (m === 'WRONG_PASS') diag = 'كلمة المرور غير صحيحة لهذا الحساب. المحاولات المتبقية: ';
+        else if (m === 'UNKNOWN_USER') diag = 'اسم المستخدم غير موجود في قائمة الحسابات.';
+        else if (m === 'WRONG_PASS') diag = 'كلمة المرور غير صحيحة لهذا الحساب.';
         else if (m === 'NO_ACCOUNTS_SOURCE') diag = (navigator.onLine === false)
           ? 'لا يوجد اتصال بالإنترنت ولا نسخة محفوظة من الحسابات على هذا الجهاز.'
           : `تعذّر قراءة تبويب الحسابات «${c.USERS_SHEET_NAME || 'Accounts'}». تأكد من الاسم ومن أن الـ API يعمل.`;
         else diag = 'تعذّر التحقق من الحسابات الآن. تحقّق من الاتصال أو اسم التبويب في config.js.';
         if (m === 'UNKNOWN_USER' || m === 'WRONG_PASS') {
+          if (lockoutDisabled()) { showGate(diag); return false; }
           const a = bumpAttempts();
           const remain = Math.max(0, c.MAX_ATTEMPTS - (a.n || 0));
-          showGate(a.until ? `تم إيقاف المحاولات مؤقتاً لمدة ${c.LOCKOUT_SECONDS} ثانية.` : diag + remain + '.');
+          showGate(a.until ? `تم إيقاف المحاولات مؤقتاً لمدة ${c.LOCKOUT_SECONDS} ثانية.` : diag + ' المحاولات المتبقية: ' + remain + '.');
           return false;
         }
         showGate(diag); return false;
@@ -327,6 +335,7 @@ window.Gate = (function () {
       return true;
     }
     if (await check(pwd)) { markUnlocked(''); return true; }
+    if (lockoutDisabled()) { showGate('رمز غير صحيح.'); return false; }
     const a2 = bumpAttempts();
     const remain2 = Math.max(0, c.MAX_ATTEMPTS - (a2.n || 0));
     showGate(a2.until ? `تم إيقاف المحاولات مؤقتاً لمدة ${c.LOCKOUT_SECONDS} ثانية.` : 'رمز غير صحيح. المحاولات المتبقية: ' + remain2 + '.');
@@ -386,6 +395,7 @@ window.Gate = (function () {
   function init(onPass) {
     const c = cfg();
     if (!c.ENABLED) { unlocked = true; return true; }
+    if (lockoutDisabled()) resetAttempts();               // يمسح أي قفل قديم محفوظ من نسخة سابقة
     if (sessionValid()) { unlocked = true; hideGate(); startIdleLock(); return true; }
     showGate('');
     bindUI(onPass);

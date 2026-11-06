@@ -72,6 +72,7 @@ window.Gate = (function () {
     try { a = JSON.parse(ls.get(ATTEMPTS_KEY) || '{"n":0,"until":0}'); } catch (e) { /* ignore */ }
     a.n = (a.n || 0) + 1;
     if (a.n >= c.MAX_ATTEMPTS) { a.until = Date.now() + c.LOCKOUT_SECONDS * 1000; a.n = 0; }
+    else { a.until = 0; }                                // مسح أي قفل قديم منتهي حتى لا تظهر رسالة الإيقاف بعد انتهائه
     ls.set(ATTEMPTS_KEY, JSON.stringify(a));
     return a;
   }
@@ -159,7 +160,8 @@ window.Gate = (function () {
     }
     const u = normUser(user), raw = String(pass || '').trim(), p = passHash(raw);
     // يقبل كلمة المرور نصاً صريحاً (كما في Google Sheet) أو بصمة passHash محفوظة مسبقاً
-    const hit = list.find((x) => x.u === u && passHash(x.p) === p);
+    // (الجدول الحالي يخزّن البصمة نفسها — لذا نقارن القيمة المخزّنة مباشرة قبل إعادة تشفيرها)
+    const hit = list.find((x) => x.u === u && (x.p === p || passHash(x.p) === p));
     if (hit) { currentRole = hit.role || ''; return true; }
     const knownUser = list.some((x) => x.u === u);
     throw Object.assign(new Error(knownUser ? 'WRONG_PASS' : 'UNKNOWN_USER'), { accounts: list.length });
